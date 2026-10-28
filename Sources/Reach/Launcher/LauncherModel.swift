@@ -19,6 +19,8 @@ final class LauncherModel {
     private(set) var showCount = 0
 
     let apps = AppIndex()
+    /// Set at launch; nil keeps plain text-match order.
+    @ObservationIgnored var learning: Learning?
     private let files = FileSearch()
 
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
@@ -68,12 +70,13 @@ final class LauncherModel {
         }
     }
 
-    /// Text-match order: best score first, then by name.
+    /// Learning first (S-004), then text match, then by name.
     private func rank(_ scored: [(LaunchResult, Int)], query: String) -> [LaunchResult] {
-        scored
-            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.title.localizedStandardCompare($1.0.title) == .orderedAscending }
-            .prefix(Self.maxResults)
-            .map(\.0)
+        let byName = scored.sorted { $0.0.title.localizedStandardCompare($1.0.title) == .orderedAscending }
+        let byID = Dictionary(byName.map { ($0.0.id, $0.0) }, uniquingKeysWith: { first, _ in first })
+        let order = Ranking.order(byName.map { (id: $0.0.id, score: $0.1) },
+                                  learned: learning?.picks(for: query) ?? [:])
+        return order.prefix(Self.maxResults).compactMap { byID[$0] }
     }
 
     private func setResults(_ new: [LaunchResult]) {

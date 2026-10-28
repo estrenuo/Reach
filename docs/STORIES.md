@@ -69,7 +69,7 @@ UX:
 - States: first run = plain text-match order
 - Words: the feature is called "Learning" everywhere
 - Access: n/a
-Status: doing
+Status: done
 
 ### S-005 Find files by name with a keyword
 As the user, I type `open <name>` (or `'` / space prefix) and see matching files and folders, most recently used first.

@@ -117,6 +117,27 @@ enum SelfTest {
         check("a failed open shows the error and stays open", launcher.isVisible && error.hasPrefix("Unable to open “Safari”"), error)
         lm.opener = { opened.append($0); return true }
 
+        // S-004: open Visual Studio Code twice for "co", then it leads.
+        launcher.show()
+        lm.query = "co"
+        if let code = lm.results.firstIndex(where: { $0.title == "Visual Studio Code" }), code > 0 {
+            for _ in 0..<2 {
+                launcher.show()
+                lm.query = "co"
+                if let index = lm.results.firstIndex(where: { $0.title == "Visual Studio Code" }) { lm.open(at: index) }
+            }
+            launcher.show()
+            lm.query = "co"
+            check("after two picks the result comes first", lm.results.first?.title == "Visual Studio Code",
+                  lm.results.first?.title ?? "none")
+            let reopened = try? ModelContainer(for: Snippet.self, LearningEntry.self,
+                                               configurations: ModelConfiguration(url: Store.url))
+            let saved = (try? reopened?.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
+            check("Learning survives a restart", saved.contains { $0.query == "co" && $0.count == 2 })
+        } else {
+            check("Visual Studio Code is installed and not already first for \"co\"", false)
+        }
+
         // S-005
         lm.query = "open "
         check("a bare file keyword shows the hint", lm.results.first?.title == "Type a file name" && lm.results.first?.isOpenable == false)

@@ -78,6 +78,9 @@ final class AppModel {
     func startLauncher() {
         let controller = LauncherController(model: launcherModel)
         launcher = controller
+        let learning = Learning(container: container)
+        launcherModel.learning = learning
+        launcherModel.onOpened = { query, result in learning.record(query: query, resultID: result.id) }
         HotkeyCenter.shared.onPress = { controller.toggle() }
         HotkeyCenter.shared.start(register: !Self.isTestRun)
         launcherModel.apps.refreshIfStale()
