@@ -129,7 +129,13 @@ Depends: S-005
 Acceptance:
 - [snap] Path in the field, listing on the left, large icon and created/modified dates on the right.
 - [self] ↩ on a folder opens it in Finder; → enters it; ← goes to the parent.
-Status: todo
+UX:
+- Flow: type `~/` or `/` -> the folder's contents, folders and files mixed, A to Z -> type to filter -> → or Tab enters the selected folder (Tab on a file completes its name) -> ← drops the typed name, then goes up one folder -> ↩ opens the file, or the folder in Finder -> Esc clears the query, then hides
+- Surface: inline in the launcher (changes what is on screen): the result list on the left, the Preview on the right, the selected name in a footer
+- States: empty folder "“Developer” is empty"; no match "Nothing in “Developer” matches “xyz”"; missing "No folder at “~/nope”"; long names truncate in the middle with the full name as a tooltip; hidden files only when the typed name starts with "."
+- Words: Preview labels "Created" and "Modified"; folder row tooltip "Press → to browse this folder, ↩ to open it in Finder"
+- Access: keyboard only; VoiceOver reads "Folder, Developer, result 1 of 14"; the Preview is one element "Created 16 Jan 2020, Modified today"; no web fallbacks while browsing
+Status: done
 
 ### S-009 Show the action panel for a result
 As the user, I press → on a file or app and choose an action (Open with, Reveal in Finder, Copy path, Get Info, Move to Trash…).

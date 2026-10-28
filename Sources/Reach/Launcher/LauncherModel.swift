@@ -17,9 +17,13 @@ final class LauncherModel {
     private(set) var errors: [String: String] = [:]
     /// Goes up every time the launcher shows: the view refocuses and replays its entrance.
     private(set) var showCount = 0
+    /// Set while the query is a path (`~/`, `/`): the launcher shows the
+    /// folder's contents in their own order, with the Preview beside them.
+    private(set) var browsing: PathQuery?
 
     let apps: AppIndex
     let files: FileSearch
+    let paths: PathBrowser
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -37,10 +41,11 @@ final class LauncherModel {
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
 
-    init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch()) {
+    init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser()) {
         self.apps = apps
         self.files = files
-        sources = [apps, files]
+        self.paths = paths
+        sources = [apps, files, paths]
     }
 
     func didShow() {
@@ -59,6 +64,7 @@ final class LauncherModel {
         generation += 1
         let asked = generation
         let kind = QueryKind(query)
+        if case .path(let path) = kind { browsing = path } else { browsing = nil }
         sources.forEach { $0.cancel() }
         answers = sources.enumerated().map { index, source in
             source.results(for: kind) { [weak self] late in
@@ -79,6 +85,11 @@ final class LauncherModel {
         let all = answers.compactMap { $0 }.joined()
         let hints = all.filter { !$0.result.isOpenable }.map(\.result)
         let openable = all.filter(\.result.isOpenable)
+        if browsing != nil {
+            // A folder listing keeps its own order (A to Z, or best match).
+            setResults(hints + openable.prefix(PathBrowser.limit).map(\.result))
+            return
+        }
         let byID = Dictionary(openable.map { ($0.result.id, $0.result) }, uniquingKeysWith: { first, _ in first })
         let ranked = Ranking.order(openable.map { (id: $0.result.id, score: $0.score) },
                                    learned: learning?.picks(for: query) ?? [:])
@@ -107,6 +118,32 @@ final class LauncherModel {
     }
 
     func openSelected() { open(at: selection) }
+
+    var selectedResult: LaunchResult? {
+        results.indices.contains(selection) ? results[selection] : nil
+    }
+
+    /// → while browsing: into the selected folder. False when there is none.
+    func enter() -> Bool {
+        guard let browsing, let result = selectedResult, result.isFolder else { return false }
+        query = browsing.entering(result.title)
+        return true
+    }
+
+    /// ← while browsing: drops the typed name, then goes up one folder.
+    func back() -> Bool {
+        guard let browsing else { return false }
+        query = browsing.back(home: paths.home)
+        return true
+    }
+
+    /// Tab while browsing: enters a folder, or completes a file's name.
+    func complete() -> Bool {
+        guard let browsing, let result = selectedResult, result.isOpenable else { return false }
+        if enter() { return true }
+        query = browsing.folder + result.title
+        return true
+    }
 
     /// Opens result `index`, then hides the launcher. On failure the launcher
     /// stays open with the error as the result's subtitle.

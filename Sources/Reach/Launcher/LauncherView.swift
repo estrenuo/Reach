@@ -8,8 +8,24 @@ enum LauncherLayout {
     static let iconSize: CGFloat = 32
     static let markSize: CGFloat = 44
 
+    /// Browsing: a fixed-height list of short rows, the Preview, and a footer.
+    static let browseRows = 12
+    static let compactRowHeight: CGFloat = 32
+    static let compactIconSize: CGFloat = 24
+    static let listWidth: CGFloat = 360
+    static let previewIconSize: CGFloat = 192
+    static let footerHeight: CGFloat = 20
+
     static func height(rows: Int) -> CGFloat {
         Space.md * 2 + fieldHeight + (rows > 0 ? Space.sm + CGFloat(rows) * rowHeight : 0)
+    }
+
+    static var browseHeight: CGFloat {
+        Space.md * 2 + fieldHeight + Space.sm + CGFloat(browseRows) * compactRowHeight + Space.sm + footerHeight
+    }
+
+    @MainActor static func height(for model: LauncherModel) -> CGFloat {
+        model.browsing != nil ? browseHeight : height(rows: model.results.count)
     }
 }
 
@@ -36,7 +52,9 @@ struct LauncherView: View {
                     .frame(width: LauncherLayout.markSize, height: LauncherLayout.markSize)
                     .accessibilityHidden(true)
             }
-            if !model.results.isEmpty {
+            if model.browsing != nil {
+                BrowseView(model: model)
+            } else if !model.results.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(Array(model.results.enumerated()), id: \.element.id) { index, result in
                         ResultRow(result: result, index: index, count: model.results.count,
@@ -51,7 +69,7 @@ struct LauncherView: View {
             }
         }
         .padding(Space.md)
-        .frame(width: LauncherLayout.width, height: LauncherLayout.height(rows: model.results.count), alignment: .top)
+        .frame(width: LauncherLayout.width, height: LauncherLayout.height(for: model), alignment: .top)
         .glassEffect(.regular, in: .rect(cornerRadius: Radius.panel, style: .continuous))
         .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
         .opacity(appeared ? 1 : 0)
@@ -77,6 +95,10 @@ struct ResultRow: View {
     let count: Int
     let selected: Bool
     let error: String?
+    /// Short rows for the folder listing while browsing.
+    var compact = false
+
+    private var iconSize: CGFloat { compact ? LauncherLayout.compactIconSize : LauncherLayout.iconSize }
 
     private var subtitle: String? {
         if let error { return error }
@@ -88,11 +110,11 @@ struct ResultRow: View {
             IconCache.image(for: result.icon)
                 .resizable()
                 .scaledToFit()
-                .frame(width: LauncherLayout.iconSize, height: LauncherLayout.iconSize)
+                .frame(width: iconSize, height: iconSize)
                 .foregroundStyle(selected ? Palette.onAccent : Palette.accentText)
             VStack(alignment: .leading, spacing: 0) {
                 Text(result.title)
-                    .font(.title3)
+                    .font(compact ? .body : .title3)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let subtitle {
@@ -104,22 +126,27 @@ struct ResultRow: View {
                 }
             }
             Spacer(minLength: Space.sm)
-            if result.isOpenable {
+            if result.isOpenable, selected || index < LauncherModel.maxResults {
                 Text(selected ? "↩" : "⌘\(index + 1)")
-                    .font(.title3)
+                    .font(compact ? .body : .title3)
                     .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
             }
         }
         .foregroundStyle(selected ? Palette.onAccent : .primary)
         .padding(.horizontal, Space.md)
-        .frame(height: LauncherLayout.rowHeight)
+        .frame(height: compact ? LauncherLayout.compactRowHeight : LauncherLayout.rowHeight)
         .background(selected ? Palette.accent : .clear,
                     in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
         .contentShape(Rectangle())
-        .help(result.subtitle.isEmpty ? result.title : result.subtitle)
+        .help(tooltip)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private var tooltip: String {
+        if result.isFolder && compact { return "Press → to browse this folder, ↩ to open it in Finder" }
+        return result.subtitle.isEmpty ? result.title : result.subtitle
     }
 
     private var accessibilityText: String {

@@ -49,7 +49,7 @@ enum SelfTest {
         }
     }
 
-    /// S-001 to S-007: the launcher, driven with real key events.
+    /// S-001 to S-008: the launcher, driven with real key events.
     private static func checkLauncher(model: AppModel) async {
         guard let launcher = model.launcher else {
             check("the launcher exists", false)
@@ -173,6 +173,45 @@ enum SelfTest {
         lm.query = "zzqxv nothing"
         check("no results shows three fallbacks", lm.results.count == 3 && lm.results.first?.title == "Search Google for “zzqxv nothing”")
         check("the fallback URL is encoded", lm.results.first?.url?.absoluteString.hasSuffix("q=zzqxv%20nothing") == true)
+        // S-008 on a folder made for the test: browse with → and ←.
+        let root = "/tmp/Reach-browse-selftest/"
+        let fm = FileManager.default
+        try? fm.removeItem(atPath: root)
+        for folder in ["Alpha", "Beta", "Empty"] {
+            try? fm.createDirectory(atPath: root + folder, withIntermediateDirectories: true)
+        }
+        for file in ["notes.txt", ".hidden", "Beta/inner.txt"] {
+            fm.createFile(atPath: root + file, contents: Data("test".utf8))
+        }
+        lm.query = root
+        check("a path lists the folder A to Z, without hidden files",
+              lm.browsing != nil && lm.results.map(\.title) == ["Alpha", "Beta", "Empty", "notes.txt"],
+              lm.results.map(\.title).joined(separator: ", "))
+        check("browsing offers no web fallbacks", !lm.results.contains { $0.id.hasPrefix("fallback:") })
+        lm.query = root + "no"
+        check("typing a name filters the folder", lm.results.map(\.title) == ["notes.txt"])
+        check("Tab completes a file name", key(48, "\t") && lm.query == root + "notes.txt")
+        check("← drops the typed name", key(123, "") && lm.query == root)
+        _ = key(125, "")
+        check("→ enters the selected folder", key(124, "") && lm.query == root + "Beta/"
+              && lm.results.map(\.title) == ["inner.txt"], lm.query)
+        check("→ on a file does nothing", !key(124, "") && lm.query == root + "Beta/")
+        check("← goes to the parent folder", key(123, "") && lm.query == root)
+        lm.query = root + "Empty/"
+        check("an empty folder says so", lm.results.first?.title == "“Empty” is empty" && lm.results.count == 1)
+        lm.query = root + "Nope/"
+        check("a missing folder says so", lm.results.first?.title == "No folder at “/tmp/Reach-browse-selftest/Nope”")
+        lm.query = "~/"
+        check("← from the home folder goes to its parent", key(123, "")
+              && lm.query == (NSHomeDirectory() as NSString).deletingLastPathComponent + "/", lm.query)
+        lm.query = root
+        _ = key(36, "\r")
+        check("↩ on a folder opens it", opened.last?.resolvingSymlinksInPath() == URL(fileURLWithPath: root + "Alpha").resolvingSymlinksInPath() && !launcher.isVisible,
+              "\(opened.last?.path ?? "nothing"), visible: \(launcher.isVisible)")
+        try? fm.removeItem(atPath: root)
+        launcher.show()
+        lm.query = "zzqxv nothing"
+
         // S-007: ⌘, in the launcher opens Settings.
         check("⌘, is handled", key(43, ",", command: true))
         try? await Task.sleep(for: .seconds(1))

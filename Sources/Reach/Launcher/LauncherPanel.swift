@@ -72,7 +72,7 @@ final class LauncherController {
         let mouse = NSEvent.mouseLocation
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main else { return }
         let area = screen.visibleFrame
-        let height = LauncherLayout.height(rows: model.results.count)
+        let height = LauncherLayout.height(for: model)
         let top = area.maxY - area.height * 0.2
         panel.setFrame(NSRect(x: area.midX - LauncherLayout.width / 2, y: top - height,
                               width: LauncherLayout.width, height: height), display: true)
@@ -80,7 +80,7 @@ final class LauncherController {
 
     /// Grows and shrinks downward: the search field stays where it is.
     private func resize() {
-        let height = LauncherLayout.height(rows: model.results.count)
+        let height = LauncherLayout.height(for: model)
         let frame = panel.frame
         guard frame.height != height else { return }
         panel.setFrame(NSRect(x: frame.minX, y: frame.maxY - height, width: frame.width, height: height),
@@ -121,6 +121,11 @@ final class LauncherController {
         case 125: model.move(1)
         case 36, 76: model.openSelected()
         case 53: model.cancel()
+        // While browsing: → and Tab go into a folder, ← goes back up.
+        // Otherwise they move the text cursor as usual.
+        case 124 where flags.isEmpty: return model.enter()
+        case 123 where flags.isEmpty: return model.back()
+        case 48 where flags.isEmpty: return model.complete()
         default: return false
         }
         return true

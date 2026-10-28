@@ -17,7 +17,7 @@ Logic that can be tested without the app goes in ReachKit. The app target holds 
 ```text
 HotkeyCenter (Carbon) ─┐
 Menu bar "Show Launcher" ┼─> LauncherController ──> LauncherPanel (NSPanel, non-activating)
-                         │        │ keys (↑ ↓ ↩ Esc ⌘1–9 ⌘,)        └─ LauncherView (SwiftUI)
+                         │        │ keys (↑ ↓ ← → Tab ↩ Esc ⌘1–9 ⌘,)        └─ LauncherView (SwiftUI)
                          │        v
                          └──> LauncherModel ── query ──> [ResultSource] ──> merge ──> results
                                    │                       apps, files        hints, Ranking + Learning,
@@ -40,7 +40,8 @@ protocol ResultSource: AnyObject {
 
 - Fast sources return results at once. Slow ones (Spotlight) return nil and call `later`; the model keeps the previous results on screen until every source has answered.
 - The model merges the answers: non-openable hints first, then openable results ranked by `Ranking.order` with Learning (at most 9), then `Fallbacks` when nothing openable came back.
-- Adapters: `AppIndex` (apps in the search scope), `FileSearch` (Spotlight), and `FakeSource` in the self-test.
+- Adapters: `AppIndex` (apps in the search scope), `FileSearch` (Spotlight), `PathBrowser` (folder listings for `~/` and `/`), and `FakeSource` in the self-test.
+- Browsing (`QueryKind.path`) is the one exception to the merge: the folder listing keeps its own order (A to Z, or best match), has no cap of 9 and no fallbacks, and the launcher switches to `BrowseView` (list, Preview, footer). → / Tab enter a folder and ← goes up, through `LauncherModel.enter`, `complete` and `back`.
 
 **To add a kind of result** (calculator, web search keyword, system command): write one class that conforms to `ResultSource`, add it to `LauncherModel.sources` in `init`, and add a self-test check. If it needs a keyword, add a case to `QueryKind` in ReachKit with a unit test.
 

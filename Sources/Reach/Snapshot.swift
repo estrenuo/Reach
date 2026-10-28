@@ -40,7 +40,7 @@ enum Snapshot {
             }
             if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
                 await model.launcherModel.apps.refreshNow()
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("path", "~/")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {

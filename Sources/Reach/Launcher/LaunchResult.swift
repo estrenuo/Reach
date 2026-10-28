@@ -17,6 +17,8 @@ struct LaunchResult: Identifiable, Equatable {
     var url: URL?
     /// Spoken by VoiceOver before the title, like "PDF document".
     var kindLabel: String = ""
+    /// A folder you can browse into with → (not a package like an app).
+    var isFolder = false
 
     var isOpenable: Bool { url != nil }
 }

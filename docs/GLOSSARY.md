@@ -19,5 +19,8 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Learning | The launcher remembering which result you opened for a query and ranking it first | knowledge, latching, AI |
 | Settings | The app's settings window | Preferences |
 | Menu bar icon | The app's icon in the macOS menu bar, with its menu | status item, tray icon |
+| Browse | Walk folders inside the launcher with → and ← after typing `~/` or `/` | navigate, explore, drill down |
+| Path | A query that starts with `~/` or `/`: a folder, plus an optional name to filter it | location, directory string |
+| Preview | The right side of the launcher while browsing: large icon, Created and Modified dates | inspector, detail pane (Quick Look is the full-size preview, S-012) |
 | Action panel | The list of things you can do with the selected result (M2) | context menu, actions view |
 | Reach | The app itself | Alfred, the launcher (that is the panel) |

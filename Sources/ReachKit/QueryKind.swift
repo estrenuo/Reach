@@ -7,11 +7,14 @@ public enum QueryKind: Equatable, Sendable {
     case normal(String)
     /// File search: `open <name>`, `'<name>` or ` <name>`. The name may be empty.
     case files(String)
+    /// Browsing: a query that starts with `~/` or `/`.
+    case path(PathQuery)
 
     /// The words after any keyword: what fallbacks search the web for.
+    /// Empty while browsing, so a path never offers web searches.
     public var text: String {
         switch self {
-        case .empty: ""
+        case .empty, .path: ""
         case .normal(let text), .files(let text): text
         }
     }
@@ -21,6 +24,7 @@ public enum QueryKind: Equatable, Sendable {
 
     public init(_ query: String) {
         if query.isEmpty { self = .empty; return }
+        if let path = PathQuery(query) { self = .path(path); return }
         for keyword in Self.fileKeywords where query.lowercased().hasPrefix(keyword) {
             self = .files(Self.trimmed(query.dropFirst(keyword.count)))
             return
