@@ -86,18 +86,23 @@ enum SelfTest {
         launcher.show()
         check("the launcher is a non-activating panel", launcher.panel.styleMask.contains(.nonactivatingPanel))
 
-        // S-002
+        // S-002 on the real app index: Safari ships with every Mac.
         lm.query = "safari"
         check("typing finds Safari first", lm.results.first?.title == "Safari", lm.results.first?.title ?? "none")
-        lm.query = "a"
-        check("at most nine results", lm.results.count == LauncherModel.maxResults, "\(lm.results.count)")
         let start = Date.now
         for query in ["s", "sy", "sys", "syst", "syse"] { lm.query = query }
         let perKey = Date.now.timeIntervalSince(start) / 5
         check("results update within 50 ms a keystroke", perKey < 0.05, String(format: "%.1f ms", perKey * 1000))
 
+        // From here a fake source with fixed apps, so the checks run the same on any Mac.
+        let realSources = lm.sources
+        let fakeApps = FakeSource(["Console", "Contacts", "ColorSync Utility", "Visual Studio Code", "Calculator",
+                                   "Calendar", "Chess", "Clock", "Compass", "Camera", "Cards", "Capture"])
+        lm.sources = [fakeApps]
+        lm.query = "c"
+        check("at most nine results", lm.results.count == LauncherModel.maxResults, "\(lm.results.count)")
+
         // S-003
-        lm.query = "a"
         _ = key(126, "")
         check("↑ on the first result does nothing", lm.selection == 0)
         for _ in 0..<12 { _ = key(125, "") }
@@ -106,37 +111,43 @@ enum SelfTest {
         check("⌘3 is handled", key(20, "3", command: true))
         check("⌘3 opens result 3 and hides", opened.last == third && !launcher.isVisible)
         launcher.show()
-        lm.query = "safari"
+        lm.query = "console"
         _ = key(36, "\r")
-        check("Return opens the selected result", opened.last?.lastPathComponent == "Safari.app" && !launcher.isVisible)
+        check("Return opens the selected result", opened.last == FakeSource.url("Console") && !launcher.isVisible)
         launcher.show()
         lm.opener = { _ in false }
-        lm.query = "safari"
+        lm.query = "console"
         _ = key(36, "\r")
         let error = lm.errors.values.first ?? ""
-        check("a failed open shows the error and stays open", launcher.isVisible && error.hasPrefix("Unable to open “Safari”"), error)
+        check("a failed open shows the error and stays open", launcher.isVisible && error.hasPrefix("Unable to open “Console”"), error)
         lm.opener = { opened.append($0); return true }
 
-        // S-004: open Visual Studio Code twice for "co", then it leads.
-        launcher.show()
+        // S-004: Console starts with "co"; open Visual Studio Code twice and it leads.
         lm.query = "co"
-        if let code = lm.results.firstIndex(where: { $0.title == "Visual Studio Code" }), code > 0 {
-            for _ in 0..<2 {
-                launcher.show()
-                lm.query = "co"
-                if let index = lm.results.firstIndex(where: { $0.title == "Visual Studio Code" }) { lm.open(at: index) }
-            }
+        check("without Learning the better text match leads", lm.results.first?.title == "Console")
+        for _ in 0..<2 {
             launcher.show()
             lm.query = "co"
-            check("after two picks the result comes first", lm.results.first?.title == "Visual Studio Code",
-                  lm.results.first?.title ?? "none")
-            let reopened = try? ModelContainer(for: Snippet.self, LearningEntry.self,
-                                               configurations: ModelConfiguration(url: Store.url))
-            let saved = (try? reopened?.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
-            check("Learning survives a restart", saved.contains { $0.query == "co" && $0.count == 2 })
-        } else {
-            check("Visual Studio Code is installed and not already first for \"co\"", false)
+            if let index = lm.results.firstIndex(where: { $0.title == "Visual Studio Code" }) { lm.open(at: index) }
         }
+        launcher.show()
+        lm.query = "co"
+        check("after two picks the result comes first", lm.results.first?.title == "Visual Studio Code",
+              lm.results.first?.title ?? "none")
+        let reopened = try? ModelContainer(for: Snippet.self, LearningEntry.self,
+                                           configurations: ModelConfiguration(url: Store.url))
+        let saved = (try? reopened?.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
+        check("Learning survives a restart", saved.contains { $0.query == "co" && $0.count == 2 })
+
+        // Result sources: a slow one keeps the previous results up until it answers.
+        let shown = lm.results.map(\.title)
+        lm.sources = [fakeApps, FakeSource(["Conveyor"], delay: .milliseconds(300))]
+        lm.query = "con"
+        check("a slow source keeps the previous results", lm.results.map(\.title) == shown)
+        try? await Task.sleep(for: .milliseconds(500))
+        check("then shows every source's answer", lm.results.contains { $0.title == "Conveyor" }
+              && lm.results.contains { $0.title == "Console" })
+        lm.sources = realSources
 
         // S-005
         lm.query = "open "
@@ -191,5 +202,37 @@ enum SelfTest {
         exitCode = code
         for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
         NSApp.terminate(nil)
+    }
+}
+
+/// A source with fixed titles and optional delay, so launcher checks do not
+/// depend on the apps on this Mac and slow sources can be tested.
+private final class FakeSource: ResultSource {
+    private let titles: [String]
+    private let delay: Duration?
+
+    init(_ titles: [String], delay: Duration? = nil) {
+        self.titles = titles
+        self.delay = delay
+    }
+
+    static func url(_ title: String) -> URL {
+        URL(string: "reach-test://app/\(title.replacingOccurrences(of: " ", with: "-"))")!
+    }
+
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
+        guard case .normal(let text) = query else { return [] }
+        let found = titles.compactMap { title in
+            Matcher.score(query: text, title: title).map {
+                Scored(result: LaunchResult(id: "fake:\(title)", title: title, subtitle: "Test app",
+                                            icon: .symbol("app"), url: Self.url(title)), score: $0)
+            }
+        }
+        guard let delay else { return found }
+        Task {
+            try? await Task.sleep(for: delay)
+            later(found)
+        }
+        return nil
     }
 }
