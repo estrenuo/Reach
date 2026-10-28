@@ -59,9 +59,15 @@ enum SelfTest {
         var opened: [URL] = []
         lm.opener = { opened.append($0); return true }
         await lm.apps.refreshNow()
+        // Like the real keyboard: arrow keys carry .numericPad and .function.
+        func flags(_ code: UInt16, command: Bool) -> NSEvent.ModifierFlags {
+            var flags: NSEvent.ModifierFlags = command ? .command : []
+            if (123...126).contains(code) { flags.formUnion([.numericPad, .function]) }
+            return flags
+        }
         func key(_ code: UInt16, _ characters: String, command: Bool = false) -> Bool {
             guard let event = NSEvent.keyEvent(
-                with: .keyDown, location: .zero, modifierFlags: command ? .command : [],
+                with: .keyDown, location: .zero, modifierFlags: flags(code, command: command),
                 timestamp: 0, windowNumber: launcher.panel.windowNumber, context: nil,
                 characters: characters, charactersIgnoringModifiers: characters,
                 isARepeat: false, keyCode: code) else { return false }

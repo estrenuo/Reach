@@ -104,7 +104,10 @@ final class LauncherController {
     /// True when the key was used. Keys typed into an input method pass through.
     func handle(_ event: NSEvent) -> Bool {
         if let editor = panel.firstResponder as? NSTextView, editor.hasMarkedText() { return false }
+        // Arrow keys always carry .numericPad and .function; only the keys
+        // people hold down count as modifiers.
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            .subtracting([.numericPad, .function, .capsLock])
         if flags == .command, let key = event.charactersIgnoringModifiers {
             if key == "," {
                 hide()
