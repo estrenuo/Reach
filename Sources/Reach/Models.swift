@@ -82,6 +82,7 @@ final class AppModel {
         launcherModel.learning = learning
         launcherModel.onOpened = { query, result in learning.record(query: query, resultID: result.id) }
         HotkeyCenter.shared.onPress = { controller.toggle() }
+        HotkeyCenter.shared.onSelection = { controller.showSelection() }
         HotkeyCenter.shared.start(register: !Self.isTestRun)
         launcherModel.apps.refreshIfStale()
     }

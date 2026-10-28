@@ -176,7 +176,16 @@ Depends: S-009
 Acceptance:
 - [self] A Finder selection gives file actions; selected text gives text actions (Large Type, web search, copy as plain text).
 - [manual] Works in Finder, Safari and TextEdit.
-Status: todo
+UX:
+- Flow: select files in Finder or text in any app -> the selection hotkey -> the launcher opens straight on the action panel for it -> type to filter, ↩ or ⌘1–9 runs -> the launcher hides; Esc clears the filter, then hides the launcher (there are no results behind it)
+- Hotkey: ⌃⌥⌘\ while Alfred still owns ⌥⌘\ (the same rule as ⌃⌥Space); shown in Settings > Actions
+- Surface: the action panel of S-009, with the selection as its header
+- Files: the first selected file gets the file actions; the header says "and 2 more" for the rest (acting on all of them is S-013)
+- Text actions: Show in Large Type; Copy as Plain Text; one "Search Google for “…”" row per fallback engine
+- States: nothing selected: the launcher with "Select files in Finder or text in any app, then press ⌃⌥⌘\"; no Accessibility permission: the row "Allow Reach to read selected text" that opens System Settings > Privacy & Security > Accessibility; Large Type: a dark rounded card over the screen, closed by Esc or a click
+- Words: header for text "Selected text in Safari", Preview shows the text itself
+- Access: text actions read like file actions; Large Type is one element "Large Type, <text>"
+Status: done
 
 ### S-012 Quick Look the selected result
 As the user, I press ⇧ (or ⌘Y) to preview the selected file.

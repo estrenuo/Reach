@@ -25,8 +25,21 @@ struct ActionPanelView: View {
             HStack(alignment: .top, spacing: Space.md) {
                 list
                     .frame(width: LauncherLayout.listWidth)
-                PreviewPane(result: panel.target)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if let text = panel.text {
+                        // Selected text previews as itself.
+                        ScrollView {
+                            Text(text)
+                                .font(.body)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .accessibilityLabel("Preview, \(text)")
+                    } else {
+                        PreviewPane(result: panel.target)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(height: CGFloat(LauncherLayout.browseRows) * LauncherLayout.compactRowHeight)
             Text(panel.footer)
@@ -39,17 +52,25 @@ struct ActionPanelView: View {
         }
     }
 
+    private var isSymbol: Bool {
+        if case .symbol = panel.target.icon { true } else { false }
+    }
+
     private var header: some View {
         HStack(spacing: Space.md) {
             IconCache.image(for: panel.target.icon)
                 .resizable()
                 .scaledToFit()
+                // A symbol (selected text) is drawn smaller than a file icon, inside the same square.
+                .frame(width: isSymbol ? LauncherLayout.iconSize : LauncherLayout.markSize,
+                       height: isSymbol ? LauncherLayout.iconSize : LauncherLayout.markSize)
+                .foregroundStyle(Palette.accentText)
                 .frame(width: LauncherLayout.markSize, height: LauncherLayout.markSize)
             VStack(alignment: .leading, spacing: 0) {
                 Text(panel.target.title)
                     .font(.title2)
                     .lineLimit(1)
-                Text((panel.url.path as NSString).abbreviatingWithTildeInPath)
+                Text(panel.detail)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -59,7 +80,7 @@ struct ActionPanelView: View {
         .padding(.horizontal, Space.sm)
         .frame(height: LauncherLayout.markSize)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Actions for \(panel.target.title), \(panel.url.path)")
+        .accessibilityLabel("Actions for \(panel.target.title), \(panel.detail)")
     }
 
     private var list: some View {

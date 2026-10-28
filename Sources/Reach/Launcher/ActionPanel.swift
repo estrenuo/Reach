@@ -5,18 +5,29 @@ import ReachKit
 /// `log show --last 10m --predicate 'subsystem == "com.sanderrobijns.reach"'`
 let actionLog = Logger(subsystem: "com.sanderrobijns.reach", category: "actions")
 
-/// The action panel for one file, folder or app: its actions, filtered by
-/// what is typed, or the apps that can open it after Open With….
+/// The action panel for one file, folder or app, or for selected text: its
+/// actions, filtered by what is typed, or the apps that can open it after Open With….
 @Observable
 final class ActionPanel {
     enum Item: Equatable {
         case action(FileAction)
         /// Open the target with this app (from Open With…).
         case app(URL)
+        /// An action on selected text, with the text.
+        case text(TextAction, String)
+        /// A web search for selected text.
+        case web(URL)
     }
 
     let target: LaunchResult
-    let url: URL
+    /// The file, folder or app; nil for selected text.
+    let url: URL?
+    /// The selected text; nil for a file.
+    let text: String?
+    /// Opened by the selection hotkey: there are no results to go back to.
+    var fromSelection = false
+    /// More files were selected; for now the actions apply to the first (S-013 acts on all).
+    var others = 0
     var filter = "" {
         didSet { if filter != oldValue { refresh() } }
     }
@@ -31,7 +42,28 @@ final class ActionPanel {
     init(target: LaunchResult, url: URL) {
         self.target = target
         self.url = url
+        text = nil
         refresh()
+    }
+
+    /// The panel for selected text, from the app called `source`.
+    init(text: String, source: String) {
+        target = LaunchResult(id: "selection:text", title: TextAction.headline(text),
+                              subtitle: "Selected text in \(source)", icon: .symbol("text.quote"), url: nil,
+                              kindLabel: "Selected text")
+        url = nil
+        self.text = text
+        fromSelection = true
+        refresh()
+    }
+
+    /// The path, or where the text came from, for the header.
+    var detail: String {
+        if let url {
+            let path = (url.path as NSString).abbreviatingWithTildeInPath
+            return others > 0 ? "\(path) and \(others) more" : path
+        }
+        return target.subtitle
     }
 
     var selectedItem: Item? { items.indices.contains(selection) ? items[selection] : nil }
@@ -42,6 +74,8 @@ final class ActionPanel {
         switch selectedItem {
         case .action(let action): return action.summary
         case .app(let app): return "Open “\(target.title)” with \(Self.appName(app))"
+        case .text(let action, _): return action.summary
+        case .web: return "Open the search in your browser"
         case nil: return ""
         }
     }
@@ -73,7 +107,25 @@ final class ActionPanel {
 
     private func refresh() {
         failure = nil
-        if choosingApp {
+        if let text {
+            let actions = TextAction.filtered(by: filter)
+            // Short titles, the whole text in the search.
+            let short = TextAction.headline(text, limit: 14)
+            let searches = Fallbacks.results(for: text).map { search in
+                var row = search
+                row.title = search.title.replacingOccurrences(of: "“\(text)”", with: "“\(short)”")
+                return row
+            }.filter { search in
+                filter.isEmpty || Matcher.score(query: filter, title: search.title) != nil
+            }
+            items = actions.map { .text($0, text) } + searches.compactMap { $0.url.map { .web($0) } }
+            rows = actions.map { action in
+                LaunchResult(id: "text:\(action.rawValue)", title: action.title, subtitle: "",
+                             icon: .symbol(action.symbol), url: URL(string: "reach-action://\(action.rawValue)"),
+                             kindLabel: "Action")
+            } + searches
+            if rows.isEmpty { rows = [hint("No actions match “\(filter)”")] }
+        } else if choosingApp, let url {
             let apps = NSWorkspace.shared.urlsForApplications(toOpen: url).filter { $0 != url }
             let text = filter.trimmingCharacters(in: .whitespaces)
             let matching = text.isEmpty ? apps
@@ -117,10 +169,29 @@ enum ActionRunner {
     /// Why the last action failed, when there is a fix to tell people about.
     static var problem: String?
 
-    static func run(_ item: ActionPanel.Item, on url: URL) -> Bool {
+    static func run(_ item: ActionPanel.Item, on url: URL?) -> Bool {
         problem = nil
         let workspace = NSWorkspace.shared
         switch item {
+        case .text(.largeType, let text):
+            LargeType.shared.show(text)
+            return true
+        case .text(.copyPlainText, let text):
+            NSPasteboard.general.clearContents()
+            return NSPasteboard.general.setString(text, forType: .string)
+        case .web(let search):
+            return workspace.open(search)
+        case .app, .action:
+            guard let url else { return false }
+            return run(item, onFile: url)
+        }
+    }
+
+    private static func run(_ item: ActionPanel.Item, onFile url: URL) -> Bool {
+        let workspace = NSWorkspace.shared
+        switch item {
+        case .text, .web:
+            return false
         case .app(let app):
             workspace.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
             return true

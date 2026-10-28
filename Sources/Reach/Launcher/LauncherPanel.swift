@@ -60,6 +60,16 @@ final class LauncherController {
         installKeys()
     }
 
+    /// The selection hotkey: reads the selection while the other app is still
+    /// in front, then shows the action panel for it.
+    func showSelection() {
+        Task { @MainActor in
+            let selection = await model.readSelection()
+            show()
+            model.showActions(for: selection)
+        }
+    }
+
     func hide() {
         guard isVisible else { return }
         removeKeys()

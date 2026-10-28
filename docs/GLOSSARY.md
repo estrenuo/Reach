@@ -22,6 +22,9 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Browse | Walk folders inside the launcher with → and ← after typing `~/` or `/` | navigate, explore, drill down |
 | Path | A query that starts with `~/` or `/`: a folder, plus an optional name to filter it | location, directory string |
 | Preview | The right side of the launcher while browsing: large icon, Created and Modified dates | inspector, detail pane (Quick Look is the full-size preview, S-012) |
+| Selection | The files selected in Finder, or the text selected in any app, at the moment you press the selection hotkey | highlight, current item |
+| Selection hotkey | The global key combination (⌃⌥⌘\\) that opens the action panel for the selection | universal action hotkey |
+| Large Type | Text shown in huge letters on a dark card over the screen | big text, fullscreen text |
 | Action panel | The list of actions for the selected result, opened with → | context menu, actions view |
 | Action | One thing the action panel can do with a result: Reveal in Finder, Copy Path, Move to Trash | command, operation |
 | Move to Trash | Put a file in the Trash, where it can be put back | Delete (that cannot be undone) |

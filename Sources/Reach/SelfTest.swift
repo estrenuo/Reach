@@ -49,7 +49,7 @@ enum SelfTest {
         }
     }
 
-    /// S-001 to S-010: the launcher, driven with real key events.
+    /// S-001 to S-011: the launcher, driven with real key events.
     private static func checkLauncher(model: AppModel) async {
         guard let launcher = model.launcher else {
             check("the launcher exists", false)
@@ -299,6 +299,49 @@ enum SelfTest {
         actionSettings.off = []
         check("test runs leave the saved action settings alone",
               UserDefaults.standard.stringArray(forKey: "actions.off") == savedBefore)
+
+        // S-011: the selection hotkey, with a fake selection.
+        lm.perform = { item, _ in performed.append(item); return true }
+        func pick(_ selection: Selection) { lm.readSelection = { selection } }
+        pick(.files([URL(fileURLWithPath: root + "notes.txt")]))
+        HotkeyCenter.shared.onSelection()
+        try? await Task.sleep(for: .milliseconds(200))
+        check("a Finder selection gives file actions", launcher.isVisible && lm.actions?.target.title == "notes.txt"
+              && lm.actions?.rows.count == FileAction.allCases.count, lm.actions?.target.title ?? "no panel")
+        _ = key(53, "\u{1b}")
+        check("Esc on a selection panel hides the launcher", !launcher.isVisible)
+        pick(.text("hello world", source: "TextEdit"))
+        HotkeyCenter.shared.onSelection()
+        try? await Task.sleep(for: .milliseconds(200))
+        let textRows = lm.actions?.rows.map(\.title) ?? []
+        check("selected text gives text actions", textRows.starts(with: ["Show in Large Type", "Copy as Plain Text"])
+              && textRows.contains("Search Google for “hello world”") && lm.actions?.detail == "Selected text in TextEdit",
+              textRows.joined(separator: ", "))
+        lm.actions?.filter = "plain"
+        _ = key(36, "\r")
+        check("Copy as Plain Text runs on the text", performed.last == .text(.copyPlainText, "hello world") && !launcher.isVisible)
+        HotkeyCenter.shared.onSelection()
+        try? await Task.sleep(for: .milliseconds(200))
+        lm.actions?.filter = "google"
+        _ = key(36, "\r")
+        check("a web search opens the search URL", opened.last?.absoluteString.hasSuffix("q=hello%20world") == true)
+        pick(.nothing)
+        HotkeyCenter.shared.onSelection()
+        try? await Task.sleep(for: .milliseconds(200))
+        check("nothing selected says what to do", lm.actions == nil && lm.results.first?.title == LauncherModel.nothingSelected)
+        pick(.noAccess)
+        HotkeyCenter.shared.onSelection()
+        try? await Task.sleep(for: .milliseconds(200))
+        check("without Accessibility it offers System Settings", lm.results.first?.title == LauncherModel.allowAccess
+              && lm.results.first?.url?.scheme == "x-apple.systempreferences")
+        launcher.hide()
+        // Large Type, the real window: Esc closes it.
+        LargeType.shared.show("Large")
+        try? await Task.sleep(for: .milliseconds(200))
+        check("Large Type shows the text", LargeType.shared.isVisible && LargeType.shared.text == "Large")
+        LargeType.shared.hide()
+        check("and closes", !LargeType.shared.isVisible)
+        pick(.nothing)
 
         // The whole path through NSApp, like the keyboard: focus must reach
         // the filter field, so typed letters filter and ↩ runs the match.

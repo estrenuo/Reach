@@ -14,6 +14,13 @@ final class HotkeyCenter {
     /// False when the system refused the combination (another app owns it).
     private(set) var isRegistered = false
     var onPress: () -> Void = {}
+    /// The selection hotkey (S-011): the action panel for the macOS selection.
+    var onSelection: () -> Void = {}
+    /// False when another app owns the selection hotkey.
+    private(set) var selectionRegistered = false
+    private var selectionRef: EventHotKeyRef?
+    private static let launcherID: UInt32 = 1
+    private static let selectionID: UInt32 = 3
 
     private var ref: EventHotKeyRef?
     private var handlerInstalled = false
@@ -38,7 +45,10 @@ final class HotkeyCenter {
     /// Installs the event handler; registers the saved hotkey unless `register` is false.
     func start(register: Bool = true) {
         installHandler()
-        if register { isRegistered = self.register(combo) }
+        if register {
+            isRegistered = self.register(combo)
+            selectionRegistered = registerSelection()
+        }
     }
 
     /// Switches to `new`. When the system refuses it, the old hotkey stays and this returns false.
@@ -74,8 +84,19 @@ final class HotkeyCenter {
         return true
     }
 
+    private func registerSelection() -> Bool {
+        let combo = KeyCombo.selection
+        let id = EventHotKeyID(signature: Self.signature, id: Self.selectionID)
+        return RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), 0, &selectionRef) == noErr
+    }
+
+    /// Which hotkey was pressed: the launcher's or the selection's.
+    fileprivate func pressed(_ id: UInt32) {
+        id == Self.selectionID ? onSelection() : onPress()
+    }
+
     private func register(_ combo: KeyCombo) -> Bool {
-        let id = EventHotKeyID(signature: Self.signature, id: 1)
+        let id = EventHotKeyID(signature: Self.signature, id: Self.launcherID)
         var newRef: EventHotKeyRef?
         let status = RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), 0, &newRef)
         guard status == noErr else { return false }
@@ -93,8 +114,12 @@ final class HotkeyCenter {
         guard !handlerInstalled else { return }
         handlerInstalled = true
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
-            Task { @MainActor in HotkeyCenter.shared.onPress() }
+        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ in
+            var hotkey = EventHotKeyID()
+            GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+                              nil, MemoryLayout<EventHotKeyID>.size, nil, &hotkey)
+            let id = hotkey.id
+            Task { @MainActor in HotkeyCenter.shared.pressed(id) }
             return noErr
         }, 1, &spec, nil, nil)
     }

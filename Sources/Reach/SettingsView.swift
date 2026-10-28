@@ -106,6 +106,16 @@ struct ActionsSettings: View {
             Text("Actions you turn off no longer show in the action panel. Open With… shows only for files and apps.")
                 .foregroundStyle(.secondary)
         }
+        Section("Selection") {
+            LabeledContent {
+                Text(HotkeyCenter.shared.selectionRegistered || AppModel.isTestRun
+                     ? KeyCombo.selection.display(key: "\\") : "In use by another app")
+                    .foregroundStyle(.secondary)
+            } label: {
+                Text("Act on the selection")
+                Text("Select files in Finder or text in any app, then press this to see its actions.")
+            }
+        }
     }
 }
 

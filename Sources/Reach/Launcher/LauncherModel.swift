@@ -40,7 +40,9 @@ final class LauncherModel {
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
     @ObservationIgnored var opener: @MainActor (URL) -> Bool = { LauncherModel.openInWorkspace($0) }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
-    @ObservationIgnored var perform: @MainActor (ActionPanel.Item, URL) -> Bool = { ActionRunner.run($0, on: $1) }
+    @ObservationIgnored var perform: @MainActor (ActionPanel.Item, URL?) -> Bool = { ActionRunner.run($0, on: $1) }
+    /// Reads the macOS selection for the selection hotkey. The self-test swaps in a fake.
+    @ObservationIgnored var readSelection: @MainActor () async -> Selection = { await SelectionReader.read() }
     @ObservationIgnored var onHide: @MainActor () -> Void = {}
     @ObservationIgnored var onResultsChange: @MainActor () -> Void = {}
     /// Called after a result opened, with the query that found it (Learning, S-004).
@@ -182,6 +184,37 @@ final class LauncherModel {
         return true
     }
 
+    /// The selection hotkey: the action panel for the selected files or text,
+    /// or a row that says what to do when there is nothing to act on.
+    func showActions(for selection: Selection) {
+        actions = nil
+        switch selection {
+        case .files(let urls):
+            guard let url = urls.first else { return }
+            let isFolder = ActionRunner.folder(of: url) == url
+            let result = LaunchResult(id: url.path, title: FileManager.default.displayName(atPath: url.path), subtitle: "",
+                                      icon: .file(url.path), url: url, kindLabel: isFolder ? "Folder" : "File",
+                                      isFolder: isFolder)
+            let panel = ActionPanel(target: result, url: url)
+            panel.fromSelection = true
+            panel.others = urls.count - 1
+            actions = panel
+        case .text(let text, let source):
+            actions = ActionPanel(text: text, source: source)
+        case .nothing:
+            setResults([LaunchResult(id: "hint:selection", title: Self.nothingSelected, subtitle: "",
+                                     icon: .symbol("selection.pin.in.out"), url: nil)])
+        case .noAccess:
+            setResults([LaunchResult(id: "hint:access", title: Self.allowAccess,
+                                     subtitle: "System Settings > Privacy & Security > Accessibility",
+                                     icon: .symbol("lock"), url: SelectionReader.accessibilitySettings)])
+        }
+        onResultsChange()
+    }
+
+    static let nothingSelected = "Select files in Finder or text in any app, then press ⌃⌥⌘\\"
+    static let allowAccess = "Allow Reach to read selected text"
+
     /// Back to the results, with the query as it was.
     func closeActions() {
         actions = nil
@@ -191,7 +224,9 @@ final class LauncherModel {
     /// Esc in the action panel: clears the filter, leaves Open With…, then closes the panel.
     func cancelActions() {
         guard let actions else { return }
-        if !actions.back() { closeActions() }
+        guard !actions.back() else { return }
+        // From the selection hotkey there are no results behind the panel.
+        if actions.fromSelection { onHide() } else { closeActions() }
     }
 
     /// Runs action `index` of the panel. Most actions hide the launcher;
@@ -201,20 +236,23 @@ final class LauncherModel {
         panel.select(index)
         let item = panel.items[index]
         let target = panel.target
-        actionLog.notice("run \(String(describing: item), privacy: .public) on \(panel.url.path, privacy: .public), filter '\(panel.filter, privacy: .public)'")
+        actionLog.notice("run \(String(describing: item), privacy: .public) on \(panel.detail, privacy: .public), filter '\(panel.filter, privacy: .public)'")
         switch item {
         case .action(.openWith):
             panel.chooseApp()
             return
         case .action(.browse):
-            let folder = ActionRunner.folder(of: panel.url).path
+            guard let url = panel.url else { return }
+            let folder = ActionRunner.folder(of: url).path
             actions = nil
             let shown = (folder as NSString).abbreviatingWithTildeInPath
             rewriteQuery(shown.hasSuffix("/") ? shown : shown + "/")
             onResultsChange()
             return
         case .action(.open):
-            guard opener(panel.url) else { panel.failure = "Unable to open “\(target.title)”."; return }
+            guard let url = panel.url, opener(url) else { panel.failure = "Unable to open “\(target.title)”."; return }
+        case .web(let search):
+            guard opener(search) else { panel.failure = "Unable to open the search."; return }
         default:
             guard perform(item, panel.url) else {
                 let name = panel.rows.indices.contains(index) ? panel.rows[index].title : "the action"
