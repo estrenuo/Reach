@@ -54,3 +54,7 @@ Proposal: do it inside S-014, where the settings exist; with the result-source s
 - Splitting `SelfTest.swift` (195 lines): readable as one file per milestone section; split when it passes 400.
 - A protocol around `HotkeyCenter`: one adapter (Carbon) and the self-test already drives it with test combinations; a seam would be hypothetical.
 - Moving `Learning` into ReachKit: its logic (`Ranking`) is already there; what remains is SwiftData glue.
+
+## Outcome
+
+Done on 2026-10-28 in three commits (8c9673b, ee8e710, and the fake-source commit), plus ARCHITECTURE.md. Same behaviour: unit tests and self-test pass before and after, launcher snapshots within 0.11% of the baseline. The self-test went from 34 to 37 checks and no longer needs Visual Studio Code.

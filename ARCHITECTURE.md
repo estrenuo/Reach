@@ -1,0 +1,57 @@
+# Architecture — Reach
+
+A keyboard launcher: an agent app (no Dock icon) with a floating launcher panel, a menu bar icon and a Settings window. See `docs/BRIEF.md` for what it does and `CLAUDE.md` for how to build and check it.
+
+## Targets
+
+| Target | Holds | Depends on |
+| --- | --- | --- |
+| `ReachKit` | Pure logic, no AppKit or SwiftUI: `Matcher` (text scores), `QueryKind` (keywords), `Ranking` (text score plus Learning), `WebSearchURL`, `KeyCombo`, `SnippetName` | Foundation |
+| `Reach` | The app: panel, views, system hooks, SwiftData | ReachKit |
+| `ReachKitTests` | Unit tests for ReachKit | ReachKit |
+
+Logic that can be tested without the app goes in ReachKit. The app target holds the self-test (`SelfTest.swift`) and snapshot mode (`Snapshot.swift`); both refuse to run without `APP_STORE` in /tmp.
+
+## The launcher
+
+```text
+HotkeyCenter (Carbon) ─┐
+Menu bar "Show Launcher" ┼─> LauncherController ──> LauncherPanel (NSPanel, non-activating)
+                         │        │ keys (↑ ↓ ↩ Esc ⌘1–9 ⌘,)        └─ LauncherView (SwiftUI)
+                         │        v
+                         └──> LauncherModel ── query ──> [ResultSource] ──> merge ──> results
+                                   │                       apps, files        hints, Ranking + Learning,
+                                   └─ opener (NSWorkspace; a recorder in the self-test)   fallbacks
+```
+
+- `LauncherController` (in `LauncherPanel.swift`) shows, hides, sizes and places the panel, and turns key events into model calls. The panel never activates Reach, so the previous app keeps focus.
+- `LauncherModel` owns the query, the results and the selection. It knows no source by name.
+
+## Seam: ResultSource
+
+`Launcher/ResultSource.swift`. Every kind of result is a source:
+
+```swift
+protocol ResultSource: AnyObject {
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]?
+    func cancel()
+}
+```
+
+- Fast sources return results at once. Slow ones (Spotlight) return nil and call `later`; the model keeps the previous results on screen until every source has answered.
+- The model merges the answers: non-openable hints first, then openable results ranked by `Ranking.order` with Learning (at most 9), then `Fallbacks` when nothing openable came back.
+- Adapters: `AppIndex` (apps in the search scope), `FileSearch` (Spotlight), and `FakeSource` in the self-test.
+
+**To add a kind of result** (calculator, web search keyword, system command): write one class that conforms to `ResultSource`, add it to `LauncherModel.sources` in `init`, and add a self-test check. If it needs a keyword, add a case to `QueryKind` in ReachKit with a unit test.
+
+## Data
+
+- SwiftData store at `~/Library/Application Support/Reach/Reach.store`: `Snippet`, `LearningEntry`. New fields need a default value so existing stores keep loading.
+- Settings (hotkey, open at login, accent) live in `UserDefaults` or with the system (`SMAppService`), not in the store.
+- Results are built per query and never stored.
+
+## Decisions
+
+- Global hotkey through Carbon `RegisterEventHotKey`: no permission needed.
+- File search uses Spotlight word starts (`"name*"cdw`), not substring matching: a leading wildcard skips the index and missed the 200 ms target.
+- Learning: 150 points a pick, at most five picks, halved every 30 days; capped below the exact-title score so typing a full name always wins.
