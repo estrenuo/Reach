@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 
 /// The Settings window (Command-Comma). One tab per topic, at most about
@@ -57,8 +58,45 @@ struct GeneralSettings: View {
     @AppStorage("confirmDelete") private var confirmDelete = true
 
     var body: some View {
+        Section("Launcher") {
+            HotkeyRecorder()
+            LoginItemToggle()
+        }
+        Section("Permissions") {
+            LabeledContent {
+                Button("Grant Permissions…") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                }
+            } label: {
+                Text("Accessibility")
+                Text("Needed later for pasting and snippet expansion.")
+            }
+        }
         Section("Snippets") {
             Toggle("Ask before deleting snippets", isOn: $confirmDelete)
         }
+    }
+}
+
+/// Open at login, through a login item the user can also see in System Settings.
+struct LoginItemToggle: View {
+    @State private var enabled = SMAppService.mainApp.status == .enabled
+    @State private var error: String?
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { enabled }, set: change)) {
+            Text("Open at login")
+            if let error { Text(error).foregroundStyle(.red) }
+        }
+    }
+
+    private func change(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            error = nil
+        } catch {
+            self.error = "Could not change the login item: \(error.localizedDescription)"
+        }
+        enabled = SMAppService.mainApp.status == .enabled
     }
 }

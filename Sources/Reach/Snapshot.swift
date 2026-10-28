@@ -7,7 +7,7 @@ import SwiftUI
 /// writes <page>-light.png and <page>-dark.png for every sidebar page, and
 /// settings-<tab>-light.png and settings-<tab>-dark.png for every Settings tab, then quits.
 /// Each PNG gets a <page>-<mode>-layout.json with the grid probes (tools/check-layout.swift).
-/// APP_SNAPSHOT_PAGES=all,starred limits the pages. Add "settings" to include Settings.
+/// APP_SNAPSHOT_PAGES=all,starred limits the pages. Add "settings" or "launcher" to include those.
 /// Add APP_ACCENT=<id> to see the pages in another accent.
 enum Snapshot {
     static func runIfRequested(model: AppModel, openSettings: OpenSettingsAction) {
@@ -38,6 +38,20 @@ enum Snapshot {
                     capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
                 }
             }
+            if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
+                await model.launcherModel.apps.refreshNow()
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing")]
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    for (name, query) in states {
+                        launcher.show()
+                        model.launcherModel.query = query
+                        try? await Task.sleep(for: .seconds(1))
+                        capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                        launcher.hide()
+                    }
+                }
+            }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
                 openSettings()
@@ -47,7 +61,8 @@ enum Snapshot {
                     for tab in SettingsTab.allCases {
                         model.settingsTab = tab
                         try? await Task.sleep(for: .seconds(0.8))
-                        let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet }
+                        // Only titled windows: the menu bar icon and the launcher have windows too.
+                        let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
                     }
                 }
@@ -85,10 +100,12 @@ enum Snapshot {
             shot.arguments = ["-x", "-o", "-l", String(window.windowNumber), path]
             try? shot.run()
             shot.waitUntilExit()
-            if FileManager.default.fileExists(atPath: path) {
+            // A locked screen gives a tiny blank image instead of the window.
+            if let rep = NSImageRep(contentsOfFile: path), CGFloat(rep.pixelsWide) >= window.frame.width {
                 print("SNAPSHOT \(path)")
                 return
             }
+            try? FileManager.default.removeItem(atPath: path)
             Thread.sleep(forTimeInterval: 0.5)
         }
         guard let view = window.contentView?.superview ?? window.contentView,
@@ -96,7 +113,7 @@ enum Snapshot {
         view.cacheDisplay(in: view.bounds, to: rep)
         if let data = rep.representation(using: .png, properties: [:]) {
             try? data.write(to: URL(fileURLWithPath: path))
-            print("SNAPSHOT \(path) (fallback: no Screen Recording permission, sidebars and glass are blank)")
+            print("SNAPSHOT \(path) (fallback: no Screen Recording permission or a locked screen, sidebars and glass are blank)")
         }
     }
 }

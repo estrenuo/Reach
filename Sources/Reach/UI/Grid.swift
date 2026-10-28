@@ -15,6 +15,18 @@ enum Space {
     static let margin: CGFloat = 20
 }
 
+/// Corner radii. Rows sit inside the panel, so their radius is the panel's minus the inset.
+enum Radius {
+    static let panel: CGFloat = 24
+    static let row: CGFloat = 12
+    static let field: CGFloat = 12
+}
+
+/// Animation durations, in seconds.
+enum Motion {
+    static let appear: Double = 0.12
+}
+
 extension View {
     /// Marks an area (a page, a card, a sheet). Probes inside it must sit on
     /// the 4 pt grid and at least `inset` from its edges.

@@ -23,7 +23,7 @@ UX:
 - States: empty = search field only, no hint text in the results area; there is no loading state (the bar shows before any search runs)
 - Words: search field placeholder "Search"; no title bar
 - Access: VoiceOver reads "Launcher, search field"; Reduce Motion uses a fade instead of a scale-in
-Status: todo
+Status: done
 
 ### S-002 See ranked app results while typing
 As the user, I type part of an app name and see up to 9 matching apps, the best match selected.
@@ -39,7 +39,7 @@ UX:
 - States: no results → fallbacks (S-006); too much → 9 visible rows, then scroll with a thin indicator; long titles truncate in the middle with the full title in the tooltip
 - Words: subtitle of an app result is its path; shortcut column "↩" on the selected result, "⌘2"…"⌘9" on the others
 - Access: the selection is shown by fill and by the ↩ glyph (not by colour alone); VoiceOver reads "title, subtitle, result 1 of 9"
-Status: todo
+Status: done
 
 ### S-003 Open a result with Return or ⌘number
 As the user, I press ↩ to open the selected result, ↑/↓ to move the selection, or ⌘2–⌘9 to open a row directly.
@@ -54,7 +54,7 @@ UX:
 - States: done = the launcher hides at once; error "Unable to open “Name”. It may have been moved or deleted." inline as the selected result's subtitle, launcher stays open
 - Words: no buttons; tooltip on a result shows its full path
 - Access: keyboard-only flow complete; VoiceOver action "Open"
-Status: todo
+Status: done
 
 ### S-004 Results learn from what I pick
 As the user, when I type the same letters again, the item I chose last time comes first.
@@ -69,7 +69,7 @@ UX:
 - States: first run = plain text-match order
 - Words: the feature is called "Learning" everywhere
 - Access: n/a
-Status: todo
+Status: doing
 
 ### S-005 Find files by name with a keyword
 As the user, I type `open <name>` (or `'` / space prefix) and see matching files and folders, most recently used first.
@@ -85,7 +85,7 @@ UX:
 - States: keyword typed with no name yet → one hint result "Type a file name"; no matches → "No files match “query”" as a non-openable result plus the fallbacks; slow Spotlight (> 0.5 s) → keep the previous results until new ones arrive
 - Words: keyword names "open" and `'`; hint result "Type a file name"
 - Access: the file kind is in the VoiceOver label ("PDF document, report.pdf, in Documents")
-Status: todo
+Status: done
 
 ### S-006 Search the web when nothing matches
 As the user, when my query has no results I see "Search Google / Amazon / Wikipedia for '…'" and ↩ opens the browser.
@@ -100,7 +100,7 @@ UX:
 - States: shown only when nothing else matches
 - Words: "Search Google for “query”" (curly quotes, engine name first)
 - Access: the engine icon has a text alternative ("Google")
-Status: todo
+Status: done
 
 ### S-007 Change the launcher hotkey in Settings
 As the user, I open Settings from the menu bar icon, record a new hotkey on the General page, and it works immediately.
@@ -116,7 +116,7 @@ UX:
 - States: recording = field shows "Press a key combination"; conflict = inline error "This key combination is used by another app. Choose a different one." under the field
 - Words: menu "Show Launcher", "Settings…", "Quit"; labels "Launcher hotkey", "Open at login"; button "Grant Permissions…"
 - Access: the recorder field reads "Launcher hotkey, Control Option Space"; the whole page works with Tab
-Status: todo
+Status: done
 
 ---
 
