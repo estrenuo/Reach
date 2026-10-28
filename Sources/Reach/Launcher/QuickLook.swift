@@ -43,8 +43,11 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
             return true
         }
         guard let file = Self.file(for: result), let panel = QLPreviewPanel.shared() else {
-            // No ids or paths: they can hold a search text or a private file name.
-            quickLookLog.notice("nothing to show for \(result?.kindLabel ?? "no result", privacy: .public)")
+            // A fixed reason only: ids, paths and kind labels can hold file, folder or search names.
+            let reason = result == nil ? "no result"
+                : result?.url?.isFileURL != true ? "not a file"
+                : !PreviewSettings.shared.quickLook ? "Quick Look is off" : "skipped in Settings"
+            quickLookLog.notice("nothing to show: \(reason, privacy: .public)")
             return false
         }
         url = file
