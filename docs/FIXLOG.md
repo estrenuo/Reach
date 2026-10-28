@@ -24,3 +24,11 @@ Rule: test typing with key events sent through `NSApp.sendEvent`, never by setti
 - Finding the log: in zsh, `log` is a builtin; use `/usr/bin/log show --last 10m --info --predicate 'subsystem == "com.sanderrobijns.reach"'`.
 
 Rule: test file actions in a synced folder too, not only /tmp; before blaming privacy permissions, check tccd in the log and the folder's attributes (`ls -lOe@`); log every action with its error so a failure on the user's Mac can be read back.
+
+## Quick Look stayed open after the launcher hid (S-012)
+
+- Symptom: the self-test failed now and then on "hiding the launcher closes Quick Look", with the launcher hidden and the Quick Look panel still on screen. Other focus checks failed in the same runs.
+- Cause: two at once. A tap on ⇧ followed at once by a hide (a click elsewhere) closes Quick Look during its opening animation. Quick Look ignores `orderOut` then, and `retryClose` stopped at once because the panel did not report visible yet. Separately, the runs that failed most had another app (Claude) come to the front: the launcher hides when it loses the keyboard, as it should, and every check after that fails.
+- Fix: `retryClose` keeps trying for 0.6 s while the panel still reports hidden. A new check hides the launcher mid-animation; it failed on the old code and passes now. The self-test names every app that came to the front during a failed run.
+
+Rule: when a close or hide can race an animation, retry until the window is really gone, and test the race on purpose; when a focus check fails, find out first whether another app took the keyboard.

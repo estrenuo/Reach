@@ -43,8 +43,21 @@ enum SelfTest {
             }
             check("names are cleaned", SnippetName.clean("  Email   signature ") == "Email signature")
 
+            // The launcher hides when another app takes the keyboard, as it should.
+            // Name those apps, so a failure caused by someone typing is easy to tell apart.
+            var intruders: Set<String> = []
+            let watch = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { note in
+                let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                if let app, app != .current { MainActor.assumeIsolated { _ = intruders.insert(app.localizedName ?? "?") } }
+            }
             await checkLauncher(model: model)
             await checkQuickLook(model: model)
+            NSWorkspace.shared.notificationCenter.removeObserver(watch)
+            if failures > 0, !intruders.isEmpty {
+                print("NOTE \(intruders.sorted().joined(separator: ", ")) came to the front during the run. "
+                      + "Focus checks fail then; run again without using the Mac.")
+            }
 
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
@@ -416,6 +429,10 @@ enum SelfTest {
                                     charactersIgnoringModifiers: chars, isARepeat: false, keyCode: code)
         }
         func send(_ e: NSEvent?) { if let e { _ = launcher.handle(e) } }
+        func state() -> String {
+            "launcher \(launcher.isVisible ? "shown" : "hidden"), key \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none"), "
+                + "Quick Look \(quickLook.isOpen ? "open" : "closed"), app \(NSApp.isActive ? "active" : "inactive")"
+        }
         func tapShift() async {
             clock += 1  // well after any typing
             send(event(.flagsChanged, 56, .shift))
@@ -430,13 +447,13 @@ enum SelfTest {
         await tapShift()
         check("a tap on ⇧ opens Quick Look on the selected file",
               quickLook.isOpen && quickLook.url?.lastPathComponent == "notes.txt")
-        check("the launcher stays open and keeps the keyboard", launcher.isVisible && launcher.panel.isKeyWindow)
+        check("the launcher stays open and keeps the keyboard", launcher.isVisible && launcher.panel.isKeyWindow, state())
         await tapShift()
-        check("a second tap closes it", !quickLook.isOpen)
+        check("a second tap closes it", !quickLook.isOpen, state())
         await tapShift()
         send(event(.keyDown, 53, [], "\u{1b}"))
         try? await Task.sleep(for: .milliseconds(500))
-        check("Esc closes only Quick Look", !quickLook.isOpen && launcher.isVisible && lm.query == root)
+        check("Esc closes only Quick Look", !quickLook.isOpen && launcher.isVisible && lm.query == root, state())
         clock += 1
         send(event(.flagsChanged, 56, .shift))
         send(event(.keyDown, 0, .shift, "A"))
@@ -450,7 +467,7 @@ enum SelfTest {
         check("⌘Y opens Quick Look", quickLook.isOpen)
         send(event(.keyDown, 16, .command, "y"))
         try? await Task.sleep(for: .milliseconds(500))
-        check("and closes it", !quickLook.isOpen)
+        check("and closes it", !quickLook.isOpen, state())
         settings.skips.types = ["public.text"]
         await tapShift()
         check("a skipped file type gets no Quick Look", !quickLook.isOpen)
@@ -465,7 +482,17 @@ enum SelfTest {
         await tapShift()
         launcher.hide()
         try? await Task.sleep(for: .milliseconds(500))
-        check("hiding the launcher closes Quick Look", !quickLook.isOpen)
+        check("hiding the launcher closes Quick Look", !quickLook.isOpen, state())
+        // Hidden while Quick Look is still opening, as after a tap on ⇧ and a click elsewhere.
+        launcher.show()
+        lm.query = root
+        try? await Task.sleep(for: .milliseconds(400))
+        clock += 1
+        send(event(.flagsChanged, 56, .shift))
+        send(event(.flagsChanged, 56, []))
+        launcher.hide()
+        try? await Task.sleep(for: .milliseconds(1000))
+        check("hiding it mid-animation closes Quick Look too", !quickLook.isOpen, state())
         check("test runs leave the saved preview settings alone",
               UserDefaults.standard.object(forKey: "previews.skipTypes") as? [String] != ["public.text"])
         try? fm.removeItem(atPath: root)

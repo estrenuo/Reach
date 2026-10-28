@@ -57,11 +57,13 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
         retryClose(times: 3)
     }
 
+    /// Keeps trying while the panel still reports hidden too: mid-animation
+    /// it is not yet visible, and shows up once the animation ends.
     private func retryClose(times: Int) {
         guard times > 0 else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self, self.url == nil, self.isOpen else { return }
-            QLPreviewPanel.shared().orderOut(nil)
+            guard let self, self.url == nil else { return }
+            if self.isOpen { QLPreviewPanel.shared().orderOut(nil) }
             self.retryClose(times: times - 1)
         }
     }
