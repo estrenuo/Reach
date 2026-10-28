@@ -43,12 +43,13 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
             return true
         }
         guard let file = Self.file(for: result), let panel = QLPreviewPanel.shared() else {
-            quickLookLog.notice("nothing to show for \(result?.id ?? "no result", privacy: .public)")
+            // No ids or paths: they can hold a search text or a private file name.
+            quickLookLog.notice("nothing to show for \(result?.kindLabel ?? "no result", privacy: .public)")
             return false
         }
         url = file
         openedAt = ProcessInfo.processInfo.systemUptime
-        quickLookLog.notice("open \(file.path, privacy: .public); app \(NSApp.isActive ? "active" : "inactive", privacy: .public), key \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none", privacy: .public)")
+        quickLookLog.notice("open a .\(file.pathExtension, privacy: .public) file; app \(NSApp.isActive ? "active" : "inactive", privacy: .public), key \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none", privacy: .public)")
         // Above the launcher, which floats at the status bar level.
         panel.level = NSWindow.Level(NSWindow.Level.statusBar.rawValue + 1)
         // Shown, not made key: the launcher keeps the keyboard.
