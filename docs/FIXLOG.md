@@ -32,3 +32,11 @@ Rule: test file actions in a synced folder too, not only /tmp; before blaming pr
 - Fix: `retryClose` keeps trying for 0.6 s while the panel still reports hidden. A new check hides the launcher mid-animation; it failed on the old code and passes now. The self-test names every app that came to the front during a failed run.
 
 Rule: when a close or hide can race an animation, retry until the window is really gone, and test the race on purpose; when a focus check fails, find out first whether another app took the keyboard.
+
+## ⇧ closed the launcher instead of opening Quick Look (S-012)
+
+- Symptom: on the real Mac a tap on ⇧ made the launcher disappear, with Quick Look left open or gone again. The self-test passed.
+- Cause: Quick Look makes itself key when it opens. In real use another app is active and Reach is not, so at `resignKey` the key window is nil, not the Quick Look panel. The launcher read that as a click elsewhere and hid. The self-test called `handle` directly while Reach was the active app, where the key window is the Quick Look panel. The entry above blamed some of these failures on Claude coming to the front; most were this bug.
+- Fix: `QuickLook.isTakingKeyboard` is true for one second after opening; a resign in that second takes the keyboard back. A new check puts Finder in front and taps ⇧ through `CGEvent`, the system's own path. It failed on the old code.
+
+Rule: test system hooks with another app in front and real events posted through the system, since that is how people use a launcher; never accept "another app took focus" as the explanation before a test with no one at the Mac has ruled out a bug.

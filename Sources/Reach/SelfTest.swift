@@ -493,6 +493,32 @@ enum SelfTest {
         launcher.hide()
         try? await Task.sleep(for: .milliseconds(1000))
         check("hiding it mid-animation closes Quick Look too", !quickLook.isOpen, state())
+
+        // As in real use: another app in front, and ⇧ tapped on the real keyboard,
+        // so the event takes the system's path through the key monitor.
+        if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
+            finder.activate()
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        launcher.show()
+        lm.query = root
+        try? await Task.sleep(for: .milliseconds(500))
+        func realShift() async {
+            let source = CGEventSource(stateID: .hidSystemState)
+            let down = CGEvent(keyboardEventSource: source, virtualKey: 56, keyDown: true)
+            down?.flags = .maskShift
+            down?.post(tap: .cghidEventTap)
+            try? await Task.sleep(for: .milliseconds(60))
+            let up = CGEvent(keyboardEventSource: source, virtualKey: 56, keyDown: false)
+            up?.flags = []
+            up?.post(tap: .cghidEventTap)
+            try? await Task.sleep(for: .milliseconds(700))
+        }
+        await realShift()
+        check("with another app in front, a real ⇧ tap opens Quick Look and the launcher stays", quickLook.isOpen && launcher.isVisible, state())
+        await realShift()
+        check("and a second real tap closes it", !quickLook.isOpen, state())
+        launcher.hide()
         check("test runs leave the saved preview settings alone",
               UserDefaults.standard.object(forKey: "previews.skipTypes") as? [String] != ["public.text"])
         try? fm.removeItem(atPath: root)

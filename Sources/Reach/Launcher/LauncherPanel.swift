@@ -61,7 +61,10 @@ final class LauncherController {
         panel.onResign = { [weak self] in
             // Quick Look makes itself key when it opens. Take the keyboard back,
             // so ↑, ↓ and a second ⇧ still reach the launcher.
-            if NSApp.keyWindow is QLPreviewPanel, QuickLook.shared.url != nil, self?.isVisible == true {
+            quickLookLog.notice("launcher lost the keyboard to \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "another app", privacy: .public)")
+            let quickLook = QuickLook.shared
+            let tookIt = NSApp.keyWindow is QLPreviewPanel ? quickLook.url != nil : quickLook.isTakingKeyboard
+            if tookIt, self?.isVisible == true {
                 DispatchQueue.main.async { self?.panel.makeKey() }
                 return
             }
@@ -190,7 +193,9 @@ final class LauncherController {
         if isShift, flags == .shift {
             shiftTap.pressed(at: event.timestamp)
         } else if isShift, flags.isEmpty {
-            if shiftTap.released(at: event.timestamp), model.actions == nil {
+            let tap = shiftTap.released(at: event.timestamp)
+            quickLookLog.debug("⇧ up: \(tap ? "tap" : "not a tap", privacy: .public)")
+            if tap, model.actions == nil {
                 _ = QuickLook.shared.toggle(model.selectedResult)
             }
         } else {
