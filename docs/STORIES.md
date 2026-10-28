@@ -151,7 +151,7 @@ UX:
 - Actions: Open; Open With…; Reveal in Finder; Browse in Launcher; Get Info; Copy Path; Copy File; Open in Terminal; Move to Trash. Folders skip Open With…; Open in Terminal uses the folder itself, or a file's folder
 - States: no action matches "No actions match “xyz”"; Open With… with no other apps "No other apps open this file"; a failed action shows "Unable to run “Move to Trash” on “notes.txt”." in the footer and the panel stays
 - Words: footer descriptions in sentence case, like "Show it selected in a Finder window" and "Move it to the Trash. You can put it back from the Trash."; filter placeholder "Filter actions"
-- Access: keyboard only; VoiceOver reads the header "Actions for Safari, /Applications/Safari.app", each row "Action, Reveal in Finder, 3 of 9"; Move to Trash needs no confirmation because it can be undone from the Trash; when macOS keeps Reach out of the folder (Desktop, Documents, Downloads), Finder moves it, after asking once for Automation permission
+- Access: keyboard only; VoiceOver reads the header "Actions for Safari, /Applications/Safari.app", each row "Action, Reveal in Finder, 3 of 9"; Move to Trash needs no confirmation because it can be undone from the Trash; when a synced folder (OneDrive, iCloud Drive) refuses a plain trash, Finder moves it, after asking once for Automation permission
 Status: done
 
 ### S-010 Choose which actions appear

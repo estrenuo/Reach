@@ -19,8 +19,8 @@ Rule: test typing with key events sent through `NSApp.sendEvent`, never by setti
 ## Move to Trash failed for files on the Desktop (S-009)
 
 - Symptom: Move to Trash on `~/Desktop/Schermafbeelding….png` showed "Unable to run “Move to Trash”…" and the file stayed.
-- Cause: `trashItem` threw NSCocoaErrorDomain 513 (no permission). macOS keeps apps out of Desktop, Documents and Downloads until people allow it; Spotlight finds the file, but Reach may not touch it. The self-test used /tmp, which has no such guard. The focus fix before this one was real, but not the whole story.
+- Cause: `trashItem` threw NSCocoaErrorDomain 513 (no permission). Not privacy permissions: Reach had Desktop access, and tccd logged nothing. The Desktop is a file provider domain (OneDrive: `com.apple.file-provider-domain-id`, `group:everyone deny delete`), which refuses a plain trash from other apps. The self-test used /tmp, which is not synced. The focus fix before this one was real, but not the whole story.
 - Fix: on 513 `Trash.move` hands the file to a fallback, and Reach asks Finder to delete it (Apple Events, asked once). A refused Automation permission shows where to allow it. Actions log to `com.sanderrobijns.reach` / `actions`.
 - Finding the log: in zsh, `log` is a builtin; use `/usr/bin/log show --last 10m --info --predicate 'subsystem == "com.sanderrobijns.reach"'`.
 
-Rule: test file actions on a file in a protected folder (Desktop), not only /tmp; log every action with its error so a failure on the user's Mac can be read back.
+Rule: test file actions in a synced folder too, not only /tmp; before blaming privacy permissions, check tccd in the log and the folder's attributes (`ls -lOe@`); log every action with its error so a failure on the user's Mac can be read back.

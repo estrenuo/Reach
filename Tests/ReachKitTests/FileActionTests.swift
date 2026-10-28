@@ -35,7 +35,7 @@ func trashUsesTrashItem() throws {
     #expect(result?.path == "/Users/sam/.Trash/notes.txt")
 }
 
-/// Refuses like macOS does for a folder Reach may not open.
+/// Refuses like a synced folder (a file provider) does.
 private struct ProtectedFolder: Trashing {
     var code = CocoaError.Code.fileWriteNoPermission
     func trashItem(at url: URL, resultingItemURL: AutoreleasingUnsafeMutablePointer<NSURL?>?) throws {
@@ -43,7 +43,7 @@ private struct ProtectedFolder: Trashing {
     }
 }
 
-@Test("No access to the folder: the fallback trashes it instead")
+@Test("A folder that refuses: the fallback trashes it instead")
 func trashFallsBack() throws {
     var asked: [URL] = []
     let file = URL(fileURLWithPath: "/Users/sam/Desktop/shot.png")

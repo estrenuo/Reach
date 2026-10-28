@@ -169,10 +169,10 @@ enum ActionRunner {
             """)) != nil
     }
 
-    /// Move to Trash through Finder, for folders macOS keeps Reach out of.
-    /// Finder has access, and its Trash knows where to put the file back.
+    /// Move to Trash through Finder, for folders that refuse a plain trash, like a
+    /// Desktop synced by OneDrive or iCloud Drive. Finder trashes through the file provider.
     private static func trashWithFinder(_ url: URL) throws {
-        actionLog.notice("no access to \(url.deletingLastPathComponent().path, privacy: .public), asking Finder")
+        actionLog.notice("\(url.deletingLastPathComponent().path, privacy: .public) refused a plain trash, asking Finder")
         try tellFinder("delete (POSIX file \"\(escaped(url.path))\" as alias)")
     }
 
