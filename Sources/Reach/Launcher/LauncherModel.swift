@@ -201,6 +201,7 @@ final class LauncherModel {
         panel.select(index)
         let item = panel.items[index]
         let target = panel.target
+        actionLog.notice("run \(String(describing: item), privacy: .public) on \(panel.url.path, privacy: .public), filter '\(panel.filter, privacy: .public)'")
         switch item {
         case .action(.openWith):
             panel.chooseApp()
@@ -218,6 +219,7 @@ final class LauncherModel {
             guard perform(item, panel.url) else {
                 let name = panel.rows.indices.contains(index) ? panel.rows[index].title : "the action"
                 panel.failure = "Unable to run “\(name)” on “\(target.title)”."
+                    + (ActionRunner.problem.map { " " + $0 } ?? "")
                 return
             }
         }

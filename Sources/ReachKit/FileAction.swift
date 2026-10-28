@@ -72,10 +72,19 @@ extension FileManager: Trashing {}
 
 public enum Trash {
     /// Moves `url` to the Trash, where it can be put back. Returns where it went.
+    /// When macOS keeps Reach out of the folder (Desktop, Documents and
+    /// Downloads need permission), `fallback` asks another app (Finder) that
+    /// has access. Other errors are thrown as they are.
     @discardableResult
-    public static func move(_ url: URL, using files: some Trashing = FileManager.default) throws -> URL? {
+    public static func move(_ url: URL, using files: some Trashing = FileManager.default,
+                            fallback: ((URL) throws -> Void)? = nil) throws -> URL? {
         var trashed: NSURL?
-        try files.trashItem(at: url, resultingItemURL: &trashed)
+        do {
+            try files.trashItem(at: url, resultingItemURL: &trashed)
+        } catch let error as CocoaError where error.code == .fileWriteNoPermission && fallback != nil {
+            try fallback?(url)
+            return nil
+        }
         return trashed as URL?
     }
 }

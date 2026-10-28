@@ -34,3 +34,28 @@ func trashUsesTrashItem() throws {
     #expect(trash.trashed == [file])
     #expect(result?.path == "/Users/sam/.Trash/notes.txt")
 }
+
+/// Refuses like macOS does for a folder Reach may not open.
+private struct ProtectedFolder: Trashing {
+    var code = CocoaError.Code.fileWriteNoPermission
+    func trashItem(at url: URL, resultingItemURL: AutoreleasingUnsafeMutablePointer<NSURL?>?) throws {
+        throw CocoaError(code)
+    }
+}
+
+@Test("No access to the folder: the fallback trashes it instead")
+func trashFallsBack() throws {
+    var asked: [URL] = []
+    let file = URL(fileURLWithPath: "/Users/sam/Desktop/shot.png")
+    try Trash.move(file, using: ProtectedFolder()) { asked.append($0) }
+    #expect(asked == [file])
+}
+
+@Test("Other errors are not hidden by the fallback")
+func trashOtherErrors() {
+    var asked = 0
+    #expect(throws: CocoaError.self) {
+        try Trash.move(URL(fileURLWithPath: "/nope"), using: ProtectedFolder(code: .fileNoSuchFile)) { _ in asked += 1 }
+    }
+    #expect(asked == 0)
+}

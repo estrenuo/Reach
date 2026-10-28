@@ -15,3 +15,12 @@ Rule: build self-test key events with the flags the real keyboard sends, and com
 - Fix: set focus one run loop tick after appearing, then put the cursor after the text. The self-test now sends ←, letters and ↩ through `NSApp.sendEvent` and checks what the field received.
 
 Rule: test typing with key events sent through `NSApp.sendEvent`, never by setting the model's text; set SwiftUI focus a tick after a view appears in a panel.
+
+## Move to Trash failed for files on the Desktop (S-009)
+
+- Symptom: Move to Trash on `~/Desktop/Schermafbeelding….png` showed "Unable to run “Move to Trash”…" and the file stayed.
+- Cause: `trashItem` threw NSCocoaErrorDomain 513 (no permission). macOS keeps apps out of Desktop, Documents and Downloads until people allow it; Spotlight finds the file, but Reach may not touch it. The self-test used /tmp, which has no such guard. The focus fix before this one was real, but not the whole story.
+- Fix: on 513 `Trash.move` hands the file to a fallback, and Reach asks Finder to delete it (Apple Events, asked once). A refused Automation permission shows where to allow it. Actions log to `com.sanderrobijns.reach` / `actions`.
+- Finding the log: in zsh, `log` is a builtin; use `/usr/bin/log show --last 10m --info --predicate 'subsystem == "com.sanderrobijns.reach"'`.
+
+Rule: test file actions on a file in a protected folder (Desktop), not only /tmp; log every action with its error so a failure on the user's Mac can be read back.
