@@ -13,7 +13,8 @@ struct Scored {
 /// none came back. A new kind of result is one new source.
 protocol ResultSource: AnyObject {
     /// Results for `query` right away, or nil when they come later through
-    /// `later` (Spotlight). Return [] for a query this source does not handle.
+    /// `later` (Spotlight), which must not be called before this returns.
+    /// Return [] for a query this source does not handle.
     /// Non-openable results (hints like "Type a file name") are shown first.
     func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]?
 

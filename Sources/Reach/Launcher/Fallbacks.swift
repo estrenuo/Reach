@@ -15,7 +15,8 @@ enum Fallbacks {
     ]
 
     static func results(for query: String) -> [LaunchResult] {
-        engines.compactMap { engine in
+        guard !query.isEmpty else { return [] }
+        return engines.compactMap { engine in
             guard let url = WebSearchURL.make(template: engine.template, query: query) else { return nil }
             return LaunchResult(
                 id: "fallback:\(engine.name)", title: "Search \(engine.name) for “\(query)”",

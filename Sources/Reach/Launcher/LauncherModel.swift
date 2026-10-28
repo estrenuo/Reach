@@ -18,10 +18,15 @@ final class LauncherModel {
     /// Goes up every time the launcher shows: the view refocuses and replays its entrance.
     private(set) var showCount = 0
 
-    let apps = AppIndex()
+    let apps: AppIndex
+    let files: FileSearch
+    /// Every source is asked for every query; equal scores keep this order.
+    @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
     @ObservationIgnored var learning: Learning?
-    private let files = FileSearch()
+    /// Each source's answer for the current query; nil while it is still searching.
+    @ObservationIgnored private var answers: [[Scored]?] = []
+    @ObservationIgnored private var generation = 0
 
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
     @ObservationIgnored var opener: @MainActor (URL) -> Bool = { LauncherModel.openInWorkspace($0) }
@@ -32,6 +37,12 @@ final class LauncherModel {
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
 
+    init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch()) {
+        self.apps = apps
+        self.files = files
+        sources = [apps, files]
+    }
+
     func didShow() {
         query = ""
         setResults([])
@@ -40,43 +51,40 @@ final class LauncherModel {
     }
 
     func didHide() {
-        files.cancel()
+        sources.forEach { $0.cancel() }
     }
 
     func refresh() {
         errors = [:]
-        switch QueryKind(query) {
-        case .empty:
-            files.cancel()
-            setResults([])
-        case .normal(let text):
-            files.cancel()
-            let ranked = rank(apps.results(for: text), query: text)
-            setResults(ranked.isEmpty ? Fallbacks.results(for: text) : ranked)
-        case .files(let name):
-            guard !name.isEmpty else {
-                files.cancel()
-                setResults([LaunchResult(id: "hint:files", title: "Type a file name", subtitle: "",
-                                         icon: .symbol("doc.text.magnifyingglass"), url: nil)])
-                return
-            }
-            let asked = query
-            files.search(name) { [weak self] found in
-                guard let self, self.query == asked else { return }
-                let none = LaunchResult(id: "hint:nofiles", title: "No files match “\(name)”", subtitle: "",
-                                        icon: .symbol("doc.questionmark"), url: nil)
-                self.setResults(found.isEmpty ? [none] + Fallbacks.results(for: name) : found)
+        generation += 1
+        let asked = generation
+        let kind = QueryKind(query)
+        sources.forEach { $0.cancel() }
+        answers = sources.enumerated().map { index, source in
+            source.results(for: kind) { [weak self] late in
+                guard let self, self.generation == asked else { return }
+                self.answers[index] = late
+                self.publish(kind)
             }
         }
+        publish(kind)
     }
 
-    /// Learning first (S-004), then text match, then by name.
-    private func rank(_ scored: [(LaunchResult, Int)], query: String) -> [LaunchResult] {
-        let byName = scored.sorted { $0.0.title.localizedStandardCompare($1.0.title) == .orderedAscending }
-        let byID = Dictionary(byName.map { ($0.0.id, $0.0) }, uniquingKeysWith: { first, _ in first })
-        let order = Ranking.order(byName.map { (id: $0.0.id, score: $0.1) },
-                                  learned: learning?.picks(for: query) ?? [:])
-        return order.prefix(Self.maxResults).compactMap { byID[$0] }
+    /// Shows the merged answers once every source has answered, so the
+    /// previous results stay on screen while Spotlight searches.
+    /// Order: hints, then openable results ranked with Learning, then
+    /// fallbacks when nothing openable came back.
+    private func publish(_ kind: QueryKind) {
+        guard answers.allSatisfy({ $0 != nil }) else { return }
+        let all = answers.compactMap { $0 }.joined()
+        let hints = all.filter { !$0.result.isOpenable }.map(\.result)
+        let openable = all.filter(\.result.isOpenable)
+        let byID = Dictionary(openable.map { ($0.result.id, $0.result) }, uniquingKeysWith: { first, _ in first })
+        let ranked = Ranking.order(openable.map { (id: $0.result.id, score: $0.score) },
+                                   learned: learning?.picks(for: query) ?? [:])
+            .prefix(Self.maxResults)
+            .compactMap { byID[$0] }
+        setResults(hints + ranked + (ranked.isEmpty ? Fallbacks.results(for: kind.text) : []))
     }
 
     private func setResults(_ new: [LaunchResult]) {
