@@ -20,6 +20,11 @@ final class LauncherModel {
     /// Set while the query is a path (`~/`, `/`): the launcher shows the
     /// folder's contents in their own order, with the Preview beside them.
     private(set) var browsing: PathQuery?
+    /// The action panel for the selected result, opened with → (S-009).
+    private(set) var actions: ActionPanel?
+    /// Goes up when the launcher, not the person, rewrites the query (→, ←, Tab):
+    /// the view then puts the text cursor at the end, so typing adds to the path.
+    private(set) var queryRewrites = 0
 
     let apps: AppIndex
     let files: FileSearch
@@ -34,6 +39,8 @@ final class LauncherModel {
 
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
     @ObservationIgnored var opener: @MainActor (URL) -> Bool = { LauncherModel.openInWorkspace($0) }
+    /// Runs an action from the action panel. The self-test swaps in a recorder.
+    @ObservationIgnored var perform: @MainActor (ActionPanel.Item, URL) -> Bool = { ActionRunner.run($0, on: $1) }
     @ObservationIgnored var onHide: @MainActor () -> Void = {}
     @ObservationIgnored var onResultsChange: @MainActor () -> Void = {}
     /// Called after a result opened, with the query that found it (Learning, S-004).
@@ -49,6 +56,7 @@ final class LauncherModel {
     }
 
     func didShow() {
+        actions = nil
         query = ""
         setResults([])
         showCount += 1
@@ -56,6 +64,7 @@ final class LauncherModel {
     }
 
     func didHide() {
+        actions = nil
         sources.forEach { $0.cancel() }
     }
 
@@ -126,14 +135,14 @@ final class LauncherModel {
     /// → while browsing: into the selected folder. False when there is none.
     func enter() -> Bool {
         guard let browsing, let result = selectedResult, result.isFolder else { return false }
-        query = browsing.entering(result.title)
+        rewriteQuery(browsing.entering(result.title))
         return true
     }
 
     /// ← while browsing: drops the typed name, then goes up one folder.
     func back() -> Bool {
         guard let browsing else { return false }
-        query = browsing.back(home: paths.home)
+        rewriteQuery(browsing.back(home: paths.home))
         return true
     }
 
@@ -141,7 +150,7 @@ final class LauncherModel {
     func complete() -> Bool {
         guard let browsing, let result = selectedResult, result.isOpenable else { return false }
         if enter() { return true }
-        query = browsing.folder + result.title
+        rewriteQuery(browsing.folder + result.title)
         return true
     }
 
@@ -160,12 +169,69 @@ final class LauncherModel {
         onHide()
     }
 
+    private func rewriteQuery(_ new: String) {
+        query = new
+        queryRewrites += 1
+    }
+
+    /// → on a file, folder or app: shows its action panel. False for other results.
+    func showActions() -> Bool {
+        guard actions == nil, let result = selectedResult, let url = result.url, url.isFileURL else { return false }
+        actions = ActionPanel(target: result, url: url)
+        onResultsChange()
+        return true
+    }
+
+    /// Back to the results, with the query as it was.
+    func closeActions() {
+        actions = nil
+        onResultsChange()
+    }
+
+    /// Esc in the action panel: clears the filter, leaves Open With…, then closes the panel.
+    func cancelActions() {
+        guard let actions else { return }
+        if !actions.back() { closeActions() }
+    }
+
+    /// Runs action `index` of the panel. Most actions hide the launcher;
+    /// Open With… lists apps, Browse in Launcher shows the folder.
+    func runAction(at index: Int) {
+        guard let panel = actions, panel.items.indices.contains(index) else { return }
+        panel.select(index)
+        let item = panel.items[index]
+        let target = panel.target
+        switch item {
+        case .action(.openWith):
+            panel.chooseApp()
+            return
+        case .action(.browse):
+            let folder = ActionRunner.folder(of: panel.url).path
+            actions = nil
+            let shown = (folder as NSString).abbreviatingWithTildeInPath
+            rewriteQuery(shown.hasSuffix("/") ? shown : shown + "/")
+            onResultsChange()
+            return
+        case .action(.open):
+            guard opener(panel.url) else { panel.failure = "Unable to open “\(target.title)”."; return }
+        default:
+            guard perform(item, panel.url) else {
+                let name = panel.rows.indices.contains(index) ? panel.rows[index].title : "the action"
+                panel.failure = "Unable to run “\(name)” on “\(target.title)”."
+                return
+            }
+        }
+        if case .action(.open) = item { onOpened(query, target) }
+        if case .app = item { onOpened(query, target) }
+        onHide()
+    }
+
     /// Esc clears the query; with an empty query it hides the launcher.
     func cancel() {
         if query.isEmpty { onHide() } else { query = "" }
     }
 
-    private static func openInWorkspace(_ url: URL) -> Bool {
+    static func openInWorkspace(_ url: URL) -> Bool {
         if url.pathExtension == "app" {
             NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
             return true

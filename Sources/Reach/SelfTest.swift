@@ -49,7 +49,7 @@ enum SelfTest {
         }
     }
 
-    /// S-001 to S-008: the launcher, driven with real key events.
+    /// S-001 to S-009: the launcher, driven with real key events.
     private static func checkLauncher(model: AppModel) async {
         guard let launcher = model.launcher else {
             check("the launcher exists", false)
@@ -59,6 +59,8 @@ enum SelfTest {
         var opened: [URL] = []
         lm.opener = { opened.append($0); return true }
         await lm.apps.refreshNow()
+        /// Lets SwiftUI put the query in the field, so the cursor sits at its end.
+        func settle() async { try? await Task.sleep(for: .milliseconds(100)) }
         // Like the real keyboard: arrow keys carry .numericPad and .function.
         func flags(_ code: UInt16, command: Bool) -> NSEvent.ModifierFlags {
             var flags: NSEvent.ModifierFlags = command ? .command : []
@@ -201,7 +203,14 @@ enum SelfTest {
         _ = key(125, "")
         check("→ enters the selected folder", key(124, "") && lm.query == root + "Beta/"
               && lm.results.map(\.title) == ["inner.txt"], lm.query)
-        check("→ on a file does nothing", !key(124, "") && lm.query == root + "Beta/")
+        try? await Task.sleep(for: .milliseconds(100))
+        let field = launcher.panel.firstResponder as? NSTextView
+        check("after → the cursor is at the end of the path",
+              field.map { $0.selectedRange() == NSRange(location: ($0.string as NSString).length, length: 0) } == true,
+              field.map { NSStringFromRange($0.selectedRange()) } ?? "no editor")
+        _ = key(124, "")
+        check("→ on a file stays in the folder", lm.query == root + "Beta/")
+        lm.closeActions()
         check("← goes to the parent folder", key(123, "") && lm.query == root)
         lm.query = root + "Empty/"
         check("an empty folder says so", lm.results.first?.title == "“Empty” is empty" && lm.results.count == 1)
@@ -214,6 +223,63 @@ enum SelfTest {
         _ = key(36, "\r")
         check("↩ on a folder opens it", opened.last?.resolvingSymlinksInPath() == URL(fileURLWithPath: root + "Alpha").resolvingSymlinksInPath() && !launcher.isVisible,
               "\(opened.last?.path ?? "nothing"), visible: \(launcher.isVisible)")
+        // S-009: the action panel, with a recorder instead of the system.
+        var performed: [ActionPanel.Item] = []
+        lm.perform = { item, _ in performed.append(item); return true }
+        launcher.show()
+        lm.query = root + "notes"
+        await settle()
+        let editor = launcher.panel.firstResponder as? NSTextView
+        let caret = "\(editor?.string ?? "no editor") \(editor.map { NSStringFromRange($0.selectedRange()) } ?? "")"
+        check("→ on a file opens its action panel", key(124, "") && lm.actions?.target.title == "notes.txt",
+              "\(lm.results.map(\.title)) caret: \(caret)")
+        check("a file has every action", lm.actions?.rows.count == FileAction.allCases.count)
+        lm.actions?.filter = "copy"
+        check("typing filters the actions", lm.actions?.rows.map(\.title) == ["Copy Path", "Copy File"])
+        _ = key(53, "\u{1b}")
+        check("Esc clears the filter first", lm.actions?.filter == "" && lm.actions?.rows.count == FileAction.allCases.count)
+        _ = key(53, "\u{1b}")
+        check("Esc again returns to the results, query kept", lm.actions == nil && lm.query == root + "notes"
+              && launcher.isVisible)
+        _ = key(124, "")
+        lm.actions?.filter = "path"
+        _ = key(36, "\r")
+        check("↩ runs the selected action and hides", performed.last == .action(.copyPath) && !launcher.isVisible)
+        launcher.show()
+        lm.query = root + "notes"
+        await settle()
+        _ = key(124, "")
+        check("⌘3 runs action 3", key(20, "3", command: true) && performed.last == .action(FileAction.allCases[2]))
+        launcher.show()
+        lm.query = root + "notes"
+        await settle()
+        _ = key(124, "")
+        lm.actions?.filter = "open with"
+        _ = key(36, "\r")
+        check("Open With… lists the apps that open the file", lm.actions?.choosingApp == true
+              && lm.actions?.rows.contains { $0.title == "TextEdit" } == true,
+              lm.actions?.rows.map(\.title).joined(separator: ", ") ?? "no panel")
+        _ = key(53, "\u{1b}")
+        check("Esc leaves the app list", lm.actions?.choosingApp == false)
+        lm.actions?.filter = "browse"
+        _ = key(36, "\r")
+        check("Browse in Launcher shows the file's folder", lm.actions == nil && lm.browsing != nil
+              && lm.query.hasSuffix("Reach-browse-selftest/"), lm.query)
+        _ = key(124, "")
+        check("← on an empty filter returns to the results", key(123, "") && lm.actions == nil)
+        lm.query = "zzqxv nothing"
+        check("→ on a web search does nothing", !key(124, "") && lm.actions == nil)
+        lm.perform = { _, _ in false }
+        lm.query = root + "notes"
+        await settle()
+        _ = key(124, "")
+        lm.actions?.filter = "trash"
+        _ = key(36, "\r")
+        check("a failed action says so and the panel stays",
+              lm.actions?.footer == "Unable to run “Move to Trash” on “notes.txt”." && launcher.isVisible,
+              lm.actions?.footer ?? "no panel")
+        lm.closeActions()
+
         try? fm.removeItem(atPath: root)
         launcher.show()
         lm.query = "zzqxv nothing"

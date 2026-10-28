@@ -108,6 +108,7 @@ final class LauncherController {
         // people hold down count as modifiers.
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             .subtracting([.numericPad, .function, .capsLock])
+        if model.actions != nil { return handleActions(event, flags: flags) }
         if flags == .command, let key = event.charactersIgnoringModifiers {
             if key == "," {
                 hide()
@@ -126,11 +127,37 @@ final class LauncherController {
         case 53: model.cancel()
         // While browsing: → and Tab go into a folder, ← goes back up.
         // Otherwise they move the text cursor as usual.
-        case 124 where flags.isEmpty: return model.enter()
+        // → on a file or app opens its action panel, once the cursor is at the end.
+        case 124 where flags.isEmpty: return model.enter() || (caretAtEnd && model.showActions())
         case 123 where flags.isEmpty: return model.back()
         case 48 where flags.isEmpty: return model.complete()
         default: return false
         }
         return true
+    }
+
+    /// Keys in the action panel. ← on an empty filter goes back, like Esc.
+    private func handleActions(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+        guard let actions = model.actions else { return false }
+        if flags == .command, let key = event.charactersIgnoringModifiers, let number = Int(key), (1...9).contains(number) {
+            model.runAction(at: number - 1)
+            return true
+        }
+        switch event.keyCode {
+        case 126: actions.move(-1)
+        case 125: actions.move(1)
+        case 36, 76: model.runAction(at: actions.selection)
+        case 53: model.cancelActions()
+        case 123 where flags.isEmpty && actions.filter.isEmpty: model.cancelActions()
+        default: return false
+        }
+        return true
+    }
+
+    /// True when the text cursor, or the selection, reaches the end of the query.
+    /// A query the launcher filled in is selected as a whole, and counts.
+    private var caretAtEnd: Bool {
+        guard let editor = panel.firstResponder as? NSTextView else { return true }
+        return NSMaxRange(editor.selectedRange()) == (editor.string as NSString).length
     }
 }

@@ -26,6 +26,8 @@ Menu bar "Show Launcher" ┼─> LauncherController ──> LauncherPanel (NSPan
 
 - `LauncherController` (in `LauncherPanel.swift`) shows, hides, sizes and places the panel, and turns key events into model calls. The panel never activates Reach, so the previous app keeps focus.
 - `LauncherModel` owns the query, the results and the selection. It knows no source by name.
+- The action panel (`ActionPanel`, `ActionPanelView`) takes over the launcher for one file, folder or app when → is pressed with the cursor at the end of the query. `FileAction` in ReachKit lists the actions and filters them; `ActionRunner` runs them on the system, and the self-test swaps in a recorder through `LauncherModel.perform`. Move to Trash goes through `Trash.move` (`FileManager.trashItem`), never a delete.
+- When the launcher rewrites the query itself (→, ←, Tab, Browse in Launcher) it bumps `queryRewrites`, and the view puts the text cursor at the end.
 
 ## Seam: ResultSource
 

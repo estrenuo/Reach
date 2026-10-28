@@ -24,8 +24,14 @@ enum LauncherLayout {
         Space.md * 2 + fieldHeight + Space.sm + CGFloat(browseRows) * compactRowHeight + Space.sm + footerHeight
     }
 
+    /// The action panel: a header with the result above the browse layout.
+    static var actionsHeight: CGFloat { browseHeight - fieldHeight + filterHeight + markSize + Space.sm }
+    /// The action panel's filter field: lower than the search field, under the header.
+    static let filterHeight: CGFloat = 40
+
     @MainActor static func height(for model: LauncherModel) -> CGFloat {
-        model.browsing != nil ? browseHeight : height(rows: model.results.count)
+        if model.actions != nil { return actionsHeight }
+        return model.browsing != nil ? browseHeight : height(rows: model.results.count)
     }
 }
 
@@ -37,12 +43,49 @@ struct LauncherView: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
+        Group {
+            if let actions = model.actions {
+                ActionPanelView(model: model, panel: actions)
+            } else {
+                search
+            }
+        }
+        .padding(Space.md)
+        .frame(width: LauncherLayout.width, height: LauncherLayout.height(for: model), alignment: .top)
+        .glassEffect(.regular, in: .rect(cornerRadius: Radius.panel, style: .continuous))
+        .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
+        .opacity(appeared ? 1 : 0)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Launcher")
+        .onAppear {
+            model.openSettings = {
+                NSApp.activate()
+                openSettings()
+            }
+        }
+        .onChange(of: model.showCount, initial: true) {
+            fieldFocused = true
+            appeared = false
+            withAnimation(.easeOut(duration: Motion.appear)) { appeared = true }
+        }
+    }
+
+    private var search: some View {
         VStack(spacing: Space.sm) {
             HStack(spacing: Space.md) {
                 TextField("Search", text: $model.query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 28))
                     .focused($fieldFocused)
+                    // Back from the action panel, typing goes to the search field again.
+                    .onAppear { fieldFocused = true }
+                    .onChange(of: model.queryRewrites) {
+                        // After SwiftUI has put the new text in the field.
+                        DispatchQueue.main.async {
+                            guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else { return }
+                            editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+                        }
+                    }
                     .accessibilityLabel("Launcher, search field")
                     .padding(.horizontal, Space.lg)
                     .frame(height: LauncherLayout.fieldHeight)
@@ -67,24 +110,6 @@ struct LauncherView: View {
                     }
                 }
             }
-        }
-        .padding(Space.md)
-        .frame(width: LauncherLayout.width, height: LauncherLayout.height(for: model), alignment: .top)
-        .glassEffect(.regular, in: .rect(cornerRadius: Radius.panel, style: .continuous))
-        .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
-        .opacity(appeared ? 1 : 0)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Launcher")
-        .onAppear {
-            model.openSettings = {
-                NSApp.activate()
-                openSettings()
-            }
-        }
-        .onChange(of: model.showCount, initial: true) {
-            fieldFocused = true
-            appeared = false
-            withAnimation(.easeOut(duration: Motion.appear)) { appeared = true }
         }
     }
 }

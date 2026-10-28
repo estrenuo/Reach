@@ -50,13 +50,13 @@ struct BrowseView: View {
     }
 }
 
-/// A large icon and the dates of the selected file or folder.
-private struct PreviewPane: View {
+/// A large icon, the version of an app, and the dates of the selected file or folder.
+struct PreviewPane: View {
     let result: LaunchResult?
 
     var body: some View {
         if let result, let url = result.url {
-            let dates = Self.dates(url)
+            let info = Self.info(url)
             VStack(spacing: Space.lg) {
                 Spacer(minLength: 0)
                 IconCache.image(for: result.icon)
@@ -65,14 +65,16 @@ private struct PreviewPane: View {
                     .frame(width: LauncherLayout.previewIconSize, height: LauncherLayout.previewIconSize)
                 Spacer(minLength: 0)
                 Grid(alignment: .leading, horizontalSpacing: Space.sm, verticalSpacing: Space.xs) {
-                    if let created = dates.created { row("Created", created) }
-                    if let modified = dates.modified { row("Modified", modified) }
+                    if let version = info.version { row("Version", version) }
+                    if let created = info.created { row("Created", created) }
+                    if let modified = info.modified { row("Modified", modified) }
                 }
                 .font(.callout)
             }
             .padding(.bottom, Space.sm)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Preview, " + [dates.created.map { "Created \($0)" }, dates.modified.map { "Modified \($0)" }]
+            .accessibilityLabel("Preview, " + [info.version.map { "Version \($0)" }, info.created.map { "Created \($0)" },
+                                                info.modified.map { "Modified \($0)" }]
                 .compactMap { $0 }.joined(separator: ", "))
         }
     }
@@ -84,9 +86,13 @@ private struct PreviewPane: View {
         }
     }
 
-    private static func dates(_ url: URL) -> (created: String?, modified: String?) {
-        let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+    private static func info(_ url: URL) -> (version: String?, created: String?, modified: String?) {
+        // /Applications/Safari.app is a link to the real app.
+        let url = url.resolvingSymlinksInPath()
+        let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey, .isPackageKey])
         let style = Date.FormatStyle(date: .abbreviated, time: .shortened)
-        return (values?.creationDate?.formatted(style), values?.contentModificationDate?.formatted(style))
+        let version = values?.isPackage == true
+            ? Bundle(url: url)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String : nil
+        return (version, values?.creationDate?.formatted(style), values?.contentModificationDate?.formatted(style))
     }
 }
