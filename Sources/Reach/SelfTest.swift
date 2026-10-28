@@ -279,6 +279,35 @@ enum SelfTest {
               lm.actions?.footer == "Unable to run “Move to Trash” on “notes.txt”." && launcher.isVisible,
               lm.actions?.footer ?? "no panel")
         lm.closeActions()
+        // The whole path through NSApp, like the keyboard: focus must reach
+        // the filter field, so typed letters filter and ↩ runs the match.
+        var ranWith: [ActionPanel.Item] = []
+        lm.perform = { item, _ in ranWith.append(item); return true }
+        launcher.show()
+        lm.query = root + "notes"
+        try? await Task.sleep(for: .milliseconds(300))
+        func send(_ code: UInt16, _ chars: String) async {
+            if let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags(code, command: false),
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: launcher.panel.windowNumber, context: nil,
+                characters: chars, charactersIgnoringModifiers: chars, isARepeat: false, keyCode: code) {
+                NSApp.sendEvent(event)
+            }
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        await send(124, "\u{F703}")
+        for (code, char) in [(17, "t"), (15, "r"), (0, "a"), (1, "s"), (4, "h")] { await send(UInt16(code), char) }
+        check("typed letters reach the filter field", lm.actions?.filter == "trash", lm.actions?.filter ?? "no panel")
+        await send(36, "\r")
+        check("↩ runs the action you typed", ranWith.last == .action(.trash), "\(ranWith)")
+        launcher.show()
+        lm.query = root + "notes"
+        try? await Task.sleep(for: .milliseconds(300))
+        await send(124, "\u{F703}")
+        await send(53, "\u{1b}")
+        await send(1, "s")
+        check("after Esc typing goes to the search field again", lm.actions == nil && lm.query == root + "notess", lm.query)
+        lm.perform = { _, _ in true }
+        launcher.hide()
 
         try? fm.removeItem(atPath: root)
         launcher.show()

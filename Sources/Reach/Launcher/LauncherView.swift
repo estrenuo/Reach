@@ -70,6 +70,11 @@ struct LauncherView: View {
         }
     }
 
+    private static func caretToEnd() {
+        guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else { return }
+        editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+    }
+
     private var search: some View {
         VStack(spacing: Space.sm) {
             HStack(spacing: Space.md) {
@@ -77,15 +82,16 @@ struct LauncherView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 28))
                     .focused($fieldFocused)
-                    // Back from the action panel, typing goes to the search field again.
-                    .onAppear { fieldFocused = true }
-                    .onChange(of: model.queryRewrites) {
-                        // After SwiftUI has put the new text in the field.
+                    // Back from the action panel: focus, then the cursor after the query,
+                    // since focusing a field selects all of its text.
+                    .onAppear {
                         DispatchQueue.main.async {
-                            guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else { return }
-                            editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+                            fieldFocused = true
+                            DispatchQueue.main.async(execute: Self.caretToEnd)
                         }
                     }
+                    // After SwiftUI has put the rewritten text in the field.
+                    .onChange(of: model.queryRewrites) { DispatchQueue.main.async(execute: Self.caretToEnd) }
                     .accessibilityLabel("Launcher, search field")
                     .padding(.horizontal, Space.lg)
                     .frame(height: LauncherLayout.fieldHeight)

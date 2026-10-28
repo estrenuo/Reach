@@ -15,7 +15,9 @@ struct ActionPanelView: View {
                 .textFieldStyle(.plain)
                 .font(.title2)
                 .focused($filterFocused)
-                .onAppear { filterFocused = true }
+                // A tick later: on appear the field is not in the window yet,
+                // and focus set then is lost, so typing went nowhere.
+                .onAppear { DispatchQueue.main.async { filterFocused = true } }
                 .accessibilityLabel(panel.choosingApp ? "Filter apps" : "Filter actions")
                 .padding(.horizontal, Space.md)
                 .frame(height: LauncherLayout.filterHeight)
