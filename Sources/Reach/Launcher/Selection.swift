@@ -33,21 +33,27 @@ enum SelectionReader {
     }
 
     private static func finderSelection() -> [URL]? {
+        // A list, one item per file: a name may hold any character, even a line break.
         let source = """
         tell application "Finder"
-            set out to ""
+            set out to {}
             repeat with f in (selection as alias list)
-                set out to out & POSIX path of f & linefeed
+                set end of out to POSIX path of f
             end repeat
             return out
         end tell
         """
         var error: NSDictionary?
-        guard let paths = NSAppleScript(source: source)?.executeAndReturnError(&error).stringValue else {
+        guard let list = NSAppleScript(source: source)?.executeAndReturnError(&error) else {
             if let error { actionLog.error("Finder selection: \(String(describing: error), privacy: .public)") }
             return nil
         }
-        return paths.split(separator: "\n").map { URL(fileURLWithPath: String($0)) }
+        guard list.numberOfItems > 0 else { return [] }
+        return (1...list.numberOfItems).compactMap { index in
+            guard let path = list.atIndex(index)?.stringValue,
+                  FileManager.default.fileExists(atPath: path) else { return nil }
+            return URL(fileURLWithPath: path)
+        }
     }
 
     /// The focused element's selected text, for apps that expose it (TextEdit, Safari).

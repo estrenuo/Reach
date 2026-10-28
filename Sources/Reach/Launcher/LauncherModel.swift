@@ -236,7 +236,8 @@ final class LauncherModel {
         panel.select(index)
         let item = panel.items[index]
         let target = panel.target
-        actionLog.notice("run \(String(describing: item), privacy: .public) on \(panel.detail, privacy: .public), filter '\(panel.filter, privacy: .public)'")
+        // Only the kind of action and the file: selected text and search URLs can hold secrets.
+        actionLog.notice("run \(item.logName, privacy: .public) on \(panel.url?.path ?? "selected text", privacy: .public)")
         switch item {
         case .action(.openWith):
             panel.chooseApp()

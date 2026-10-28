@@ -17,6 +17,16 @@ final class ActionPanel {
         case text(TextAction, String)
         /// A web search for selected text.
         case web(URL)
+
+        /// For the log: the action without the text or the search it carries.
+        var logName: String {
+            switch self {
+            case .action(let action): "action \(action.rawValue)"
+            case .app(let app): "open with \(app.lastPathComponent)"
+            case .text(let action, _): "text \(action.rawValue)"
+            case .web(let search): "web search on \(search.host() ?? "?")"
+            }
+        }
     }
 
     let target: LaunchResult
