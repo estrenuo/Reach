@@ -212,7 +212,17 @@ Depends: S-009
 Acceptance:
 - [snap] Buffered items show small icons in the bar.
 - [unit] ⌥↑ toggles, ⌥← removes the last item; the buffer clears after an action.
-Status: todo
+UX:
+- Flow: select a file, folder or app -> ⌥↑ adds it, or takes it out again; ⌥↓ adds it and selects the next result -> search again, the buffer stays -> ⌥→ opens the action panel for every item -> an action runs on all of them, then the buffer is empty. Way back: ⌥← takes out the last item, ⌥⌫ empties the buffer, Esc in the panel goes back to the results with the buffer kept
+- Keys: ⌥← and ⌥⌫ work on the buffer only when it has items; with an empty buffer they move and delete by word, as in any text field. ⌥↑ on a result without a file (web search, hint) does nothing
+- Surface: small icons at the right end of the search field (inline; the launcher keeps its height), with a count; the action panel as for one file
+- States: empty buffer shows nothing; up to 5 icons, then "+N"; each icon's tooltip is the file's name, the group's is "3 items in the buffer. ⌥→ for actions, ⌥← to take out the last, ⌥⌫ to empty."; the panel header says "3 Items" with the names as its detail, and its Preview lists the names
+- Actions on several items: Open, Open With… (apps that open every one, only when no item is a folder), Reveal in Finder, Get Info, Copy Path (one path per line), Copy File, Move to Trash. Browse in Launcher, Open in Terminal and Quick Look are for one item and do not show
+- Clearing: after an action on the buffer, and when the buffer is unused for 5 minutes (checked when the launcher shows). Hiding and showing the launcher keeps it. The selection hotkey with several Finder files opens the same panel for all of them
+- Words: "Buffer"; "3 Items"; footer as for the action
+- Access: keyboard only; VoiceOver reads the icons as "Buffer, 3 items: q3.pdf, q2.pdf, photo.png"
+- Not now: settings for the buffer (on/off, when to clear), ⌥-click to take out one item
+Status: done
 
 ### S-014 Set file-search keywords, scope and exclusions
 As the user, I rename or disable the `open`/`find`/`in`/`tags` keywords, edit the search scope and hide file types.

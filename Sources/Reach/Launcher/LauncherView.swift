@@ -78,24 +78,29 @@ struct LauncherView: View {
     private var search: some View {
         VStack(spacing: Space.sm) {
             HStack(spacing: Space.md) {
-                TextField("Search", text: $model.query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 28))
-                    .focused($fieldFocused)
-                    // Back from the action panel: focus, then the cursor after the query,
-                    // since focusing a field selects all of its text.
-                    .onAppear {
-                        DispatchQueue.main.async {
-                            fieldFocused = true
-                            DispatchQueue.main.async(execute: Self.caretToEnd)
+                HStack(spacing: Space.sm) {
+                    TextField("Search", text: $model.query)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 28))
+                        .focused($fieldFocused)
+                        // Back from the action panel: focus, then the cursor after the query,
+                        // since focusing a field selects all of its text.
+                        .onAppear {
+                            DispatchQueue.main.async {
+                                fieldFocused = true
+                                DispatchQueue.main.async(execute: Self.caretToEnd)
+                            }
                         }
+                        // After SwiftUI has put the rewritten text in the field.
+                        .onChange(of: model.queryRewrites) { DispatchQueue.main.async(execute: Self.caretToEnd) }
+                        .accessibilityLabel("Launcher, search field")
+                    if !model.buffer.isEmpty {
+                        BufferView(items: model.buffer.items)
                     }
-                    // After SwiftUI has put the rewritten text in the field.
-                    .onChange(of: model.queryRewrites) { DispatchQueue.main.async(execute: Self.caretToEnd) }
-                    .accessibilityLabel("Launcher, search field")
-                    .padding(.horizontal, Space.lg)
-                    .frame(height: LauncherLayout.fieldHeight)
-                    .background(.quinary, in: RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
+                }
+                .padding(.horizontal, Space.lg)
+                .frame(height: LauncherLayout.fieldHeight)
+                .background(.quinary, in: RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: LauncherLayout.markSize, height: LauncherLayout.markSize)

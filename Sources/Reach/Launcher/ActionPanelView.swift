@@ -35,6 +35,24 @@ struct ActionPanelView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .accessibilityLabel("Preview, \(text)")
+                    } else if panel.isMany {
+                        // Several items preview as their names.
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: Space.xs) {
+                                ForEach(Array(zip(panel.urls, panel.names)), id: \.0) { url, name in
+                                    Label {
+                                        Text(name).lineLimit(1).truncationMode(.middle)
+                                    } icon: {
+                                        IconCache.image(for: .file(url.path))
+                                            .resizable()
+                                            .frame(width: LauncherLayout.compactIconSize, height: LauncherLayout.compactIconSize)
+                                    }
+                                    .help(url.path)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .accessibilityLabel("Preview, \(panel.names.joined(separator: ", "))")
                     } else {
                         PreviewPane(result: panel.target)
                     }

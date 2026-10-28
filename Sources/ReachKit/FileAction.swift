@@ -35,6 +35,20 @@ public enum FileAction: String, CaseIterable, Sendable {
         }
     }
 
+    /// The footer for several items (S-013), for the actions that show for them.
+    public var summaryForMany: String {
+        switch self {
+        case .open: "Open each with its default app"
+        case .openWith: "Choose one app to open them all"
+        case .reveal: "Show them selected in Finder"
+        case .getInfo: "Show a Finder Info window for each"
+        case .copyPath: "Copy the full paths, one per line"
+        case .copyFile: "Copy the files, to paste them in Finder or another app"
+        case .trash: "Move them to the Trash. You can put them back from the Trash."
+        case .quickLook, .browse, .terminal: summary
+        }
+    }
+
     public var symbol: String {
         switch self {
         case .open: "arrow.up.forward.app"
@@ -50,15 +64,19 @@ public enum FileAction: String, CaseIterable, Sendable {
         }
     }
 
-    /// The actions for a target, in panel order. Folders skip Open With…;
-    /// Quick Look shows only when it can preview the target (not off, not skipped);
-    /// actions switched off in Settings never show.
-    public static func available(isFolder: Bool, quickLook: Bool = true, off: Set<FileAction> = []) -> [FileAction] {
+    /// The actions for a target, in panel order. Folders skip Open With…
+    /// (`isFolder` is true when any item is one); Quick Look shows only when it
+    /// can preview the target (not off, not skipped); several items (`many`,
+    /// the buffer) skip the actions for one item; actions switched off in Settings never show.
+    public static func available(isFolder: Bool, quickLook: Bool = true, many: Bool = false,
+                                 off: Set<FileAction> = []) -> [FileAction] {
         allCases.filter { action in
+            guard !off.contains(action) else { return false }
             switch action {
-            case .openWith: !isFolder && !off.contains(action)
-            case .quickLook: quickLook && !off.contains(action)
-            default: !off.contains(action)
+            case .openWith: return !isFolder
+            case .quickLook: return quickLook && !many
+            case .browse, .terminal: return !many
+            default: return true
             }
         }
     }

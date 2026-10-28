@@ -27,6 +27,9 @@ final class LauncherModel {
     /// Goes up when the launcher, not the person, rewrites the query (→, ←, Tab):
     /// the view then puts the text cursor at the end, so typing adds to the path.
     private(set) var queryRewrites = 0
+    /// Items collected with ⌥↑ for one action on all of them (S-013). Kept while
+    /// the launcher hides; emptied by an action, ⌥⌫, or 5 minutes unused.
+    private(set) var buffer = FileBuffer()
 
     let apps: AppIndex
     let files: FileSearch
@@ -42,7 +45,9 @@ final class LauncherModel {
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
     @ObservationIgnored var opener: @MainActor (URL) -> Bool = { LauncherModel.openInWorkspace($0) }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
-    @ObservationIgnored var perform: @MainActor (ActionPanel.Item, URL?) -> Bool = { ActionRunner.run($0, on: $1) }
+    @ObservationIgnored var perform: @MainActor (ActionPanel.Item, [URL]) -> Bool = { ActionRunner.run($0, on: $1) }
+    /// Seconds for the buffer's 5 minutes. The self-test moves it forward.
+    @ObservationIgnored var now: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     /// Reads the macOS selection for the selection hotkey. The self-test swaps in a fake.
     @ObservationIgnored var readSelection: @MainActor () async -> Selection = { await SelectionReader.read() }
     @ObservationIgnored var onHide: @MainActor () -> Void = {}
@@ -63,6 +68,7 @@ final class LauncherModel {
 
     func didShow() {
         actions = nil
+        if buffer.isStale(at: now()) { buffer.clear() }
         query = ""
         setResults([])
         showCount += 1
@@ -195,14 +201,8 @@ final class LauncherModel {
         actions = nil
         switch selection {
         case .files(let urls):
-            guard let url = urls.first else { return }
-            let isFolder = ActionRunner.folder(of: url) == url
-            let result = LaunchResult(id: url.path, title: FileManager.default.displayName(atPath: url.path), subtitle: "",
-                                      icon: .file(url.path), url: url, kindLabel: isFolder ? "Folder" : "File",
-                                      isFolder: isFolder)
-            let panel = ActionPanel(target: result, url: url)
+            guard let panel = Self.panel(for: urls) else { return }
             panel.fromSelection = true
-            panel.others = urls.count - 1
             actions = panel
         case .text(let text, let source):
             actions = ActionPanel(text: text, source: source)
@@ -215,6 +215,68 @@ final class LauncherModel {
                                      icon: .symbol("lock"), url: SelectionReader.accessibilitySettings)])
         }
         onResultsChange()
+    }
+
+    /// The panel for one item, or "3 Items" for several. Nil for none.
+    private static func panel(for urls: [URL]) -> ActionPanel? {
+        guard let url = urls.first else { return nil }
+        guard urls.count == 1 else { return ActionPanel(items: urls) }
+        let isFolder = ActionRunner.folder(of: url) == url
+        let result = LaunchResult(id: url.path, title: FileManager.default.displayName(atPath: url.path), subtitle: "",
+                                  icon: .file(url.path), url: url, kindLabel: isFolder ? "Folder" : "File",
+                                  isFolder: isFolder)
+        return ActionPanel(target: result, url: url)
+    }
+
+    // MARK: Buffer (S-013)
+
+    /// The selected result's file, folder or app; nil for web searches and hints.
+    private var selectedFile: URL? {
+        guard let url = selectedResult?.url, url.isFileURL else { return nil }
+        return url
+    }
+
+    /// ⌥↑: the selected item goes in, or out again. False when it has no file.
+    func toggleBuffer() -> Bool {
+        guard let url = selectedFile else { return false }
+        buffer.toggle(url, at: now())
+        return true
+    }
+
+    /// ⌥↓: the selected item goes in, and the next result is selected.
+    func addToBuffer() -> Bool {
+        guard let url = selectedFile else { return false }
+        buffer.add(url, at: now())
+        move(1)
+        return true
+    }
+
+    /// ⌥←: takes out the last item. False with an empty buffer, so the key moves by word.
+    func removeLastFromBuffer() -> Bool {
+        buffer.removeLast(at: now())
+    }
+
+    /// ⌥⌫: empties the buffer. False when it is empty, so the key deletes a word.
+    func clearBuffer() -> Bool {
+        guard !buffer.isEmpty else { return false }
+        buffer.clear()
+        return true
+    }
+
+    /// ⌥→: the action panel for every item in the buffer. Items moved or
+    /// deleted since they went in are left out.
+    func showBufferActions() -> Bool {
+        guard actions == nil, !buffer.isEmpty else { return false }
+        buffer.touch(at: now())
+        let items = buffer.items.filter { FileManager.default.fileExists(atPath: $0.path) }
+        guard let panel = Self.panel(for: items) else {
+            buffer.clear()
+            return true
+        }
+        panel.fromBuffer = true
+        actions = panel
+        onResultsChange()
+        return true
     }
 
     static let nothingSelected = "Select files in Finder or text in any app, then press ⌃⌥⌘\\"
@@ -242,7 +304,8 @@ final class LauncherModel {
         let item = panel.items[index]
         let target = panel.target
         // Only the kind of action and the file: selected text and search URLs can hold secrets.
-        actionLog.notice("run \(item.logName, privacy: .public) on \(panel.url?.path ?? "selected text", privacy: .public)")
+        let on = panel.isMany ? "\(panel.urls.count) items" : panel.url?.path ?? "selected text"
+        actionLog.notice("run \(item.logName, privacy: .public) on \(on, privacy: .public)")
         switch item {
         case .action(.openWith):
             panel.chooseApp()
@@ -255,24 +318,29 @@ final class LauncherModel {
             guard let url = panel.url else { return }
             let folder = ActionRunner.folder(of: url).path
             actions = nil
+            if panel.fromBuffer { buffer.clear() }
             let shown = (folder as NSString).abbreviatingWithTildeInPath
             rewriteQuery(shown.hasSuffix("/") ? shown : shown + "/")
             onResultsChange()
             return
         case .action(.open):
-            guard let url = panel.url, opener(url) else { panel.failure = "Unable to open “\(target.title)”."; return }
+            // Every item, even when one fails.
+            let opened = panel.urls.map(opener)
+            guard !opened.isEmpty, !opened.contains(false) else { panel.failure = "Unable to open “\(target.title)”."; return }
         case .web(let search):
             guard opener(search) else { panel.failure = "Unable to open the search."; return }
         default:
-            guard perform(item, panel.url) else {
+            guard perform(item, panel.urls) else {
                 let name = panel.rows.indices.contains(index) ? panel.rows[index].title : "the action"
                 panel.failure = "Unable to run “\(name)” on “\(target.title)”."
                     + (ActionRunner.problem.map { " " + $0 } ?? "")
                 return
             }
         }
-        if case .action(.open) = item { onOpened(query, target) }
-        if case .app = item { onOpened(query, target) }
+        if panel.fromBuffer { buffer.clear() }
+        // Learning ranks one result per query; several items teach it nothing.
+        if !panel.isMany, case .action(.open) = item { onOpened(query, target) }
+        if !panel.isMany, case .app = item { onOpened(query, target) }
         onHide()
     }
 

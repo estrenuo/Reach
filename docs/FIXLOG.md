@@ -48,3 +48,11 @@ Rule: test system hooks with another app in front and real events posted through
 - Fix: `QuickLook.isMovingKeyboard` is true for a second after Quick Look opens or closes. Found by reading the `quicklook` log of a failed run: "close", then "launcher lost the keyboard".
 
 Rule: a window that makes itself key also moves the keyboard when it leaves; cover both ends, and run a focus test five times before calling it stable.
+
+## More retries kept Quick Look open (S-013, reverted)
+
+- Symptom: one self-test run in three failed on "hiding it mid-animation closes Quick Look too". Retrying `orderOut` for 2 s instead of 0.6 s, or calling `close()` instead, made it fail in every run, and the log said "Quick Look stayed open after closing for 2 s".
+- Cause: unknown in full. Calling `orderOut` or `close()` on the Quick Look panel again and again while it animates keeps it on screen; it goes once the calls stop.
+- Fix: none; the three retries over 0.6 s stay. Tried with the code from the commit before, which passed three runs in a row on the same Mac.
+
+Rule: when a change to timing code makes a flaky test fail every time, test the old code again on the same Mac before trying a third idea, and revert.

@@ -7,7 +7,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Launcher | The floating bar you summon with the hotkey: search field plus results | Alfred window, popup, spotlight, prompt |
 | Search field | The text field at the top of the launcher | query box, input, prompt |
 | Query | What you typed in the search field | search term, input |
-| Result | One row under the search field that you can open | item, hit, entry, match |
+| Result | One row under the search field that you can open | item (that is one thing in the buffer), hit, entry, match |
 | Selected result | The highlighted result that Return opens | active, focused, current row |
 | Open | Run the default action of a result: launch the app, open the file or URL | launch, execute, action (as a verb) |
 | Hotkey | The global key combination that shows or hides the launcher | shortcut (reserved for in-app keys), trigger |
@@ -30,4 +30,6 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Move to Trash | Put a file in the Trash, where it can be put back | Delete (that cannot be undone) |
 | Reach | The app itself | Alfred, the launcher (that is the panel) |
 | Quick Look | The system's full-size preview of the selected result, opened by tapping ⇧ or ⌘Y | preview (that is the launcher's right side), peek |
+| Buffer | Files, folders and apps collected with ⌥↑ to run one action on all of them with ⌥→ | basket, cart, selection (that is S-011), stack |
+| Item | One file, folder or app in the buffer; "3 Items" in the panel header | entry, element |
 | Skip | Leave a file type or folder out of Quick Look and Preview dates, in Settings > Previews | exclude, ignore, blacklist |

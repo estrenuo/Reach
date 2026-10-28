@@ -40,7 +40,7 @@ enum Snapshot {
             }
             if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
                 await model.launcherModel.apps.refreshNow()
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("path", "~/"), ("actions", "safari"), ("selection", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("path", "~/"), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -58,7 +58,18 @@ enum Snapshot {
                             _ = model.launcherModel.showActions()
                             try? await Task.sleep(for: .seconds(0.5))
                         }
+                        if name.hasPrefix("buffer") {
+                            let lm = model.launcherModel
+                            for index in 0..<min(3, lm.results.count) {
+                                lm.select(index)
+                                _ = lm.toggleBuffer()
+                            }
+                            lm.select(0)
+                            if name == "buffer-actions" { _ = lm.showBufferActions() }
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
                         capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                        _ = model.launcherModel.clearBuffer()
                         launcher.hide()
                     }
                 }

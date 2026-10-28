@@ -158,6 +158,7 @@ final class LauncherController {
             return true
         }
         if model.actions != nil { return handleActions(event, flags: flags) }
+        if flags == .option, handleBuffer(event.keyCode) { return true }
         if flags == .command, let key = event.charactersIgnoringModifiers {
             if key == "," {
                 hide()
@@ -208,6 +209,19 @@ final class LauncherController {
             shiftTap.interrupted()
         }
         return false
+    }
+
+    /// ⌥ keys for the buffer (S-013). ⌥↑ and ⌥↓ always belong to it; ⌥←, ⌥→
+    /// and ⌥⌫ only while it has items, so they still move and delete by word.
+    private func handleBuffer(_ keyCode: UInt16) -> Bool {
+        switch keyCode {
+        case 126: _ = model.toggleBuffer(); return true
+        case 125: _ = model.addToBuffer(); return true
+        case 123: return model.removeLastFromBuffer()
+        case 124: return model.showBufferActions()
+        case 51: return model.clearBuffer()
+        default: return false
+        }
     }
 
     /// Keys in the action panel. ← on an empty filter goes back, like Esc.
