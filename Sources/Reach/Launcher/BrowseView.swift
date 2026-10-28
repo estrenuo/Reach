@@ -56,7 +56,8 @@ struct PreviewPane: View {
 
     var body: some View {
         if let result, let url = result.url {
-            let info = Self.info(url)
+            // Skipped files and folders stay unread: they may be on a slow drive.
+            let info = PreviewSettings.shared.skips(url, isFolder: result.isFolder) ? (version: nil, created: nil, modified: nil) : Self.info(url)
             VStack(spacing: Space.lg) {
                 Spacer(minLength: 0)
                 IconCache.image(for: result.icon)

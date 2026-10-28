@@ -12,7 +12,9 @@ final class LauncherModel {
         didSet { if query != oldValue { refresh() } }
     }
     private(set) var results: [LaunchResult] = []
-    private(set) var selection = 0
+    private(set) var selection = 0 {
+        didSet { if selection != oldValue { onSelectionChange() } }
+    }
     /// An inline error under a result that failed to open, by result id.
     private(set) var errors: [String: String] = [:]
     /// Goes up every time the launcher shows: the view refocuses and replays its entrance.
@@ -45,6 +47,8 @@ final class LauncherModel {
     @ObservationIgnored var readSelection: @MainActor () async -> Selection = { await SelectionReader.read() }
     @ObservationIgnored var onHide: @MainActor () -> Void = {}
     @ObservationIgnored var onResultsChange: @MainActor () -> Void = {}
+    /// Called when another result is selected, or the results change under it (Quick Look follows).
+    @ObservationIgnored var onSelectionChange: @MainActor () -> Void = {}
     /// Called after a result opened, with the query that found it (Learning, S-004).
     @ObservationIgnored var onOpened: @MainActor (String, LaunchResult) -> Void = { _, _ in }
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
@@ -112,7 +116,8 @@ final class LauncherModel {
     private func setResults(_ new: [LaunchResult]) {
         results = new
         // The first openable result is selected, so Return skips a hint row.
-        selection = new.firstIndex(where: \.isOpenable) ?? 0
+        let first = new.firstIndex(where: \.isOpenable) ?? 0
+        if selection == first { onSelectionChange() } else { selection = first }
         onResultsChange()
     }
 

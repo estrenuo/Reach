@@ -1,4 +1,5 @@
 import AppKit
+import Quartz
 import SwiftData
 import ReachKit
 
@@ -43,6 +44,7 @@ enum SelfTest {
             check("names are cleaned", SnippetName.clean("  Email   signature ") == "Email signature")
 
             await checkLauncher(model: model)
+            await checkQuickLook(model: model)
 
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
@@ -392,6 +394,81 @@ enum SelfTest {
         _ = hotkeys.change(to: second, keyName: "L")
         check("the old hotkey stops working", hotkeys.isFree(first) && !hotkeys.isFree(second))
         hotkeys.suspend()
+    }
+
+    /// S-012: a tap on ⇧ or ⌘Y opens Quick Look on the selected file; a second
+    /// tap or Esc closes it. Real key and modifier events, a real Quick Look panel.
+    private static func checkQuickLook(model: AppModel) async {
+        guard let launcher = model.launcher else { return }
+        let lm = model.launcherModel
+        let quickLook = QuickLook.shared
+        let settings = PreviewSettings.shared
+        let fm = FileManager.default
+        let root = NSTemporaryDirectory() + "reach-quicklook/"
+        try? fm.removeItem(atPath: root)
+        try? fm.createDirectory(atPath: root, withIntermediateDirectories: true)
+        fm.createFile(atPath: root + "notes.txt", contents: Data("Quick Look".utf8))
+        var clock = ProcessInfo.processInfo.systemUptime
+        func event(_ type: NSEvent.EventType, _ code: UInt16, _ flags: NSEvent.ModifierFlags, _ chars: String = "") -> NSEvent? {
+            clock += 0.08
+            return NSEvent.keyEvent(with: type, location: .zero, modifierFlags: flags, timestamp: clock,
+                                    windowNumber: launcher.panel.windowNumber, context: nil, characters: chars,
+                                    charactersIgnoringModifiers: chars, isARepeat: false, keyCode: code)
+        }
+        func send(_ e: NSEvent?) { if let e { _ = launcher.handle(e) } }
+        func tapShift() async {
+            clock += 1  // well after any typing
+            send(event(.flagsChanged, 56, .shift))
+            send(event(.flagsChanged, 56, []))
+            try? await Task.sleep(for: .milliseconds(400))
+        }
+
+        launcher.show()
+        lm.query = root
+        try? await Task.sleep(for: .milliseconds(400))
+        check("the test file is selected", lm.selectedResult?.title == "notes.txt", lm.selectedResult?.title ?? "none")
+        await tapShift()
+        check("a tap on ⇧ opens Quick Look on the selected file",
+              quickLook.isOpen && quickLook.url?.lastPathComponent == "notes.txt")
+        check("the launcher stays open and keeps the keyboard", launcher.isVisible && launcher.panel.isKeyWindow)
+        await tapShift()
+        check("a second tap closes it", !quickLook.isOpen)
+        await tapShift()
+        send(event(.keyDown, 53, [], "\u{1b}"))
+        try? await Task.sleep(for: .milliseconds(500))
+        check("Esc closes only Quick Look", !quickLook.isOpen && launcher.isVisible && lm.query == root)
+        clock += 1
+        send(event(.flagsChanged, 56, .shift))
+        send(event(.keyDown, 0, .shift, "A"))
+        send(event(.flagsChanged, 56, []))
+        try? await Task.sleep(for: .milliseconds(300))
+        check("⇧ held for a capital opens nothing", !quickLook.isOpen)
+        lm.query = root
+        try? await Task.sleep(for: .milliseconds(300))
+        send(event(.keyDown, 16, .command, "y"))
+        try? await Task.sleep(for: .milliseconds(400))
+        check("⌘Y opens Quick Look", quickLook.isOpen)
+        send(event(.keyDown, 16, .command, "y"))
+        try? await Task.sleep(for: .milliseconds(500))
+        check("and closes it", !quickLook.isOpen)
+        settings.skips.types = ["public.text"]
+        await tapShift()
+        check("a skipped file type gets no Quick Look", !quickLook.isOpen)
+        settings.skips = PreviewSkips(folders: [URL(fileURLWithPath: root).resolvingSymlinksInPath().path])
+        await tapShift()
+        check("nor does a file in a skipped folder", !quickLook.isOpen)
+        settings.skips = PreviewSkips()
+        settings.quickLook = false
+        await tapShift()
+        check("nor anything with Quick Look off in Settings", !quickLook.isOpen)
+        settings.quickLook = true
+        await tapShift()
+        launcher.hide()
+        try? await Task.sleep(for: .milliseconds(500))
+        check("hiding the launcher closes Quick Look", !quickLook.isOpen)
+        check("test runs leave the saved preview settings alone",
+              UserDefaults.standard.object(forKey: "previews.skipTypes") as? [String] != ["public.text"])
+        try? fm.removeItem(atPath: root)
     }
 
     private static func check(_ name: String, _ ok: Bool, _ detail: String = "") {

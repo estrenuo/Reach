@@ -29,3 +29,5 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Action | One thing the action panel can do with a result: Reveal in Finder, Copy Path, Move to Trash | command, operation |
 | Move to Trash | Put a file in the Trash, where it can be put back | Delete (that cannot be undone) |
 | Reach | The app itself | Alfred, the launcher (that is the panel) |
+| Quick Look | The system's full-size preview of the selected result, opened by tapping ⇧ or ⌘Y | preview (that is the launcher's right side), peek |
+| Skip | Leave a file type or folder out of Quick Look and Preview dates, in Settings > Previews | exclude, ignore, blacklist |

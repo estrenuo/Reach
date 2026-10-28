@@ -194,7 +194,15 @@ Depends: S-005
 Acceptance:
 - [self] A Quick Look panel opens and closes on a second ⇧ or Esc.
 - [snap] Settings > Previews: Quick Look toggle and two exclusion lists (empty state).
-Status: todo
+UX:
+- Flow: select a result -> tap ⇧ or press ⌘Y -> the Quick Look panel opens beside the launcher, which keeps focus -> ↑/↓ change the result and Quick Look follows -> ⇧, ⌘Y or Esc closes it (Esc closes only Quick Look) -> hiding the launcher closes it too
+- Tap: ⇧ pressed and let go quickly with no other key in between, so typing capitals never opens Quick Look
+- Surface: the system Quick Look panel (a tool kept open beside the work); Settings > Previews tab (a place people come back to)
+- States: a result without a file (web search, hint) or a skipped type or folder: ⇧ does nothing; empty lists show "No file types" and "No folders"; long paths truncate in the middle with the full path as a tooltip
+- Words: tab "Previews"; checkbox "Tap ⇧ to Quick Look the selected result" with "Or press ⌘Y. Press it again or Esc to close Quick Look."; lists "Skip These File Types" and "Skip These Folders", footers "Files of these types get no Quick Look and show no dates in the Preview. Drop a file here or click + to choose one." and "Nothing inside these folders gets Quick Look or Preview dates. Useful for slow network drives."; buttons + "Add a file type to skip" / "Add a folder to skip", − "Stop skipping the selected item"
+- Access: keyboard only in the launcher; VoiceOver reads the lists as "Skip These File Types, empty"; + and − carry labels
+- Not now: rich thumbnails in the Preview (the reference's second checkbox) need a slow thumbnail source and move to Later
+Status: done
 
 ### S-013 Collect files in a buffer and act on all of them
 As the user, I press ⌥↑ on several files and then ⌥→ to run one action on all of them.
@@ -527,6 +535,7 @@ Status: todo
 - Music mini player and music keywords (21-features-music-general.png, 22-features-music-keywords.png, 23-features-music-advanced.png).
 - Web bookmarks from Safari and Chrome (11-features-web-bookmarks.png).
 - Custom actions on contact fields (18).
+- Rich file thumbnails in the Preview instead of the file icon (28).
 
 ## Dropped
 

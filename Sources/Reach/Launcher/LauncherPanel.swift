@@ -1,4 +1,6 @@
 import AppKit
+import Quartz
+import ReachKit
 import SwiftUI
 
 /// A floating panel that takes typing but leaves the other app in front,
@@ -30,6 +32,18 @@ final class LauncherPanel: NSPanel {
         super.resignKey()
         onResign()
     }
+
+    // Quick Look looks for its controller along the key window's responder chain.
+    // AppKit calls these on the main thread, but declares them nonisolated.
+    nonisolated override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+
+    nonisolated override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        MainActor.assumeIsolated { panel.dataSource = QuickLook.shared }
+    }
+
+    nonisolated override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        MainActor.assumeIsolated { panel.dataSource = nil }
+    }
 }
 
 /// Shows, hides, sizes, and places the launcher, and turns keys into model actions.
@@ -37,15 +51,25 @@ final class LauncherController {
     let model: LauncherModel
     let panel: LauncherPanel
     private var keyMonitor: Any?
+    private var shiftTap = ShiftTap()
 
     var isVisible: Bool { panel.isVisible }
 
     init(model: LauncherModel) {
         self.model = model
         panel = LauncherPanel(content: LauncherView(model: model).themed())
-        panel.onResign = { [weak self] in self?.hide() }
+        panel.onResign = { [weak self] in
+            // Quick Look makes itself key when it opens. Take the keyboard back,
+            // so ↑, ↓ and a second ⇧ still reach the launcher.
+            if NSApp.keyWindow is QLPreviewPanel, QuickLook.shared.url != nil, self?.isVisible == true {
+                DispatchQueue.main.async { self?.panel.makeKey() }
+                return
+            }
+            self?.hide()
+        }
         model.onHide = { [weak self] in self?.hide() }
         model.onResultsChange = { [weak self] in self?.resize() }
+        model.onSelectionChange = { [weak self] in QuickLook.shared.follow(self?.model.selectedResult) }
     }
 
     func toggle() {
@@ -72,6 +96,7 @@ final class LauncherController {
 
     func hide() {
         guard isVisible else { return }
+        QuickLook.shared.close()
         removeKeys()
         panel.orderOut(nil)
         model.didHide()
@@ -100,7 +125,7 @@ final class LauncherController {
 
     private func installKeys() {
         guard keyMonitor == nil else { return }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self, event.window === self.panel else { return event }
             return self.handle(event) ? nil : event
         }
@@ -114,12 +139,23 @@ final class LauncherController {
     /// True when the key was used. Keys typed into an input method pass through.
     func handle(_ event: NSEvent) -> Bool {
         if let editor = panel.firstResponder as? NSTextView, editor.hasMarkedText() { return false }
+        if event.type == .flagsChanged { return handleFlags(event) }
+        shiftTap.typed(at: event.timestamp)
         // Arrow keys always carry .numericPad and .function; only the keys
         // people hold down count as modifiers.
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             .subtracting([.numericPad, .function, .capsLock])
+        // Esc closes Quick Look before anything else.
+        if event.keyCode == 53, QuickLook.shared.isOpen {
+            QuickLook.shared.close()
+            return true
+        }
         if model.actions != nil { return handleActions(event, flags: flags) }
         if flags == .command, let key = event.charactersIgnoringModifiers {
+            if key == "y" {
+                _ = QuickLook.shared.toggle(model.selectedResult)
+                return true
+            }
             if key == "," {
                 hide()
                 model.openSettings()
@@ -144,6 +180,23 @@ final class LauncherController {
         default: return false
         }
         return true
+    }
+
+    /// A tap on ⇧ opens or closes Quick Look (S-012). Modifier changes always
+    /// pass through, so ⇧ still makes capitals.
+    private func handleFlags(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .function, .numericPad])
+        let isShift = event.keyCode == 56 || event.keyCode == 60
+        if isShift, flags == .shift {
+            shiftTap.pressed(at: event.timestamp)
+        } else if isShift, flags.isEmpty {
+            if shiftTap.released(at: event.timestamp), model.actions == nil {
+                _ = QuickLook.shared.toggle(model.selectedResult)
+            }
+        } else {
+            shiftTap.interrupted()
+        }
+        return false
     }
 
     /// Keys in the action panel. ← on an empty filter goes back, like Esc.
