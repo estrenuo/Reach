@@ -8,6 +8,15 @@ func availableActions() {
     #expect(FileAction.available(isFolder: false) == FileAction.allCases)
 }
 
+@Test("An action switched off never shows, not even when the filter matches it")
+func switchedOff() {
+    let shown = FileAction.available(isFolder: false, off: [.trash, .copyPath])
+    #expect(!shown.contains(.trash) && !shown.contains(.copyPath))
+    #expect(shown.count == FileAction.allCases.count - 2)
+    #expect(FileAction.filtered(shown, by: "trash").isEmpty)
+    #expect(FileAction.filtered(shown, by: "copy") == [.copyFile])
+}
+
 @Test("Typing filters the actions, best match first")
 func filterActions() {
     let all = FileAction.available(isFolder: false)

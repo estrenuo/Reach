@@ -49,7 +49,7 @@ enum SelfTest {
         }
     }
 
-    /// S-001 to S-009: the launcher, driven with real key events.
+    /// S-001 to S-010: the launcher, driven with real key events.
     private static func checkLauncher(model: AppModel) async {
         guard let launcher = model.launcher else {
             check("the launcher exists", false)
@@ -279,6 +279,27 @@ enum SelfTest {
               lm.actions?.footer == "Unable to run “Move to Trash” on “notes.txt”." && launcher.isVisible,
               lm.actions?.footer ?? "no panel")
         lm.closeActions()
+        // S-010: actions switched off in Settings leave the panel.
+        let actionSettings = ActionSettings.shared
+        let savedBefore = UserDefaults.standard.stringArray(forKey: "actions.off")
+        actionSettings.set(.trash, on: false)
+        launcher.show()
+        lm.query = root + "notes"
+        await settle()
+        _ = key(124, "")
+        check("a switched-off action is not in the panel", lm.actions?.rows.contains { $0.title == "Move to Trash" } == false
+              && lm.actions?.rows.count == FileAction.allCases.count - 1)
+        lm.actions?.filter = "trash"
+        check("not even when the filter matches it", lm.actions?.rows.first?.title == "No actions match “trash”")
+        lm.closeActions()
+        actionSettings.off = Set(FileAction.allCases)
+        _ = key(124, "")
+        check("with every action off the panel says where to turn them on", lm.actions?.rows.first?.title == ActionPanel.allOff)
+        lm.closeActions()
+        actionSettings.off = []
+        check("test runs leave the saved action settings alone",
+              UserDefaults.standard.stringArray(forKey: "actions.off") == savedBefore)
+
         // The whole path through NSApp, like the keyboard: focus must reach
         // the filter field, so typed letters filter and ↩ runs the match.
         var ranWith: [ActionPanel.Item] = []

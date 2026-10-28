@@ -87,13 +87,16 @@ final class ActionPanel {
                 rows = [hint(apps.isEmpty ? "No other apps open this file" : "No apps match “\(text)”")]
             }
         } else {
-            let actions = FileAction.filtered(FileAction.available(isFolder: target.isFolder), by: filter)
+            let shown = FileAction.available(isFolder: target.isFolder, off: ActionSettings.shared.off)
+            let actions = FileAction.filtered(shown, by: filter)
             items = actions.map { .action($0) }
             rows = actions.map { action in
                 LaunchResult(id: "action:\(action.rawValue)", title: action.title, subtitle: "",
                              icon: .symbol(action.symbol), url: url, kindLabel: "Action")
             }
-            if rows.isEmpty { rows = [hint("No actions match “\(filter)”")] }
+            if rows.isEmpty {
+                rows = [hint(shown.isEmpty ? Self.allOff : "No actions match “\(filter)”")]
+            }
         }
         selection = 0
     }
@@ -101,6 +104,8 @@ final class ActionPanel {
     private func hint(_ title: String) -> LaunchResult {
         LaunchResult(id: "hint:actions", title: title, subtitle: "", icon: .symbol("questionmark.circle"), url: nil)
     }
+
+    static let allOff = "All actions are off. Turn them on in Settings > Actions."
 
     static func appName(_ app: URL) -> String {
         FileManager.default.displayName(atPath: app.path).replacingOccurrences(of: ".app", with: "")

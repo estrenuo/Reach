@@ -1,3 +1,4 @@
+import ReachKit
 import ServiceManagement
 import SwiftUI
 
@@ -24,6 +25,7 @@ struct SettingsView: View {
         Form {
             switch tab {
             case .general: GeneralSettings()
+            case .actions: ActionsSettings()
             case .appearance: AppearanceSettings()
             }
         }
@@ -35,13 +37,14 @@ struct SettingsView: View {
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, appearance
+    case general, actions, appearance
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .general: "General"
+        case .actions: "Actions"
         case .appearance: "Appearance"
         }
     }
@@ -49,6 +52,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .general: "gearshape"
+        case .actions: "arrow.right.square"
         case .appearance: "paintpalette"
         }
     }
@@ -74,6 +78,33 @@ struct GeneralSettings: View {
         }
         Section("Snippets") {
             Toggle("Ask before deleting snippets", isOn: $confirmDelete)
+        }
+    }
+}
+
+/// Settings > Actions: which actions the action panel shows (S-010).
+struct ActionsSettings: View {
+    @Bindable private var settings = ActionSettings.shared
+
+    var body: some View {
+        Section {
+            ForEach(FileAction.allCases, id: \.self) { action in
+                Toggle(isOn: Binding(get: { settings.isOn(action) }, set: { settings.set(action, on: $0) })) {
+                    Label {
+                        Text(action.title)
+                    } icon: {
+                        // One width for every symbol, so the names line up.
+                        Image(systemName: action.symbol)
+                            .frame(width: Space.xl)
+                    }
+                }
+                .toggleStyle(.checkbox)
+            }
+        } header: {
+            Text("Action Panel")
+        } footer: {
+            Text("Actions you turn off no longer show in the action panel. Open With… shows only for files and apps.")
+                .foregroundStyle(.secondary)
         }
     }
 }

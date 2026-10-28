@@ -47,9 +47,10 @@ public enum FileAction: String, CaseIterable, Sendable {
         }
     }
 
-    /// The actions for a target, in panel order. Folders skip Open With….
-    public static func available(isFolder: Bool) -> [FileAction] {
-        allCases.filter { !(isFolder && $0 == .openWith) }
+    /// The actions for a target, in panel order. Folders skip Open With…;
+    /// actions switched off in Settings never show.
+    public static func available(isFolder: Bool, off: Set<FileAction> = []) -> [FileAction] {
+        allCases.filter { !(isFolder && $0 == .openWith) && !off.contains($0) }
     }
 
     /// Actions whose title matches `filter`, best match first; all of them for an empty filter.

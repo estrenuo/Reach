@@ -161,7 +161,13 @@ Depends: S-009
 Acceptance:
 - [snap] A checklist with icon and name per action.
 - [unit] A disabled action never shows in the panel.
-Status: todo
+UX:
+- Flow: Settings (⌘, or the menu bar icon) > Actions tab -> uncheck an action -> it leaves the action panel at once, also while filtering -> check it to bring it back
+- Surface: a Settings tab (one topic, a grouped Form), the native form of the reference's "Features > Actions" page
+- States: everything on by default; with every action off, → shows the hint "All actions are off. Turn them on in Settings > Actions."
+- Words: tab "Actions"; section "Action Panel"; one checkbox per action with its icon and name; footer "Actions you turn off no longer show in the action panel. Open With… shows only for files and apps."
+- Access: each checkbox reads its action's name; the settings are saved for the next launch, and test runs never change them
+Status: done
 
 ### S-011 Act on the current macOS selection
 As the user, I select files in Finder or text in any app and press ⌥⌘\ to open the action panel for it.
