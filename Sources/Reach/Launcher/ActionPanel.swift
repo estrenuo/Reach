@@ -149,7 +149,8 @@ final class ActionPanel {
                 rows = [hint(apps.isEmpty ? "No other apps open this file" : "No apps match “\(text)”")]
             }
         } else {
-            let shown = FileAction.available(isFolder: target.isFolder, off: ActionSettings.shared.off)
+            let shown = FileAction.available(isFolder: target.isFolder, quickLook: QuickLook.file(for: target) != nil,
+                                             off: ActionSettings.shared.off)
             let actions = FileAction.filtered(shown, by: filter)
             items = actions.map { .action($0) }
             rows = actions.map { action in
@@ -233,7 +234,7 @@ enum ActionRunner {
                     actionLog.error("trash failed for \(url.path, privacy: .public): \(String(describing: error), privacy: .public)")
                     return false
                 }
-            case .openWith, .browse:
+            case .openWith, .browse, .quickLook:
                 // The panel and the model handle these without the system.
                 return false
             }

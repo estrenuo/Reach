@@ -201,6 +201,7 @@ UX:
 - States: a result without a file (web search, hint) or a skipped type or folder: ⇧ does nothing; empty lists show "No file types" and "No folders"; long paths truncate in the middle with the full path as a tooltip
 - Words: tab "Previews"; checkbox "Tap ⇧ to Quick Look the selected result" with "Or press ⌘Y. Press it again or Esc to close Quick Look."; lists "Skip These File Types" and "Skip These Folders", footers "Files of these types get no Quick Look and show no dates in the Preview. Drop a file here or click + to choose one." and "Nothing inside these folders gets Quick Look or Preview dates. Useful for slow network drives."; buttons + "Add a file type to skip" / "Add a folder to skip", − "Stop skipping the selected item"
 - Access: keyboard only in the launcher; VoiceOver reads the lists as "Skip These File Types, empty"; + and − carry labels
+- Action panel: ⇧ and ⌘Y preview the panel's file too, and "Quick Look" is the second action ("Preview it without opening it. Tap ⇧ or press ⌘Y."); it shows only when Quick Look can preview the file, and ↩ on it keeps the launcher open. Esc closes Quick Look before the panel. Selected text has no file, so neither applies there
 - Not now: rich thumbnails in the Preview (the reference's second checkbox) need a slow thumbnail source and move to Later
 Status: done
 

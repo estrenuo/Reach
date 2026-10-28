@@ -63,7 +63,7 @@ final class LauncherController {
             // so ↑, ↓ and a second ⇧ still reach the launcher.
             quickLookLog.notice("launcher lost the keyboard to \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "another app", privacy: .public)")
             let quickLook = QuickLook.shared
-            let tookIt = NSApp.keyWindow is QLPreviewPanel ? quickLook.url != nil : quickLook.isTakingKeyboard
+            let tookIt = NSApp.keyWindow is QLPreviewPanel ? quickLook.url != nil : quickLook.isMovingKeyboard
             if tookIt, self?.isVisible == true {
                 DispatchQueue.main.async { self?.panel.makeKey() }
                 return
@@ -153,12 +153,12 @@ final class LauncherController {
             QuickLook.shared.close()
             return true
         }
+        if flags == .command, event.charactersIgnoringModifiers == "y" {
+            _ = QuickLook.shared.toggle(previewTarget)
+            return true
+        }
         if model.actions != nil { return handleActions(event, flags: flags) }
         if flags == .command, let key = event.charactersIgnoringModifiers {
-            if key == "y" {
-                _ = QuickLook.shared.toggle(model.selectedResult)
-                return true
-            }
             if key == "," {
                 hide()
                 model.openSettings()
@@ -185,6 +185,12 @@ final class LauncherController {
         return true
     }
 
+    /// What ⇧ and ⌘Y preview: the action panel's file, else the selected result.
+    /// Selected text has no file, so Quick Look stays shut there.
+    private var previewTarget: LaunchResult? {
+        model.actions?.target ?? model.selectedResult
+    }
+
     /// A tap on ⇧ opens or closes Quick Look (S-012). Modifier changes always
     /// pass through, so ⇧ still makes capitals.
     private func handleFlags(_ event: NSEvent) -> Bool {
@@ -195,8 +201,8 @@ final class LauncherController {
         } else if isShift, flags.isEmpty {
             let tap = shiftTap.released(at: event.timestamp)
             quickLookLog.debug("⇧ up: \(tap ? "tap" : "not a tap", privacy: .public)")
-            if tap, model.actions == nil {
-                _ = QuickLook.shared.toggle(model.selectedResult)
+            if tap {
+                _ = QuickLook.shared.toggle(previewTarget)
             }
         } else {
             shiftTap.interrupted()

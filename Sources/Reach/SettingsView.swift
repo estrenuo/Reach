@@ -106,7 +106,7 @@ struct ActionsSettings: View {
         } header: {
             Text("Action Panel")
         } footer: {
-            Text("Actions you turn off no longer show in the action panel. Open With… shows only for files and apps.")
+            Text("Actions you turn off no longer show in the action panel. Open With… shows only for files and apps, Quick Look only for files that Previews does not skip.")
                 .foregroundStyle(.secondary)
         }
         Section("Selection") {

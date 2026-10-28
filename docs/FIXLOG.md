@@ -40,3 +40,11 @@ Rule: when a close or hide can race an animation, retry until the window is real
 - Fix: `QuickLook.isTakingKeyboard` is true for one second after opening; a resign in that second takes the keyboard back. A new check puts Finder in front and taps ⇧ through `CGEvent`, the system's own path. It failed on the old code.
 
 Rule: test system hooks with another app in front and real events posted through the system, since that is how people use a launcher; never accept "another app took focus" as the explanation before a test with no one at the Mac has ruled out a bug.
+
+## The launcher hid just after Quick Look closed (S-012)
+
+- Symptom: after a second ⇧ or Esc closed Quick Look, the launcher sometimes disappeared too. One run in four, in the self-test.
+- Cause: AppKit hands the key window on again when Quick Look goes, so the launcher resigns a second time, about 0.4 s after the close. The grace from the fix above covered only the opening.
+- Fix: `QuickLook.isMovingKeyboard` is true for a second after Quick Look opens or closes. Found by reading the `quicklook` log of a failed run: "close", then "launcher lost the keyboard".
+
+Rule: a window that makes itself key also moves the keyboard when it leaves; cover both ends, and run a focus test five times before calling it stable.

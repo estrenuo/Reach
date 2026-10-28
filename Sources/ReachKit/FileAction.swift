@@ -2,11 +2,12 @@ import Foundation
 
 /// Something the action panel can do with a file, folder or app.
 public enum FileAction: String, CaseIterable, Sendable {
-    case open, openWith, reveal, browse, getInfo, copyPath, copyFile, terminal, trash
+    case open, quickLook, openWith, reveal, browse, getInfo, copyPath, copyFile, terminal, trash
 
     public var title: String {
         switch self {
         case .open: "Open"
+        case .quickLook: "Quick Look"
         case .openWith: "Open With…"
         case .reveal: "Reveal in Finder"
         case .browse: "Browse in Launcher"
@@ -22,6 +23,7 @@ public enum FileAction: String, CaseIterable, Sendable {
     public var summary: String {
         switch self {
         case .open: "Open it with its default app"
+        case .quickLook: "Preview it without opening it. Tap ⇧ or press ⌘Y."
         case .openWith: "Choose another app to open it with"
         case .reveal: "Show it selected in a Finder window"
         case .browse: "List the folder in the launcher"
@@ -36,6 +38,7 @@ public enum FileAction: String, CaseIterable, Sendable {
     public var symbol: String {
         switch self {
         case .open: "arrow.up.forward.app"
+        case .quickLook: "eye"
         case .openWith: "square.grid.2x2"
         case .reveal: "folder"
         case .browse: "list.bullet.indent"
@@ -48,9 +51,16 @@ public enum FileAction: String, CaseIterable, Sendable {
     }
 
     /// The actions for a target, in panel order. Folders skip Open With…;
+    /// Quick Look shows only when it can preview the target (not off, not skipped);
     /// actions switched off in Settings never show.
-    public static func available(isFolder: Bool, off: Set<FileAction> = []) -> [FileAction] {
-        allCases.filter { !(isFolder && $0 == .openWith) && !off.contains($0) }
+    public static func available(isFolder: Bool, quickLook: Bool = true, off: Set<FileAction> = []) -> [FileAction] {
+        allCases.filter { action in
+            switch action {
+            case .openWith: !isFolder && !off.contains(action)
+            case .quickLook: quickLook && !off.contains(action)
+            default: !off.contains(action)
+            }
+        }
     }
 
     /// Actions whose title matches `filter`, best match first; all of them for an empty filter.

@@ -68,3 +68,11 @@ func trashOtherErrors() {
     }
     #expect(asked == 0)
 }
+
+@Test("Quick Look follows Open, and leaves when it cannot preview the target")
+func quickLookAction() {
+    #expect(FileAction.available(isFolder: false).prefix(2) == [.open, .quickLook])
+    #expect(!FileAction.available(isFolder: false, quickLook: false).contains(.quickLook))
+    #expect(!FileAction.available(isFolder: true, off: [.quickLook]).contains(.quickLook))
+    #expect(FileAction.filtered(FileAction.available(isFolder: false), by: "qu").first == .quickLook)
+}

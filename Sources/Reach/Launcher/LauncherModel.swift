@@ -235,7 +235,7 @@ final class LauncherModel {
     }
 
     /// Runs action `index` of the panel. Most actions hide the launcher;
-    /// Open With… lists apps, Browse in Launcher shows the folder.
+    /// Open With… lists apps, Browse in Launcher shows the folder, Quick Look opens beside it.
     func runAction(at index: Int) {
         guard let panel = actions, panel.items.indices.contains(index) else { return }
         panel.select(index)
@@ -246,6 +246,10 @@ final class LauncherModel {
         switch item {
         case .action(.openWith):
             panel.chooseApp()
+            return
+        case .action(.quickLook):
+            // Opens beside the panel, like ⇧; the launcher stays.
+            _ = QuickLook.shared.toggle(target)
             return
         case .action(.browse):
             guard let url = panel.url else { return }

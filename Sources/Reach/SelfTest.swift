@@ -264,7 +264,9 @@ enum SelfTest {
         lm.query = root + "notes"
         await settle()
         _ = key(124, "")
-        check("⌘3 runs action 3", key(20, "3", command: true) && performed.last == .action(FileAction.allCases[2]))
+        // Row 4 runs through perform; Open With… and Quick Look stay in the launcher.
+        let fourth = lm.actions?.items.dropFirst(3).first
+        check("⌘4 runs action 4", key(21, "4", command: true) && fourth != nil && performed.last == fourth, "\(performed)")
         launcher.show()
         lm.query = root + "notes"
         await settle()
@@ -518,6 +520,39 @@ enum SelfTest {
         check("with another app in front, a real ⇧ tap opens Quick Look and the launcher stays", quickLook.isOpen && launcher.isVisible, state())
         await realShift()
         check("and a second real tap closes it", !quickLook.isOpen, state())
+        launcher.hide()
+
+        // In the action panel: ⇧, ⌘Y and the Quick Look row preview the panel's file.
+        launcher.show()
+        lm.query = root
+        try? await Task.sleep(for: .milliseconds(400))
+        _ = lm.showActions()
+        let row = lm.actions?.items.firstIndex(of: .action(.quickLook))
+        check("the action panel lists Quick Look", row == 1, "\(lm.actions?.items ?? [])")
+        await tapShift()
+        check("a tap on ⇧ in the action panel opens Quick Look on its file",
+              quickLook.isOpen && quickLook.url?.lastPathComponent == "notes.txt" && lm.actions != nil && launcher.isVisible, state())
+        send(event(.keyDown, 53, [], "\u{1b}"))
+        try? await Task.sleep(for: .milliseconds(500))
+        check("Esc closes Quick Look first, the action panel stays", !quickLook.isOpen && lm.actions != nil, state())
+        send(event(.keyDown, 16, .command, "y"))
+        try? await Task.sleep(for: .milliseconds(400))
+        check("⌘Y in the action panel opens Quick Look", quickLook.isOpen, state())
+        send(event(.keyDown, 16, .command, "y"))
+        try? await Task.sleep(for: .milliseconds(500))
+        check("and closes it", !quickLook.isOpen, state())
+        if let row { lm.runAction(at: row) }
+        try? await Task.sleep(for: .milliseconds(400))
+        check("↩ on Quick Look opens it, and the launcher stays", quickLook.isOpen && launcher.isVisible && lm.actions != nil, state())
+        quickLook.close()
+        lm.closeActions()
+        settings.skips.types = ["public.text"]
+        _ = lm.showActions()
+        check("a skipped file type gets no Quick Look row", lm.actions?.items.contains(.action(.quickLook)) == false)
+        settings.skips = PreviewSkips()
+        lm.closeActions()
+        lm.query = "zzqxv nothing"
+        try? await Task.sleep(for: .milliseconds(300))
         launcher.hide()
         check("test runs leave the saved preview settings alone",
               UserDefaults.standard.object(forKey: "previews.skipTypes") as? [String] != ["public.text"])
