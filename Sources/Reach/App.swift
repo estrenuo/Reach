@@ -6,7 +6,7 @@ import SwiftUI
 //   Reach                      the app
 //   APP_STORE=<file> Reach     use another database (tests, experiments)
 //   APP_SNAPSHOT=<dir> Reach   save a PNG of every sidebar page and Settings tab in light and dark mode, then quit
-//   APP_SEED=1 Reach           fill an empty /tmp store with sample items (tools/snap.sh)
+//   APP_SEED=1 Reach           fill an empty /tmp store with sample snippets (tools/snap.sh)
 //   Reach --selftest           run the self-test on a /tmp store and quit with 0 or 1 (tools/selftest.sh)
 //   APP_ACCENT=<id> Reach      run with another accent from Theme.all (UI/Theme.swift)
 //   APP_GRID=1 Reach           draw the 8 pt grid and the layout probes over the window
@@ -31,7 +31,7 @@ struct ReachApp: App {
             SidebarCommands()
             ToolbarCommands()
             CommandGroup(replacing: .newItem) {
-                Button("New Item") { model.addItem() }
+                Button("New Snippet") { model.addSnippet() }
                     .keyboardShortcut("n")
             }
         }
@@ -78,7 +78,7 @@ enum Store {
 
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: Item.self, configurations: ModelConfiguration(url: url))
+            return try ModelContainer(for: Snippet.self, configurations: ModelConfiguration(url: url))
         } catch {
             fatalError("Could not open the database at \(url.path): \(error)")
         }

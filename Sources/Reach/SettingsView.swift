@@ -57,8 +57,8 @@ struct GeneralSettings: View {
     @AppStorage("confirmDelete") private var confirmDelete = true
 
     var body: some View {
-        Section("Items") {
-            Toggle("Ask before deleting items", isOn: $confirmDelete)
+        Section("Snippets") {
+            Toggle("Ask before deleting snippets", isOn: $confirmDelete)
         }
     }
 }

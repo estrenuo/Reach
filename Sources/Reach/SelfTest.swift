@@ -26,21 +26,21 @@ enum SelfTest {
         Task {
             try? await Task.sleep(for: .seconds(0.5))
             let context = model.container.mainContext
-            func items() -> [Item] { (try? context.fetch(FetchDescriptor<Item>())) ?? [] }
+            func snippets() -> [Snippet] { (try? context.fetch(FetchDescriptor<Snippet>())) ?? [] }
 
-            let before = items().count
-            model.addItem()
-            check("New Item adds one item", items().count == before + 1)
-            check("the new item is selected", model.selection != nil)
+            let before = snippets().count
+            model.addSnippet()
+            check("New Snippet adds one snippet", snippets().count == before + 1)
+            check("the new snippet is selected", model.selection != nil)
 
-            if let item = items().first(where: { $0.id == model.selection }) {
-                item.isStarred.toggle()
-                check("starring an item marks it starred", item.isStarred)
-                context.delete(item)
+            if let snippet = snippets().first(where: { $0.id == model.selection }) {
+                snippet.isStarred.toggle()
+                check("starring a snippet marks it starred", snippet.isStarred)
+                context.delete(snippet)
                 try? context.save()
-                check("deleting the item removes it", items().count == before)
+                check("deleting the snippet removes it", snippets().count == before)
             }
-            check("titles are cleaned", ItemTitle.clean("  Buy   milk ") == "Buy milk")
+            check("names are cleaned", SnippetName.clean("  Email   signature ") == "Email signature")
 
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)

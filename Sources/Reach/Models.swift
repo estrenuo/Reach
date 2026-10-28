@@ -3,16 +3,16 @@ import SwiftData
 import ReachKit
 
 @Model
-final class Item {
-    var title: String
-    var notes: String = ""
+final class Snippet {
+    var name: String
+    var text: String = ""
     var isStarred: Bool = false
     var createdAt: Date = Date.now
     /// A stable id for links, sync, and the agent CLI.
     var uuid: UUID = UUID()
 
-    init(title: String) {
-        self.title = title
+    init(name: String) {
+        self.name = name
     }
 }
 
@@ -24,14 +24,14 @@ enum SidebarItem: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .all: "All Items"
+        case .all: "All Snippets"
         case .starred: "Starred"
         }
     }
 
     var symbol: String {
         switch self {
-        case .all: "tray"
+        case .all: "text.quote"
         case .starred: "star"
         }
     }
@@ -52,10 +52,10 @@ final class AppModel {
         self.container = container
     }
 
-    func addItem(title: String = "") {
-        let item = Item(title: ItemTitle.clean(title))
-        if sidebar == .starred { item.isStarred = true }
-        container.mainContext.insert(item)
-        selection = item.id
+    func addSnippet(name: String = "") {
+        let snippet = Snippet(name: SnippetName.clean(name))
+        if sidebar == .starred { snippet.isStarred = true }
+        container.mainContext.insert(snippet)
+        selection = snippet.id
     }
 }

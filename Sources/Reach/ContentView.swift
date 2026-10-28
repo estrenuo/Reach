@@ -9,10 +9,10 @@ struct ContentView: View {
         NavigationSplitView {
             sidebar
         } content: {
-            ItemList(page: model.sidebar ?? .all)
+            SnippetList(page: model.sidebar ?? .all)
                 .navigationSplitViewColumnWidth(min: 260, ideal: 320)
         } detail: {
-            ItemDetail()
+            SnippetDetail()
         }
         .task {
             SeedData.insertIfRequested(into: model)
@@ -31,29 +31,29 @@ struct ContentView: View {
     }
 }
 
-struct ItemList: View {
+struct SnippetList: View {
     @Environment(AppModel.self) private var model
     @Environment(\.modelContext) private var context
-    @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
+    @Query(sort: \Snippet.createdAt, order: .reverse) private var snippets: [Snippet]
     let page: SidebarItem
 
-    private var visible: [Item] {
-        page == .starred ? items.filter(\.isStarred) : items
+    private var visible: [Snippet] {
+        page == .starred ? snippets.filter(\.isStarred) : snippets
     }
 
     var body: some View {
         @Bindable var model = model
-        List(visible, selection: $model.selection) { item in
-            Label(item.title, systemImage: item.isStarred ? "star.fill" : "circle")
-                .tag(item.id)
+        List(visible, selection: $model.selection) { snippet in
+            Label(snippet.name, systemImage: snippet.isStarred ? "star.fill" : "text.quote")
+                .tag(snippet.id)
                 .contextMenu {
-                    Button("Delete", role: .destructive) { context.delete(item) }
+                    Button("Delete", role: .destructive) { context.delete(snippet) }
                 }
         }
         .overlay {
             if visible.isEmpty {
                 ContentUnavailableView(
-                    "No Items",
+                    "No Snippets",
                     systemImage: page.symbol,
                     description: Text("Press Command-N to add one.")
                 )
@@ -62,24 +62,24 @@ struct ItemList: View {
         .navigationTitle(page.title)
         .toolbar {
             ToolbarItem {
-                Button("New Item", systemImage: "plus") { model.addItem() }
-                    .help("Add an item (Command-N)")
+                Button("New Snippet", systemImage: "plus") { model.addSnippet() }
+                    .help("Add a snippet (Command-N)")
             }
         }
     }
 }
 
-struct ItemDetail: View {
+struct SnippetDetail: View {
     @Environment(AppModel.self) private var model
-    @Query private var items: [Item]
+    @Query private var snippets: [Snippet]
 
     var body: some View {
-        if let item = items.first(where: { $0.id == model.selection }) {
-            @Bindable var item = item
+        if let snippet = snippets.first(where: { $0.id == model.selection }) {
+            @Bindable var snippet = snippet
             Form {
-                TextField("Title", text: $item.title)
-                Toggle("Starred", isOn: $item.isStarred)
-                TextField("Notes", text: $item.notes, axis: .vertical)
+                TextField("Name", text: $snippet.name)
+                Toggle("Starred", isOn: $snippet.isStarred)
+                TextField("Text", text: $snippet.text, axis: .vertical)
                     .lineLimit(4...)
             }
             .formStyle(.grouped)
