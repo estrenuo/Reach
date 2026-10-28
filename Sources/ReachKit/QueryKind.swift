@@ -8,6 +8,14 @@ public enum QueryKind: Equatable, Sendable {
     /// File search: `open <name>`, `'<name>` or ` <name>`. The name may be empty.
     case files(String)
 
+    /// The words after any keyword: what fallbacks search the web for.
+    public var text: String {
+        switch self {
+        case .empty: ""
+        case .normal(let text), .files(let text): text
+        }
+    }
+
     public static let fileKeywords = ["open "]
     public static let filePrefixes: [Character] = ["'", " "]
 

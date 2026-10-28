@@ -1,12 +1,32 @@
 import AppKit
+import ReachKit
 
 /// Finds files and folders by name through Spotlight, most recently used first.
 /// A new search keeps the previous results on screen until it finishes.
-final class FileSearch {
+final class FileSearch: ResultSource {
     static let limit = 9
     private var query: NSMetadataQuery?
     private var observer: NSObjectProtocol?
     private var pending: (@MainActor ([LaunchResult]) -> Void)?
+
+    static let hint = LaunchResult(id: "hint:files", title: "Type a file name", subtitle: "",
+                                   icon: .symbol("doc.text.magnifyingglass"), url: nil)
+
+    static func noMatch(_ name: String) -> LaunchResult {
+        LaunchResult(id: "hint:nofiles", title: "No files match “\(name)”", subtitle: "",
+                     icon: .symbol("doc.questionmark"), url: nil)
+    }
+
+    /// Files for `open <name>`, `'<name>` or ` <name>`, most recently used first.
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
+        guard case .files(let name) = query else { return [] }
+        guard !name.isEmpty else { return [Scored(result: Self.hint, score: 0)] }
+        search(name) { found in
+            later(found.isEmpty ? [Scored(result: Self.noMatch(name), score: 0)]
+                                : found.map { Scored(result: $0, score: 0) })
+        }
+        return nil
+    }
 
     /// Calls `done` once with up to nine results for `name`.
     func search(_ name: String, done: @escaping @MainActor ([LaunchResult]) -> Void) {

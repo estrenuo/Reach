@@ -64,3 +64,10 @@ func hotkey() {
     #expect(KeyCombo.default.spoken(key: "Space") == "Control Option Space")
     #expect(!KeyCombo(keyCode: 0, modifiers: KeyCombo.shift).isValid)
 }
+
+@Test("The text after the keyword")
+func queryText() {
+    #expect(QueryKind("open report").text == "report")
+    #expect(QueryKind("saf").text == "saf")
+    #expect(QueryKind("").text == "")
+}

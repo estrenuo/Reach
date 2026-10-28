@@ -3,7 +3,7 @@ import ReachKit
 
 /// The apps in the search scope, read from disk in the background.
 @Observable
-final class AppIndex {
+final class AppIndex: ResultSource {
     struct Entry: Sendable {
         var name: String
         var path: String
@@ -33,6 +33,14 @@ final class AppIndex {
     func refreshNow() async {
         lastScan = .now
         entries = await Task.detached(priority: .userInitiated) { Self.scan() }.value
+    }
+
+    /// Apps for a normal query, sorted by name so equal scores stay alphabetical.
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
+        guard case .normal(let text) = query else { return [] }
+        return results(for: text)
+            .sorted { $0.0.title.localizedStandardCompare($1.0.title) == .orderedAscending }
+            .map { Scored(result: $0.0, score: $0.1) }
     }
 
     func results(for query: String) -> [(LaunchResult, Int)] {
