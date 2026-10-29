@@ -19,6 +19,8 @@ struct LaunchResult: Identifiable, Equatable {
     var kindLabel: String = ""
     /// A folder you can browse into with → (not a package like an app).
     var isFolder = false
+    /// Return reveals it in Finder instead of opening it (the `find` keyword, S-014).
+    var reveals = false
 
     var isOpenable: Bool { url != nil }
 }

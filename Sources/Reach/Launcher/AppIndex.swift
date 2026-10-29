@@ -9,22 +9,22 @@ final class AppIndex: ResultSource {
         var path: String
     }
 
-    nonisolated static let scope = [
-        "/Applications", "/Applications/Utilities",
-        "/System/Applications", "/System/Applications/Utilities",
-        "/System/Library/CoreServices/Applications",
-        NSHomeDirectory() + "/Applications",
-    ]
+    /// The search scope (Settings > Search); apps come from each folder's top level.
+    @ObservationIgnored var scope: () -> [String] = { SearchSettings.shared.scope }
 
     private(set) var entries: [Entry] = []
     private var lastScan = Date.distantPast
+    private var scanned: [String] = []
 
-    /// Rescans when the list is older than a minute, so new apps show up.
+    /// Rescans when the list is older than a minute, so new apps show up,
+    /// or when the scope changed in Settings.
     func refreshIfStale() {
-        guard Date.now.timeIntervalSince(lastScan) > 60 else { return }
+        let folders = scope()
+        guard Date.now.timeIntervalSince(lastScan) > 60 || folders != scanned else { return }
         lastScan = .now
+        scanned = folders
         Task {
-            let found = await Task.detached(priority: .userInitiated) { Self.scan() }.value
+            let found = await Task.detached(priority: .userInitiated) { Self.scan(folders) }.value
             entries = found
         }
     }
@@ -32,7 +32,9 @@ final class AppIndex: ResultSource {
     /// Scans now and waits; used by the self-test and snapshots.
     func refreshNow() async {
         lastScan = .now
-        entries = await Task.detached(priority: .userInitiated) { Self.scan() }.value
+        let folders = scope()
+        scanned = folders
+        entries = await Task.detached(priority: .userInitiated) { Self.scan(folders) }.value
     }
 
     /// Apps for a normal query, sorted by name so equal scores stay alphabetical.
@@ -53,7 +55,7 @@ final class AppIndex: ResultSource {
         }
     }
 
-    nonisolated private static func scan() -> [Entry] {
+    nonisolated private static func scan(_ scope: [String]) -> [Entry] {
         let files = FileManager.default
         var seen = Set<String>()
         var found: [Entry] = []

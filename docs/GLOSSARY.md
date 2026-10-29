@@ -33,3 +33,6 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Buffer | Files, folders and apps collected with ⌥↑ to run one action on all of them with ⌥→ | basket, cart, selection (that is S-011), stack |
 | Item | One file, folder or app in the buffer; "3 Items" in the panel header | entry, element |
 | Skip | Leave a file type or folder out of Quick Look and Preview dates, in Settings > Previews | exclude, ignore, blacklist |
+| Search scope | The folders Reach looks in for apps and files, in Settings > Search | search paths, locations, index |
+| Default results | What a query without a keyword shows: apps, plus the file types ticked in Settings > Search | normal results, global search |
+| Don't Show | File kinds that file search keywords leave out, like Mail messages or plist files | hide, filter, exclude (Skip is for Previews) |

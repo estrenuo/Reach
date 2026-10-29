@@ -232,7 +232,13 @@ Acceptance:
 - [snap] Default Results page with the scope path list (+, −, Reset) and the type checkboxes.
 - [snap] File Search page with the keyword rows and the "Don't show" checkboxes.
 - [unit] `find` reveals in Finder, `in` searches file contents, `tags` searches Finder tags.
-Status: todo
+UX:
+- Flow: Settings > Search -> Keywords: a checkbox and a text field per keyword (open, find, in, tags); Return or leaving the field saves, Esc puts the saved word back -> Don't Show: checkboxes -> Default Results: checkboxes -> Search Scope: a folder list with +, − and Reset; drop folders from Finder. In the launcher: `find rep` -> files, ↩ reveals the selected one in Finder; `in rabbit hat` -> files whose contents have every word; `tags work` -> files tagged with every word. A keyword that is off makes the query a normal search.
+- Surface: one Settings tab "Search" between General and Actions (grouped form sections, changes values inline)
+- States: keyword with no text yet -> hint "Type a file name", "Type words from inside a file", "Type a tag"; invalid keyword -> inline red text under the field ("Type a keyword.", "A keyword is one word, without spaces.", "“find” is already the keyword for Reveal in Finder.") and the saved word stays; scope with one folder left -> − is off; no default types -> apps only, as now
+- Words: tab "Search"; sections "Keywords", "Don't Show", "Default Results", "Search Scope"; keyword labels "Open files", "Reveal in Finder", "Search inside files", "Search file tags"; Reset tooltip "Put back the standard folders"; footers say what each section does
+- Access: every checkbox and field has the label text; the keyword field's VoiceOver label is "Keyword for Open files"; the scope list reads like the Previews lists
+Status: done
 
 ---
 

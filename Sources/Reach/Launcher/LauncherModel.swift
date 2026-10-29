@@ -84,7 +84,7 @@ final class LauncherModel {
         errors = [:]
         generation += 1
         let asked = generation
-        let kind = QueryKind(query)
+        let kind = files.settings.queryKind(query)
         if case .path(let path) = kind { browsing = path } else { browsing = nil }
         sources.forEach { $0.cancel() }
         answers = sources.enumerated().map { index, source in
@@ -173,7 +173,8 @@ final class LauncherModel {
         guard results.indices.contains(index), let url = results[index].url else { return }
         let result = results[index]
         let missing = url.isFileURL && !FileManager.default.fileExists(atPath: url.path)
-        guard !missing, opener(url) else {
+        let worked = !missing && (result.reveals ? perform(.action(.reveal), [url]) : opener(url))
+        guard worked else {
             selection = index
             errors[result.id] = String(format: Self.openError, result.title)
             return

@@ -42,10 +42,10 @@ func speed() {
 @Test("Reads the file keyword", arguments: [
     ("", QueryKind.empty),
     ("saf", .normal("saf")),
-    ("open report", .files("report")),
-    ("Open ", .files("")),
-    ("'rep", .files("rep")),
-    (" rep", .files("rep")),
+    ("open report", .files(FileQuery(.open, "report"))),
+    ("Open ", .files(FileQuery(.open, ""))),
+    ("'rep", .files(FileQuery(.open, "rep"))),
+    (" rep", .files(FileQuery(.open, "rep"))),
     ("opener", .normal("opener")),
 ])
 func queryKind(_ query: String, expected: QueryKind) {

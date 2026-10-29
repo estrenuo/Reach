@@ -25,6 +25,7 @@ struct SettingsView: View {
         Form {
             switch tab {
             case .general: GeneralSettings()
+            case .search: SearchSettingsView()
             case .actions: ActionsSettings()
             case .previews: PreviewsSettings()
             case .appearance: AppearanceSettings()
@@ -38,13 +39,14 @@ struct SettingsView: View {
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, actions, previews, appearance
+    case general, search, actions, previews, appearance
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .general: "General"
+        case .search: "Search"
         case .actions: "Actions"
         case .previews: "Previews"
         case .appearance: "Appearance"
@@ -54,6 +56,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .general: "gearshape"
+        case .search: "magnifyingglass"
         case .actions: "arrow.right.square"
         case .previews: "eye"
         case .appearance: "paintpalette"
