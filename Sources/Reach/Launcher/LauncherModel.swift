@@ -235,7 +235,7 @@ final class LauncherModel {
             confirming = result
             var row = result
             row.id = "confirm:\(result.id)"
-            row.title = run.command.question
+            row.title = run.command.question(run.target)
             row.subtitle = run.command.confirmHelp
             row.system?.confirms = false
             setResults([row])

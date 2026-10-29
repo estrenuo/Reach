@@ -334,7 +334,14 @@ Depends: S-019
 Acceptance:
 - [unit] Only running apps are offered after `quit`/`hide`/`forcequit`.
 - [self] `quitall` asks for confirmation.
-Status: todo
+UX:
+- Flow: `quit` lists the running apps, last used first -> `quit saf` narrows -> ↩ quits "Quit Safari"; `qui` offers "Quit…" and ↩ completes to `quit `; `forcequit safari` asks "Force “Safari” to quit?"; `quitall` asks "Quit every app but Finder?" -> ↩ quits them, Esc keeps them
+- Surface: rows in the launcher with the app's icon; the confirmation row from S-019; Settings > System > Apps (Hide, Quit, Force Quit, Quit All)
+- States: "No apps are running"; "No running app matches “xcode”"; an app that refuses to quit shows "Unable to run “Quit Finder”." under its row
+- Words: "Quit Safari", "Hide Mail", "Force Quit…", "Press ↩ to pick a running app"
+- Defaults: Force Quit and Quit All ask first; Quit All leaves Finder and Reach running; apps with unsaved work still ask for themselves
+- Snapshots: launcher-quit-<mode>.png (sample apps, not the ones running), settings-system-<mode>.png
+Status: done
 
 ### S-021 Run a shell command
 As the user, I type `> ls -la` and ↩ runs it in my terminal app.

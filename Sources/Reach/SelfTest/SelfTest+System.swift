@@ -80,3 +80,69 @@ extension SelfTest {
         launcher.hide()
     }
 }
+
+extension SelfTest {
+    /// S-020: only running apps after quit, hide and forcequit; Force Quit and
+    /// Quit All ask first. Every run goes to a recorder.
+    static func checkApps(model: AppModel) async {
+        guard let launcher = model.launcher else { return }
+        let lm = model.launcherModel
+        var ran: [SystemRun] = []
+        lm.runSystem = { ran.append($0); return true }
+        lm.system.running = { [RunningApp(name: "Mail", pid: 9001, path: "/System/Applications/Mail.app"),
+                               RunningApp(name: "Safari", pid: 9002, path: "/Applications/Safari.app")] }
+        defer {
+            SystemSettings.shared.reset()
+            lm.runSystem = { _ in true }
+            lm.system.running = { RunningApp.current() }
+        }
+
+        launcher.show()
+        lm.query = "quit"
+        let quits = lm.results.filter { $0.system?.command == .quit }.map(\.title)
+        check("quit lists the running apps, last used first", quits == ["Quit Mail", "Quit Safari"],
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.query = "quit saf"
+        check("quit and a name picks the running app", lm.results.first?.title == "Quit Safari"
+              && !lm.results.contains { $0.title == "Quit Mail" }, lm.results.map(\.title).joined(separator: ", "))
+        lm.query = "quit calculator"
+        check("an app that is not running is not offered after quit",
+              !lm.results.contains { $0.system?.command == .quit }, lm.results.map(\.title).joined(separator: ", "))
+        lm.query = "quit saf"
+        lm.openSelected()
+        check("↩ quits that app", ran.last?.command == .quit && ran.last?.app == 9002 && !launcher.isVisible)
+
+        launcher.show()
+        lm.query = "hide mail"
+        lm.openSelected()
+        check("hide hides the app", ran.last?.command == .hide && ran.last?.app == 9001)
+
+        launcher.show()
+        lm.query = "qui"
+        check("part of the keyword offers the command", lm.results.contains { $0.completes == "quit " })
+
+        lm.query = "forcequit safari"
+        lm.openSelected()
+        check("Force Quit names the app and asks first", lm.results.first?.title == "Force “Safari” to quit?"
+              && ran.count == 2 && launcher.isVisible)
+        lm.openSelected()
+        check("↩ on the confirmation force quits", ran.last?.command == .forceQuit && ran.last?.app == 9002)
+
+        launcher.show()
+        lm.query = "quitall"
+        lm.openSelected()
+        check("quitall asks for confirmation", lm.results.count == 1
+              && lm.results.first?.title == "Quit every app but Finder?" && ran.count == 3 && launcher.isVisible)
+        lm.cancel()
+        check("Esc keeps every app running", ran.count == 3 && lm.results.first?.id == "system:quitAll")
+        lm.openSelected()
+        lm.openSelected()
+        check("↩ on the confirmation quits them", ran.last?.command == .quitAll && ran.count == 4)
+
+        launcher.show()
+        lm.system.running = { [] }
+        lm.query = "quit"
+        check("without running apps quit says so", lm.results.first?.title == "No apps are running")
+        launcher.hide()
+    }
+}

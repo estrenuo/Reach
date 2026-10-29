@@ -54,7 +54,12 @@ enum Snapshot {
                 let sources = model.launcherModel.sources
                 model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
                 defer { model.launcherModel.sources = sources }
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                // Sample apps for `quit`, not the ones running on this Mac.
+                model.launcherModel.system.running = { ["Mail", "Safari", "Music", "Notes"].map {
+                    let path = ["/System/Applications/\($0).app", "/Applications/\($0).app"].first(where: FileManager.default.fileExists) ?? ""
+                    return RunningApp(name: $0, pid: 0, path: path)
+                } }
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {

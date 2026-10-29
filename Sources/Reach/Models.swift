@@ -99,6 +99,8 @@ final class AppModel {
         HotkeyCenter.shared.start(register: !Self.isTestRun)
         // Snapshots and the self-test never sleep, lock or restart the Mac.
         if Self.isTestRun { launcherModel.runSystem = { _ in true } }
+        // Starts following which app was used last, for `quit`.
+        _ = AppRecency.shared
         launcherModel.apps.refreshIfStale()
     }
 

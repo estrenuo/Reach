@@ -47,3 +47,5 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | System command | A macOS command run by keyword: Sleep, Lock Screen, Restart, Eject | system action, power command |
 | Confirm | A system command setting: Return first shows a row that asks, a second Return runs it | prompt, are you sure |
 | Eject | Unmount a disk and make it safe to unplug | unmount, remove |
+| Running app | An app with a Dock icon that is open now; Hide, Quit and Force Quit list them, last used first | open app, process |
+| Force Quit | End an app at once; its unsaved changes are lost | kill, terminate |

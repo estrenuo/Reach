@@ -11,6 +11,8 @@ struct SystemSettingsView: View {
               footer: "Type a keyword to run the command. With Confirm on, Reach asks first: Return runs it, Esc cancels.")
         group("Sound", [.volumeUp, .volumeDown, .mute],
               footer: "Change the volume of your Mac from the launcher.")
+        group("Apps", [.hide, .quit, .forceQuit, .quitAll],
+              footer: "Type a keyword and an app name: “quit Safari”. The keyword alone lists the running apps, the last used first. Quit All leaves Finder and Reach running.")
         group("Disks", [.eject, .ejectAll],
               footer: "Eject lists each disk; type its name after the keyword to pick one. Wait for macOS to say a disk is ejected before you unplug it.")
     }

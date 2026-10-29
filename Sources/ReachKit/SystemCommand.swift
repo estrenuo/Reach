@@ -1,11 +1,13 @@
 import Foundation
 
 /// A macOS command run by keyword (S-019): `sleep`, `lock`, `restart`, `eject`.
-/// Alfred's set, in the order of its System page.
+/// Alfred's set, in the order of its System page. Hide, Quit, Force Quit and
+/// Quit All act on running apps (S-020).
 public enum SystemCommand: String, CaseIterable, Codable, Sendable {
     case screenSaver, showTrash, emptyTrash, logOut, sleep, sleepDisplays, lock, restart, shutDown
     case volumeUp, volumeDown, mute
     case eject, ejectAll
+    case hide, quit, forceQuit, quitAll
 
     public var title: String {
         switch self {
@@ -23,6 +25,10 @@ public enum SystemCommand: String, CaseIterable, Codable, Sendable {
         case .mute: "Toggle Mute"
         case .eject: "Eject"
         case .ejectAll: "Eject All"
+        case .hide: "Hide"
+        case .quit: "Quit"
+        case .forceQuit: "Force Quit"
+        case .quitAll: "Quit All"
         }
     }
 
@@ -42,6 +48,10 @@ public enum SystemCommand: String, CaseIterable, Codable, Sendable {
         case .mute: "mute"
         case .eject: "eject"
         case .ejectAll: "ejectall"
+        case .hide: "hide"
+        case .quit: "quit"
+        case .forceQuit: "forcequit"
+        case .quitAll: "quitall"
         }
     }
 
@@ -60,6 +70,10 @@ public enum SystemCommand: String, CaseIterable, Codable, Sendable {
         case .volumeDown: "speaker.wave.1"
         case .mute: "speaker.slash"
         case .eject, .ejectAll: "eject"
+        case .hide: "eye.slash"
+        case .quit: "xmark.circle"
+        case .forceQuit: "exclamationmark.octagon"
+        case .quitAll: "xmark.square"
         }
     }
 
@@ -80,25 +94,32 @@ public enum SystemCommand: String, CaseIterable, Codable, Sendable {
         case .mute: "Mute or unmute the sound"
         case .eject: "Eject a disk"
         case .ejectAll: "Eject every disk"
+        case .hide: "Hide a running app"
+        case .quit: "Quit a running app"
+        case .forceQuit: "Force a running app to quit; unsaved changes are lost"
+        case .quitAll: "Quit every app but Finder"
         }
     }
 
     /// The commands that can ask first, as in Alfred: the ones that end what you were doing.
     public var canConfirm: Bool {
         switch self {
-        case .emptyTrash, .logOut, .sleep, .sleepDisplays, .lock, .restart, .shutDown, .ejectAll: true
+        case .emptyTrash, .logOut, .sleep, .sleepDisplays, .lock, .restart, .shutDown, .ejectAll,
+             .forceQuit, .quitAll: true
         default: false
         }
     }
 
     /// The ones that cannot be undone ask first until people change it.
     public var confirmsAtFirst: Bool {
-        [.emptyTrash, .logOut, .restart, .shutDown].contains(self)
+        [.emptyTrash, .logOut, .restart, .shutDown, .forceQuit, .quitAll].contains(self)
     }
 
-    /// The confirmation row's title.
-    public var question: String {
+    /// The confirmation row's title; `target` names the app for Force Quit.
+    public func question(_ target: String? = nil) -> String {
         switch self {
+        case .forceQuit: "Force “\(target ?? "the app")” to quit?"
+        case .quitAll: "Quit every app but Finder?"
         case .emptyTrash: "Empty the Trash?"
         case .logOut: "Log out now?"
         case .sleep: "Put your Mac to sleep?"
@@ -121,13 +142,16 @@ public enum SystemCommand: String, CaseIterable, Codable, Sendable {
         case .restart: "restarts"
         case .shutDown: "shuts down"
         case .ejectAll: "ejects"
+        case .forceQuit: "force quits"
+        case .quitAll: "quits them"
         default: "runs it"
         }
         return "↩ \(verb), esc cancels"
     }
 
-    /// Eject lists each disk; the rest are one row.
-    public var listsDisks: Bool { self == .eject }
+    /// Eject lists each disk; Hide, Quit and Force Quit each running app.
+    /// The words after the keyword pick one. The rest are one row.
+    public var takesTarget: Bool { [.eject, .hide, .quit, .forceQuit].contains(self) }
 }
 
 /// One command's settings: on or off, its keyword, and whether it asks first.
@@ -155,8 +179,8 @@ public enum SystemCommands {
         public var setting: SystemCommandSetting
         /// On the `Matcher` scale, so commands rank among apps.
         public var score: Int
-        /// For Eject: the words after the keyword, which pick the disk. Nil without them.
-        public var disk: String?
+        /// The words after the keyword, which pick the disk or app. Nil without them.
+        public var target: String?
     }
 
     /// Matches weaker than a word start (`Matcher` 400) are left out.
@@ -164,16 +188,16 @@ public enum SystemCommands {
 
     /// The commands `query` names, best first. A command matches on its
     /// keyword or its title, so `sleep` finds Sleep and Sleep Displays.
-    /// `eject us` (keyword, space, words) lists the disks whose name matches.
+    /// `eject us` and `quit saf` (keyword, space, words) pick a disk or an app.
     public static func matches(_ query: String, in settings: [SystemCommandSetting]) -> [Match] {
         let text = query.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return [] }
         return settings.compactMap { setting -> Match? in
             let keyword = setting.keyword.trimmingCharacters(in: .whitespaces).lowercased()
             guard setting.isOn, !keyword.isEmpty else { return nil }
-            if setting.command.listsDisks, query.lowercased().hasPrefix(keyword + " ") {
+            if setting.command.takesTarget, query.lowercased().hasPrefix(keyword + " ") {
                 let words = query.dropFirst(keyword.count + 1).trimmingCharacters(in: .whitespaces)
-                return Match(setting: setting, score: 2000, disk: words)
+                return Match(setting: setting, score: 2000, target: words)
             }
             let score = [Matcher.score(query: text, title: keyword),
                          Matcher.score(query: text, title: setting.command.title)].compactMap { $0 }.max()
@@ -182,6 +206,17 @@ public enum SystemCommands {
             return Match(setting: setting, score: score)
         }
         .sorted { $0.score > $1.score }
+    }
+
+    /// The items whose name matches `words`, best first, with a bonus of up to
+    /// 100 on the command's score. Empty words keep every item, in its order.
+    public static func pick<Item>(_ words: String, from items: [Item], name: (Item) -> String) -> [(item: Item, bonus: Int)] {
+        let text = words.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return items.map { ($0, 0) } }
+        return items.enumerated()
+            .compactMap { offset, item in Matcher.score(query: text, title: name(item)).map { (offset, item, $0 / 10) } }
+            .sorted { $0.2 != $1.2 ? $0.2 > $1.2 : $0.0 < $1.0 }
+            .map { ($0.1, $0.2) }
     }
 
     /// Two commands, or a command and a file search keyword, cannot share a
