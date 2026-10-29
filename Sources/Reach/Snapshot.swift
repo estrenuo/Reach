@@ -42,14 +42,19 @@ enum Snapshot {
                     capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
                 }
             }
+            // Sample URLs for the URL history; the snapshot store is in /tmp.
+            for url in ["https://developer.apple.com/documentation/swiftui", "https://en.wikipedia.org/wiki/Bowler_hat",
+                        "https://www.example.com/"] {
+                if let url = URL(string: url) { model.launcherModel.history.record(url) }
+            }
             if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
                 await model.launcherModel.apps.refreshNow()
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
                 let sources = model.launcherModel.sources
-                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, model.launcherModel.webSearches, samples, model.launcherModel.paths]
+                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
                 defer { model.launcherModel.sources = sources }
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -95,6 +100,12 @@ enum Snapshot {
                         // Only titled windows: the menu bar icon and the launcher have windows too.
                         let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
+                        if tab == .web {
+                            WebSearchSettings.shared.page = .urls
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-web-urls-\(mode).png", window: settings)
+                            WebSearchSettings.shared.page = .searches
+                        }
                     }
                 }
             }

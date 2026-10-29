@@ -283,7 +283,14 @@ Depends: S-006
 Acceptance:
 - [unit] Bare domains get the default scheme; history entries expire after the chosen period.
 - [snap] History table with URL and last accessed, plus Clear.
-Status: todo
+UX:
+- Flow: type `example.com` -> "https://example.com" is the first result, selected -> ↩ opens it and the URL history remembers it -> later, typing any part (`exam`, `docs`) finds it among the apps, ranked with Learning. Settings > Web Search -> URLs -> filter, select a URL and − or Remove, or Clear… -> "Clear URL History?" with Clear and Cancel.
+- Surface: a segmented "Searches | URLs" switch at the top of the Web Search tab (one page per topic, no extra tab); Clear… is a confirmation dialog (destroys data that cannot come back)
+- States: no history -> "No URLs yet"; filter with no match -> "No URLs match “x”"; Recognize URLs off -> a domain is an ordinary query; history off -> nothing new is remembered, history rows are hidden; a URL not opened within the period goes at launch, on the next opened URL, or when the period changes
+- Words: "Recognize URLs", "Scheme for a domain typed without one" (https, http), "Treat URL schemes without // as URLs", "Remember URLs you open from Reach", "Remove a URL when not used for" (1 Week, 1 Month, 3 Months, 1 Year, Never), "Clear…"; typed row subtitle "Open this URL"; history row shows the URL without https://, the full URL under it
+- What counts: a scheme with //, `localhost:port`, an IPv4 address, or a domain ending in a common top-level domain; endings that are also file extensions (md, sh, py, rs, zip, mov) need https:// typed
+- Access: VoiceOver kinds "URL" and "URL from your history"; − and Clear… have tooltips
+Status: done
 
 ### S-018 Choose and order fallback searches
 As the user, I pick which searches appear when nothing matches, and in which order.

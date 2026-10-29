@@ -1,8 +1,9 @@
 import ReachKit
 import SwiftUI
 
-/// Settings > Web Search (S-016): custom searches first, added in a sheet,
-/// then the built-ins with a filter. Every search is on or off; built-ins
+/// Settings > Web Search (S-016): on the Searches page custom searches first,
+/// added in a sheet, then the built-ins with a filter. The URLs page has the
+/// typed URLs and the URL history (S-017). Every search is on or off; built-ins
 /// carry a lock: they can be switched off, not changed.
 struct WebSearchSettingsView: View {
     @Bindable private var settings = WebSearchSettings.shared
@@ -23,6 +24,22 @@ struct WebSearchSettingsView: View {
     }
 
     var body: some View {
+        Section {
+            Picker("Page", selection: $settings.page) {
+                ForEach(WebSearchSettings.Page.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
+        }
+        switch settings.page {
+        case .searches: searches
+        case .urls: URLSettingsView()
+        }
+    }
+
+    @ViewBuilder
+    private var searches: some View {
         Section {
             if settings.custom.isEmpty {
                 Text("No custom searches")

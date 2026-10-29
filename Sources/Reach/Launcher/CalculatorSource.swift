@@ -21,7 +21,7 @@ final class CalculatorSource: ResultSource {
         }
         guard let answer = Calculator.answer(for: text, locale: locale) else { return [] }
         return [Scored(result: LaunchResult(id: Self.id, title: answer.shown, subtitle: Self.help, icon: Self.icon,
-                                            url: nil, kindLabel: "Calculation", answer: answer.copied), score: 0)]
+                                            url: nil, kindLabel: "Calculation", answer: answer.copied, isPinned: true), score: 0)]
     }
 }
 

@@ -81,3 +81,10 @@ Rule: before reading order into a log, make stdout line-buffered; and give a lis
 - Fix: the store goes on the one property that needs it, `@AppStorage("confirmDelete", store: Store.settings)`, not on the scenes.
 
 Rule: hand a store to the property that uses it, not to a whole scene; and when snapshots change after a refactor, build the commit before and run the same pages.
+
+## A second container with fewer models dropped the URL history table (S-017)
+
+Symptom: in the self-test, a URL opened from the launcher never reached the URL history. Saving failed with SQLite error 1.
+Cause: the check "Learning survives a restart" opened the store again with `ModelContainer(for: Snippet.self, LearningEntry.self, …)`. SwiftData treated that as the store's schema, migrated it, and dropped the `URLVisit` table the app had just created. The same thing would happen to someone who opens a newer database with an older build.
+Fix: the check reopens the store with `Store.makeContainer()`, the one list of models. Checked separately that a database made by the previous build opens in the new one with its snippets intact and gains the new table.
+Rule: open the store only through `Store.makeContainer()`; a new `@Model` goes into that one list, never into a second container.

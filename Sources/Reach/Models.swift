@@ -30,6 +30,17 @@ final class LearningEntry {
     }
 }
 
+/// A URL opened from the launcher, for the URL history (S-017).
+@Model
+final class URLVisit {
+    var url: String = ""
+    var lastUsed: Date = Date.now
+
+    init(url: String) {
+        self.url = url
+    }
+}
+
 /// The sidebar pages. Snapshot mode walks through every case.
 enum SidebarItem: String, CaseIterable, Identifiable {
     case all, starred
@@ -71,6 +82,7 @@ final class AppModel {
 
     init(container: ModelContainer) {
         self.container = container
+        launcherModel.history.attach(container)
     }
 
     /// Builds the panel and listens for the hotkey. Test runs install the
@@ -81,6 +93,7 @@ final class AppModel {
         let learning = Learning(container: container)
         launcherModel.learning = learning
         launcherModel.onOpened = { query, result in learning.record(query: query, resultID: result.id) }
+        launcherModel.onURLOpened = { [launcherModel] url in launcherModel.history.record(url) }
         HotkeyCenter.shared.onPress = { controller.toggle() }
         HotkeyCenter.shared.onSelection = { controller.showSelection() }
         HotkeyCenter.shared.start(register: !Self.isTestRun)

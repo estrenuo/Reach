@@ -97,9 +97,10 @@ extension SelfTest {
         lm.query = "co"
         check("after two picks the result comes first", lm.results.first?.title == "Visual Studio Code",
               lm.results.first?.title ?? "none")
-        let reopened = try? ModelContainer(for: Snippet.self, LearningEntry.self,
-                                           configurations: ModelConfiguration(url: Store.url))
-        let saved = (try? reopened?.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
+        // The app's own schema: a container with fewer models migrates the
+        // store down and drops the tables it does not list.
+        let reopened = Store.makeContainer()
+        let saved = (try? reopened.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
         check("Learning survives a restart", saved.contains { $0.query == "co" && $0.count == 2 })
 
         // Result sources: a slow one keeps the previous results up until it answers.

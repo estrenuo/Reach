@@ -25,6 +25,10 @@ struct LaunchResult: Identifiable, Equatable {
     var answer: String?
     /// The query Return puts in the search field: "wik" becomes "wiki " (S-016).
     var completes: String?
+    /// Shown above the ranked results: a calculation's answer, a typed URL.
+    var isPinned = false
+    /// Opening it adds its URL to the URL history (S-017).
+    var remembers = false
 
     var isOpenable: Bool { url != nil || answer != nil || completes != nil }
 }

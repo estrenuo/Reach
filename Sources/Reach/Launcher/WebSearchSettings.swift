@@ -10,6 +10,19 @@ final class WebSearchSettings {
     private static let onKey = "web.on"
     private static let customKey = "web.custom"
 
+    /// The page Settings > Web Search shows; not saved.
+    enum Page: String, CaseIterable { case searches = "Searches", urls = "URLs" }
+    var page = Page.searches
+
+    // URLs (S-017)
+    var recognizesURLs: Bool { didSet { Store.settings.set(recognizesURLs, forKey: "url.recognize") } }
+    /// "https" or "http", for a domain typed without one.
+    var scheme: String { didSet { Store.settings.set(scheme, forKey: "url.scheme") } }
+    /// `mailto:a@b.c` and `spotify:track:1` count as URLs too.
+    var withoutSlashes: Bool { didSet { Store.settings.set(withoutSlashes, forKey: "url.withoutSlashes") } }
+    var keepsHistory: Bool { didSet { Store.settings.set(keepsHistory, forKey: "url.history") } }
+    var retention: URLRetention { didSet { Store.settings.set(retention.rawValue, forKey: "url.retention") } }
+
     /// The ids of the built-ins that are on.
     private var on: Set<String> {
         didSet { Store.settings.set(on.sorted(), forKey: Self.onKey) }
@@ -24,6 +37,16 @@ final class WebSearchSettings {
             ?? Set(WebSearches.builtIn.filter(\.isOn).map(\.id))
         custom = defaults.data(forKey: Self.customKey)
             .flatMap { try? JSONDecoder().decode([WebSearch].self, from: $0) } ?? []
+        recognizesURLs = defaults.object(forKey: "url.recognize") as? Bool ?? true
+        scheme = defaults.string(forKey: "url.scheme") ?? "https"
+        withoutSlashes = defaults.bool(forKey: "url.withoutSlashes")
+        keepsHistory = defaults.object(forKey: "url.history") as? Bool ?? true
+        retention = defaults.string(forKey: "url.retention").flatMap(URLRetention.init(rawValue:)) ?? .month
+    }
+
+    /// The URL `query` names under the current settings, or nil.
+    func typedURL(_ query: String) -> URL? {
+        recognizesURLs ? TypedURL.url(from: query, scheme: scheme, withoutSlashes: withoutSlashes) : nil
     }
 
     /// Built-ins first, in Alfred's order, then custom searches in the order they were added.
@@ -70,5 +93,10 @@ final class WebSearchSettings {
     func reset() {
         on = Set(WebSearches.builtIn.filter(\.isOn).map(\.id))
         custom = []
+        recognizesURLs = true
+        scheme = "https"
+        withoutSlashes = false
+        keepsHistory = true
+        retention = .month
     }
 }

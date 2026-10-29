@@ -36,6 +36,8 @@ final class LauncherModel {
     let paths: PathBrowser
     let calculator: CalculatorSource
     let webSearches: WebSearchSource
+    let typedURLs = TypedURLSource()
+    let history = URLHistory()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -62,6 +64,8 @@ final class LauncherModel {
     @ObservationIgnored var onSelectionChange: @MainActor () -> Void = {}
     /// Called after a result opened, with the query that found it (Learning, S-004).
     @ObservationIgnored var onOpened: @MainActor (String, LaunchResult) -> Void = { _, _ in }
+    /// Called after a typed or remembered URL opened (the URL history, S-017).
+    @ObservationIgnored var onURLOpened: @MainActor (URL) -> Void = { _ in }
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
 
@@ -72,7 +76,7 @@ final class LauncherModel {
         self.paths = paths
         self.calculator = calculator
         self.webSearches = webSearches
-        sources = [calculator, apps, webSearches, files, paths]
+        sources = [calculator, typedURLs, apps, history, webSearches, files, paths]
     }
 
     func didShow() {
@@ -109,14 +113,15 @@ final class LauncherModel {
 
     /// Shows the merged answers once every source has answered, so the
     /// previous results stay on screen while Spotlight searches.
-    /// Order: hints, then a calculation's answer, then openable results ranked
-    /// with Learning, then fallbacks when nothing openable came back.
+    /// Order: hints, then pinned results (a calculation's answer, a typed URL),
+    /// then openable results ranked with Learning, then fallbacks when nothing
+    /// openable came back.
     private func publish(_ kind: QueryKind) {
         guard answers.allSatisfy({ $0 != nil }) else { return }
         let all = answers.compactMap { $0 }.joined()
         let hints = all.filter { !$0.result.isOpenable }.map(\.result)
-        let calculations = all.filter { $0.result.answer != nil }.map(\.result)
-        let openable = all.filter { $0.result.isOpenable && $0.result.answer == nil }
+        let pinned = all.filter { $0.result.isOpenable && $0.result.isPinned }.map(\.result)
+        let openable = all.filter { $0.result.isOpenable && !$0.result.isPinned }
         if browsing != nil {
             // A folder listing keeps its own order (A to Z, or best match).
             setResults(hints + openable.prefix(PathBrowser.limit).map(\.result))
@@ -125,9 +130,9 @@ final class LauncherModel {
         let byID = Dictionary(openable.map { ($0.result.id, $0.result) }, uniquingKeysWith: { first, _ in first })
         let ranked = Ranking.order(openable.map { (id: $0.result.id, score: $0.score) },
                                    learned: learning?.picks(for: query) ?? [:])
-            .prefix(Self.maxResults - calculations.count)
+            .prefix(Self.maxResults - pinned.count)
             .compactMap { byID[$0] }
-        let found = calculations + ranked
+        let found = pinned + ranked
         setResults(hints + found + (found.isEmpty ? Fallbacks.results(for: kind.text) : []))
     }
 
@@ -201,6 +206,7 @@ final class LauncherModel {
             errors[result.id] = String(format: Self.openError, result.title)
             return
         }
+        if result.remembers { onURLOpened(url) }
         onOpened(query, result)
         onHide()
     }
