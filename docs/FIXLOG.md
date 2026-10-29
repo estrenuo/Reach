@@ -88,3 +88,10 @@ Symptom: in the self-test, a URL opened from the launcher never reached the URL 
 Cause: the check "Learning survives a restart" opened the store again with `ModelContainer(for: Snippet.self, LearningEntry.self, …)`. SwiftData treated that as the store's schema, migrated it, and dropped the `URLVisit` table the app had just created. The same thing would happen to someone who opens a newer database with an older build.
 Fix: the check reopens the store with `Store.makeContainer()`, the one list of models. Checked separately that a database made by the previous build opens in the new one with its snippets intact and gains the new table.
 Rule: open the store only through `Store.makeContainer()`; a new `@Model` goes into that one list, never into a second container.
+
+## The self-test crashed in the field editor after hide and show (S-022)
+
+Symptom: the self-test stopped with "Reach quit unexpectedly": an AppKit assertion, `!CGAffineTransformIsSingular` in `NSViewGetTransformToDescendant`, while the search field's text view laid out.
+Cause: the check hid the launcher (⌘↩), showed it again and set a new query in one run loop turn. The resize from the new results laid out the field editor while the previous hide and the entrance animation had not settled. A person cannot hide, show and type within one turn.
+Fix: the dictionary check waits 300 ms after `launcher.show()` before it types again.
+Rule: in the self-test, after a hide followed by a show, await a short sleep before setting the query.

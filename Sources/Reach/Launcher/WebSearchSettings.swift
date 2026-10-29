@@ -97,7 +97,10 @@ final class WebSearchSettings {
     /// Keywords other features own, so a custom search cannot take them.
     var taken: [String: String] {
         let keywords = SearchSettings.shared.keywords
-        return Dictionary(FileMode.allCases.map { (keywords[$0].word.lowercased(), $0.title) },
+        let dictionary = DictionarySettings.shared
+        let lookups = DictionaryLookup.Mode.allCases.filter { dictionary.isOn[$0] != false }
+            .map { (dictionary.keyword($0).lowercased(), $0.title) }
+        return Dictionary(FileMode.allCases.map { (keywords[$0].word.lowercased(), $0.title) } + lookups,
                           uniquingKeysWith: { first, _ in first })
     }
 

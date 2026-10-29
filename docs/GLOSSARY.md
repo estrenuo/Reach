@@ -52,3 +52,6 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Shell command | A command typed after the prefix (`> ls -la`) that runs in a new terminal window | terminal command, script |
 | Prefix | The character that turns a query into a shell command, `>` at first, in Settings > Terminal | trigger, keyword (a keyword is a word) |
 | Terminal app | The app shell commands run in: Terminal, Ghostty or iTerm | shell, console |
+| Define | Look up what a word means in the macOS dictionaries; Return opens Dictionary.app at the word | definition, look up, meaning |
+| Spell | Suggest how to write a word; Return copies the spelling | spell check, correct |
+| Spelling language | The language Spell suggests words in, Automatic at first | dictionary language, locale |

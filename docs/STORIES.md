@@ -366,7 +366,14 @@ Depends: S-002
 Acceptance:
 - [unit] Definitions come from the macOS dictionary service.
 - [self] ↩ opens Dictionary.app at the word.
-Status: todo
+UX:
+- Flow: `define seren` -> the word and related words that have a definition, the first sense as the subtitle -> ↩ opens Dictionary.app at the word; `spell recieve` -> spellings -> ↩ copies one, ⌘↩ pastes it; `defi` offers "Define a Word…" and ↩ completes to `define `
+- Surface: rows in the launcher above the other results; Settings > Dictionary (new tab after Terminal) with Spelling language and the two keywords, each with a checkbox
+- States: the keyword alone shows "Type a word to define" / "Type a word to spell"; "No definition for “xqz”"; "No spellings for “xqz”"; a keyword that is taken shows why under its field
+- Words: "Define a Word", "Spell a Word", "Spelling language", "Automatic", "↩ copies it, ⌘↩ pastes it", "Press ↩ to type a word"
+- Defaults: `define` and `spell`, both on; Automatic follows macOS. Definitions come from the dictionaries ticked in Dictionary.app. Settings is 640 wide so nine tabs fit
+- Snapshots: launcher-define-<mode>.png, launcher-spell-<mode>.png (sample words, the same on every Mac), settings-dictionary-<mode>.png
+Status: done
 
 ### S-023 Show text in Large Type
 As the user, I press ⌘L to show the query or the selected result in huge letters over the screen.

@@ -43,6 +43,7 @@ final class LauncherModel {
     let history = URLHistory()
     let system: SystemSource
     let shell: ShellSource
+    let dictionary = DictionarySource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -88,7 +89,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, typedURLs, apps, system, history, webSearches, files, paths]
+        sources = [calculator, shell, dictionary, typedURLs, apps, system, history, webSearches, files, paths]
     }
 
     func didShow() {
