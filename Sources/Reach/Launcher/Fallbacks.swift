@@ -1,27 +1,24 @@
 import ReachKit
 
-/// Web searches offered when the query has no results. M3 makes these editable.
+/// Web searches offered when the query has no results: Google, Amazon and
+/// Wikipedia from the built-in web searches, whether their keyword is on or
+/// not. S-018 makes the list editable.
 enum Fallbacks {
-    struct Engine {
-        var name: String
-        var template: String
-        var symbol: String
-    }
+    /// Built-in ids, with the site name VoiceOver reads.
+    static let names = [("google", "Google"), ("amazon", "Amazon"), ("wiki", "Wikipedia")]
 
-    static let engines = [
-        Engine(name: "Google", template: "https://www.google.com/search?q={query}", symbol: "magnifyingglass"),
-        Engine(name: "Amazon", template: "https://www.amazon.com/s?k={query}", symbol: "cart"),
-        Engine(name: "Wikipedia", template: "https://en.wikipedia.org/wiki/Special:Search?search={query}", symbol: "book"),
-    ]
+    static var engines: [(WebSearch, String)] {
+        names.compactMap { id, name in WebSearches.builtIn.first { $0.id == id }.map { ($0, name) } }
+    }
 
     static func results(for query: String) -> [LaunchResult] {
         guard !query.isEmpty else { return [] }
-        return engines.compactMap { engine in
-            guard let url = WebSearchURL.make(template: engine.template, query: query) else { return nil }
+        return engines.compactMap { engine, name in
+            guard let url = WebSearchURL.make(template: engine.url, query: query) else { return nil }
             return LaunchResult(
-                id: "fallback:\(engine.name)", title: "Search \(engine.name) for “\(query)”",
+                id: "fallback:\(name)", title: engine.title(for: query),
                 subtitle: url.host() ?? "", icon: .symbol(engine.symbol), url: url,
-                kindLabel: "Web search, \(engine.name)")
+                kindLabel: "Web search, \(name)")
         }
     }
 }

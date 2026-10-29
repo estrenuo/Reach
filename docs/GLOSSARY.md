@@ -15,6 +15,8 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Keyword | A word at the start of the query that picks a feature: `open`, `find`, `wiki` | prefix (only for single characters), command |
 | File search | Finding files and folders by name through a keyword | Spotlight search, finder |
 | Web search | Searching a website with the query, from a URL template with `{query}` | custom search, engine |
+| Custom search | A web search you add yourself in Settings > Web Search | user search, own engine |
+| Built-in search | A web search that comes with Reach; you can switch it off, not change it | default search, preset |
 | Fallback | A web search offered when the query has no results | default search, backup |
 | Learning | The launcher remembering which result you opened for a query and ranking it first | knowledge, latching, AI |
 | Settings | The app's settings window | Preferences |

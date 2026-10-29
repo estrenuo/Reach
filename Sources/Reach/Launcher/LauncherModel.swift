@@ -35,6 +35,7 @@ final class LauncherModel {
     let files: FileSearch
     let paths: PathBrowser
     let calculator: CalculatorSource
+    let webSearches: WebSearchSource
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -65,12 +66,13 @@ final class LauncherModel {
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
 
     init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser(),
-         calculator: CalculatorSource = CalculatorSource()) {
+         calculator: CalculatorSource = CalculatorSource(), webSearches: WebSearchSource = WebSearchSource()) {
         self.apps = apps
         self.files = files
         self.paths = paths
         self.calculator = calculator
-        sources = [calculator, apps, files, paths]
+        self.webSearches = webSearches
+        sources = [calculator, apps, webSearches, files, paths]
     }
 
     func didShow() {
@@ -94,6 +96,7 @@ final class LauncherModel {
         let kind = files.settings.queryKind(query)
         if case .path(let path) = kind { browsing = path } else { browsing = nil }
         sources.forEach { $0.cancel() }
+        webSearches.typed = query
         answers = sources.enumerated().map { index, source in
             source.results(for: kind) { [weak self] late in
                 guard let self, self.generation == asked else { return }
@@ -113,7 +116,7 @@ final class LauncherModel {
         let all = answers.compactMap { $0 }.joined()
         let hints = all.filter { !$0.result.isOpenable }.map(\.result)
         let calculations = all.filter { $0.result.answer != nil }.map(\.result)
-        let openable = all.filter { $0.result.url != nil }
+        let openable = all.filter { $0.result.isOpenable && $0.result.answer == nil }
         if browsing != nil {
             // A folder listing keeps its own order (A to Z, or best match).
             setResults(hints + openable.prefix(PathBrowser.limit).map(\.result))
@@ -184,6 +187,10 @@ final class LauncherModel {
         if let answer = result.answer {
             copier(answer)
             onHide()
+            return
+        }
+        if let completion = result.completes {
+            rewriteQuery(completion)
             return
         }
         guard let url = result.url else { return }

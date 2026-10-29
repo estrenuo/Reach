@@ -267,7 +267,14 @@ Depends: S-006
 Acceptance:
 - [snap] Table: keyword, title, enabled, built-in lock; filter field; "Add Custom Search".
 - [unit] A disabled keyword falls through to the fallbacks (as in 59).
-Status: todo
+UX:
+- Flow: type `wiki alfred` -> "Search Wikipedia for “alfred”" is the first result -> ↩ opens it in the browser. Part of a keyword (`wik`) offers "Search Wikipedia for “…”" among the apps; ↩ completes it to `wiki `. The keyword and a space alone open the site's front page. A search without {query} ("Open Gmail") opens on its keyword. Settings > Web Search -> Add Custom Search… -> sheet with Title, Keyword, URL -> Add (Return) or Cancel (Esc) -> the row appears, selected; double-click or Edit… changes it, − or Remove takes it out.
+- Surface: a Settings tab "Web Search" between Search and Actions (a list of settings); the add and edit form is a sheet (one short task)
+- States: no custom searches -> "No custom searches"; filter with no match -> "No searches match “x”"; Add with a problem -> red text under the fields ("Type a title.", "Type a keyword.", "A keyword is one word, without spaces.", "“in” is already the keyword for Search inside files.", "Type a URL that starts with https://."); a search that is off -> its keyword is an ordinary query
+- Words: tab "Web Search"; sections "Custom Searches" and "Built-in Searches"; "Add Custom Search…", "Edit Custom Search", "Only show enabled searches"; lock tooltip "Built in: you can switch it off, not change it"; completion subtitle "Press ↩ to type the words to search for"
+- Built-ins: Alfred's list with SF Symbols; on at first: Apple Maps, translate, wiki, amazon, imdb, linkedin, youtube, wolfram. The fallbacks (Google, Amazon, Wikipedia) come from the same list, on or off.
+- Access: every checkbox reads the search's title and keyword; the sheet works from the keyboard
+Status: done
 
 ### S-017 Open typed URLs and keep a URL history
 As the user, I type `example.com` and ↩ opens it; URLs I opened before come back as results.

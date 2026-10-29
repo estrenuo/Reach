@@ -57,6 +57,7 @@ enum SelfTest {
             await checkBuffer(model: model)
             await checkSearch(model: model)
             await checkCalculator(model: model)
+            await checkWebSearch(model: model)
             NSWorkspace.shared.notificationCenter.removeObserver(watch)
             if failures > 0, !intruders.isEmpty {
                 print("NOTE \(intruders.sorted().joined(separator: ", ")) came to the front during the run. "

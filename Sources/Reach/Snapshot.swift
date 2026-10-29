@@ -47,9 +47,9 @@ enum Snapshot {
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
                 let sources = model.launcherModel.sources
-                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, samples, model.launcherModel.paths]
+                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, model.launcherModel.webSearches, samples, model.launcherModel.paths]
                 defer { model.launcherModel.sources = sources }
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {

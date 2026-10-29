@@ -23,8 +23,10 @@ struct LaunchResult: Identifiable, Equatable {
     var reveals = false
     /// The text Return copies, for a calculation (S-015). It has no URL.
     var answer: String?
+    /// The query Return puts in the search field: "wik" becomes "wiki " (S-016).
+    var completes: String?
 
-    var isOpenable: Bool { url != nil || answer != nil }
+    var isOpenable: Bool { url != nil || answer != nil || completes != nil }
 }
 
 /// File icons from the workspace, cached per path.
