@@ -66,4 +66,19 @@ struct ClipboardPolicyTests {
     @Test func viewerHotkey() {
         #expect(KeyCombo.clipboard.display(key: "C") == "⌃⌥⌘C")
     }
+
+    @Test func standardExclusions() {
+        for app in ["com.apple.keychainaccess", "com.apple.Passwords", "com.1password.1password", "com.bitwarden.desktop"] {
+            #expect(ClipboardPolicy.standardIgnoredApps.contains(app))
+        }
+        #expect(Set(ClipboardPolicy.standardAppNames.keys) == ClipboardPolicy.standardIgnoredApps)
+    }
+
+    @Test func maxClipSize() {
+        #expect(ClipboardPolicy.MaxSize.standard.title == "256k characters")
+        #expect(ClipboardPolicy.MaxSize.ordered.map(\.title) == ["64k characters", "256k characters", "1M characters", "No Limit"])
+        #expect(ClipboardPolicy.MaxSize.small.fits(String(repeating: "x", count: 65_536)))
+        #expect(!ClipboardPolicy.MaxSize.small.fits(String(repeating: "x", count: 65_537)))
+        #expect(ClipboardPolicy.MaxSize.unlimited.fits(String(repeating: "x", count: 2_000_000)))
+    }
 }

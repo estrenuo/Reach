@@ -58,6 +58,40 @@ extension SelfTest {
         app = ("1Password", "com.1password.1password")
         copy("from 1password")
         check("a copy from 1Password is never kept", !history.poll())
+
+        // S-027: the Ignore Apps list and Max Clip Size.
+        check("Ignore Apps starts with the password managers and Keychain Access",
+              settings.ignoredAppList == ClipboardSettings.standardIgnoredApps && settings.ignoredApps.contains("com.apple.keychainaccess"))
+        settings.ignoredAppList.removeAll { $0 == "com.1password.1password" }
+        now += 60
+        copy("from 1password again")
+        check("with 1Password taken off the list, its copies are kept", history.poll() && history.items.first?.sourceApp == "1Password")
+        app = ("Notes", "com.apple.Notes")
+        settings.ignoredAppList.append("com.apple.Notes")
+        copy("a private note")
+        check("an app added to Ignore Apps is never kept", !history.poll())
+        settings.resetIgnoredApps()
+        check("Reset puts back the standard list, without added apps",
+              settings.ignoredAppList == ClipboardSettings.standardIgnoredApps && !settings.ignoredApps.contains("com.apple.Notes"))
+        check("the list shows app names, also for password managers that are not installed",
+              ClipboardAdvancedSettings.label("com.apple.Notes").0 == "Notes"
+                && ClipboardAdvancedSettings.label("com.example.not-installed") == ("com.example.not-installed", "Not installed")
+                && settings.ignoredAppList.allSatisfy { !ClipboardAdvancedSettings.label($0).0.contains(".") })
+        check("a dropped app is added by its bundle id",
+              ClipboardAdvancedSettings.bundleID(of: URL(fileURLWithPath: "/System/Applications/Notes.app")) == "com.apple.Notes"
+                && ClipboardAdvancedSettings.bundleID(of: URL(fileURLWithPath: "/tmp")) == nil)
+        app = ("TextEdit", "com.apple.TextEdit")
+        check("Max Clip Size starts at 256k characters", settings.maxSize == .medium)
+        settings.maxSize = .small
+        now += 60
+        copy(String(repeating: "x", count: 70_000))
+        check("text over Max Clip Size is not kept", !history.poll() && history.items.first?.text.count != 70_000)
+        settings.maxSize = .unlimited
+        now += 60
+        copy(String(repeating: "y", count: 70_000))
+        check("with No Limit, long text is kept", history.poll() && history.items.first?.text.count == 70_000)
+        history.items.filter { $0.text.count == 70_000 || $0.sourceApp == "1Password" }.forEach(context.delete)
+        settings.maxSize = .medium
         app = ("Preview", "com.apple.Preview")
 
         let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in

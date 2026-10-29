@@ -62,5 +62,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Clip | One kept copy: text, an image, or a file list | item, entry, clipping |
 | Retention | How long clips of one kind are kept: 24 Hours, 7 Days, 1 Month or 3 Months | expiry, lifetime |
 | Clipboard viewer | The launcher showing your clips to filter and paste, from ⌃⌥⌘C or the Clipboard History row | clipboard window, history panel |
+| Ignore Apps | Apps whose copies are never kept; starts with the password managers and Keychain Access | excluded apps, blacklist |
+| Max Clip Size | The longest copied text that is kept | clip limit, size cap |
 | Paste on Return | Return in the clipboard viewer also pastes the clip into the app in front | auto-paste |
 | Spelling language | The language Spell suggests words in, Automatic at first | dictionary language, locale |

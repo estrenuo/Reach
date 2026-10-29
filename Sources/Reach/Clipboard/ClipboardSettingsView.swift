@@ -10,6 +10,22 @@ struct ClipboardSettingsView: View {
 
     var body: some View {
         Section {
+            Picker("Page", selection: $settings.page) {
+                ForEach(ClipboardSettings.Page.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
+        }
+        switch settings.page {
+        case .history: history
+        case .advanced: ClipboardAdvancedSettings(settings: settings)
+        }
+    }
+
+    @ViewBuilder
+    private var history: some View {
+        Section {
             HStack(alignment: .top, spacing: Space.md) {
                 ForEach(ClipboardPolicy.Kind.allCases, id: \.self) { kind in
                     KindCard(kind: kind, settings: settings)
@@ -18,7 +34,7 @@ struct ClipboardSettingsView: View {
         } header: {
             Text("History")
         } footer: {
-            Text("Reach keeps what you copy for the time you choose, then forgets it. Copies from password managers and Keychain Access, and copies that apps mark as private, are never kept.")
+            Text("Reach keeps what you copy for the time you choose, then forgets it. Copies from the apps under Advanced, and copies that apps mark as private, are never kept.")
                 .foregroundStyle(.secondary)
         }
         Section("Viewer") {
@@ -29,10 +45,6 @@ struct ClipboardSettingsView: View {
             } label: {
                 Text("Show the clipboard viewer")
                 Text("Or type “clipboard” in the launcher.")
-            }
-            Toggle(isOn: $settings.pastesOnReturn) {
-                Text("Paste on Return")
-                Text("Return also pastes the clip into the app in front. Off: Return only copies it.")
             }
         }
         Section {

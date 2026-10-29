@@ -23,6 +23,21 @@ final class ClipboardSettings {
     var pastesOnReturn: Bool {
         didSet { Store.settings.set(pastesOnReturn, forKey: "clipboard.pasteOnReturn") }
     }
+    /// Bundle ids of apps whose copies are never kept (S-027). Starts with the password managers.
+    var ignoredAppList: [String] {
+        didSet { Store.settings.set(ignoredAppList, forKey: "clipboard.ignoredApps") }
+    }
+    /// Text longer than this is not kept (S-027).
+    var maxSize: ClipboardPolicy.MaxSize {
+        didSet { Store.settings.set(maxSize.rawValue, forKey: "clipboard.maxSize") }
+    }
+
+    enum Page: String, CaseIterable {
+        case history = "History", advanced = "Advanced"
+    }
+
+    /// The page Settings > Clipboard shows; not saved.
+    var page = Page.history
 
     private init() {
         let defaults = Store.settings
@@ -34,6 +49,13 @@ final class ClipboardSettings {
             return (kind, saved ?? ClipboardPolicy.standardRetention(kind))
         })
         pastesOnReturn = defaults.object(forKey: "clipboard.pasteOnReturn") as? Bool ?? true
+        ignoredAppList = defaults.stringArray(forKey: "clipboard.ignoredApps") ?? Self.standardIgnoredApps
+        maxSize = (defaults.object(forKey: "clipboard.maxSize") as? Int).flatMap(ClipboardPolicy.MaxSize.init) ?? .standard
+    }
+
+    /// The standard list, by name, for Settings.
+    static let standardIgnoredApps = ClipboardPolicy.standardIgnoredApps.sorted {
+        (ClipboardPolicy.standardAppNames[$0] ?? $0).localizedStandardCompare(ClipboardPolicy.standardAppNames[$1] ?? $1) == .orderedAscending
     }
 
     var kindsOn: Set<ClipboardPolicy.Kind> { Set(keep.filter(\.value).keys) }
@@ -43,14 +65,19 @@ final class ClipboardSettings {
         retention[kind] ?? ClipboardPolicy.standardRetention(kind)
     }
 
-    /// Apps whose copies are never kept. Settings lists them in S-027.
-    var ignoredApps: Set<String> { ClipboardPolicy.standardIgnoredApps }
+    var ignoredApps: Set<String> { Set(ignoredAppList) }
+
+    /// Reset under the Ignore Apps list: the password managers again, and only them.
+    func resetIgnoredApps() { ignoredAppList = Self.standardIgnoredApps }
 
     /// Everything off, standard retention; the self-test leaves no trace this way.
     func reset() {
         keep = Dictionary(uniqueKeysWithValues: ClipboardPolicy.Kind.allCases.map { ($0, false) })
         retention = Dictionary(uniqueKeysWithValues: ClipboardPolicy.Kind.allCases.map { ($0, ClipboardPolicy.standardRetention($0)) })
         pastesOnReturn = true
+        ignoredAppList = Self.standardIgnoredApps
+        maxSize = .standard
+        page = .history
     }
 }
 
@@ -122,6 +149,10 @@ final class ClipboardHistory {
         switch kind {
         case .text:
             guard let text = pasteboard.string(forType: .string), !text.isEmpty else { return nil }
+            guard settings.maxSize.fits(text) else {
+                clipboardLog.notice("skipped a text clip over the size limit")
+                return nil
+            }
             return (text, nil)
         case .image:
             guard let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) else { return nil }

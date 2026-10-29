@@ -48,7 +48,33 @@ public enum ClipboardPolicy {
         "com.typeit4me.clipping",
     ]
 
-    /// Apps whose copies are never kept, before Settings adds any (S-027 adds the list).
+    /// The longest text kept (S-027): longer copies are skipped, so one huge
+    /// paste does not bloat the history. Images and file lists have no limit.
+    public enum MaxSize: Int, CaseIterable, Codable, Sendable {
+        case unlimited = 0
+        case small = 65_536
+        case medium = 262_144
+        case large = 1_048_576
+
+        public static let standard = MaxSize.medium
+        /// In menu order, smallest first.
+        public static let ordered: [MaxSize] = [.small, .medium, .large, .unlimited]
+
+        public var title: String {
+            switch self {
+            case .small: "64k characters"
+            case .medium: "256k characters"
+            case .large: "1M characters"
+            case .unlimited: "No Limit"
+            }
+        }
+
+        public func fits(_ text: String) -> Bool {
+            self == .unlimited || text.utf16.count <= rawValue
+        }
+    }
+
+    /// Apps whose copies are never kept until people change the list in Settings (S-027).
     public static let standardIgnoredApps: Set<String> = [
         "com.apple.keychainaccess",
         "com.apple.Passwords",
@@ -59,6 +85,19 @@ public enum ClipboardPolicy {
         "in.sinew.Enpass-Desktop",
         "com.dashlane.dashlanephonefinal",
         "org.keepassxc.keepassxc",
+    ]
+
+    /// Names for the standard apps, so Settings can show them when they are not installed.
+    public static let standardAppNames: [String: String] = [
+        "com.apple.keychainaccess": "Keychain Access",
+        "com.apple.Passwords": "Passwords",
+        "com.1password.1password": "1Password",
+        "com.agilebits.onepassword7": "1Password 7",
+        "com.bitwarden.desktop": "Bitwarden",
+        "com.lastpass.LastPass": "LastPass",
+        "in.sinew.Enpass-Desktop": "Enpass",
+        "com.dashlane.dashlanephonefinal": "Dashlane",
+        "org.keepassxc.keepassxc": "KeePassXC",
     ]
 
     static let fileTypes: Set<String> = ["public.file-url", "NSFilenamesPboardType"]

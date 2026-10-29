@@ -450,7 +450,14 @@ Depends: S-025
 Acceptance:
 - [unit] Default exclusions include password managers and Keychain.
 - [snap] Ignore-apps list with +, −, Reset.
-Status: todo
+UX:
+- Flow: Settings > Clipboard > Advanced -> + chooses an app in /Applications, or drop an app on the list -> its copies are no longer kept; select a row and − to keep its copies again; Reset brings back the password managers and Keychain Access only; Max Clip Size menu: 64k characters, 256k characters (standard), 1M characters, No Limit
+- Surface: a second page in the Clipboard tab (History | Advanced, segmented like Web Search); S-028 adds Merging
+- States: the list starts with nine password managers and Keychain Access, by name; an app that is not installed shows its name and "Not installed"; an empty list says "No apps"
+- Words: "Advanced", "Paste on Return" (moved here), "Max Clip Size", "Ignore Apps", "No Limit", tooltips "Add an app whose copies are never kept", "Keep copies from the selected app again"
+- Access: + and − are labelled; the list reads "Ignore Apps"
+- Scope: the limit counts text only; images and file lists keep their own retention
+Status: done
 
 ### S-028 Append to the last clip
 As the user, I hold ⌘ and press C twice to append the selection to the last clipboard item.
