@@ -65,7 +65,8 @@ enum Snapshot {
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
                 let sources = model.launcherModel.sources
-                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.shell, model.launcherModel.dictionary, model.launcherModel.contacts, model.launcherModel.snippets, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
+                // Only file search is swapped; every other source is the app's own, so snapshots show what the app shows.
+                model.launcherModel.sources = sources.map { $0 === model.launcherModel.files ? samples : $0 }
                 defer { model.launcherModel.sources = sources }
                 // Sample apps for `quit`, not the ones running on this Mac.
                 model.launcherModel.system.running = { ["Mail", "Safari", "Music", "Notes"].map {
