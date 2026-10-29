@@ -147,3 +147,10 @@ enum SelfTest {
 private extension String {
     var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }
+
+/// A value the self-test changes after handing a closure that reads it to
+/// the code under test. The self-test runs on the main actor only.
+final class Shared<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
+}

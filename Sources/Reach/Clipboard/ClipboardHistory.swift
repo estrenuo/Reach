@@ -139,10 +139,10 @@ final class ClipboardHistory {
     func start() {
         purge()
         poller = Timer.scheduledTimer(withTimeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.poll() }
+            MainActor.assumeIsolated { _ = self?.poll() }
         }
         purger = Timer.scheduledTimer(withTimeInterval: ClipboardPolicy.purgeInterval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.purge() }
+            MainActor.assumeIsolated { _ = self?.purge() }
         }
     }
 

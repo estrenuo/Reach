@@ -224,6 +224,14 @@ enum Snapshot {
                             WebSearchSettings.shared.page = .searches
                         }
                     }
+                    // S-036: Search Settings with a query, and with one that finds nothing.
+                    let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
+                    for (name, query) in [("search", "clip"), ("search-empty", "qxzv")] {
+                        model.settingsQuery = query
+                        try? await Task.sleep(for: .seconds(0.8))
+                        capture(to: "\(dir)/settings-\(name)-\(mode).png", window: settings)
+                    }
+                    model.settingsQuery = ""
                 }
             }
             print("SNAPSHOT done \(dir)")

@@ -22,6 +22,7 @@ struct SettingsView: View {
         }
         .frame(minWidth: 860, idealWidth: 900, minHeight: 600, idealHeight: 640)
         .noInitialFocus()
+        .focusedSceneValue(\.settingsInFront, true)
     }
 
     @ViewBuilder
@@ -48,11 +49,30 @@ struct SettingsView: View {
     }
 }
 
-/// The pages, then the features with an icon, a title and a summary.
+/// The pages, then the features with an icon, a title and a summary. With
+/// text in Search Settings, the settings that match instead (S-036).
 private struct SettingsSidebar: View {
     @Environment(AppModel.self) private var model
+    @FocusState private var searching: Bool
 
     var body: some View {
+        @Bindable var model = model
+        Group {
+            if model.settingsQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+                pages
+            } else {
+                SettingsResults(results: SettingsTab.search(model.settingsQuery))
+            }
+        }
+        .searchable(text: $model.settingsQuery, placement: .sidebar, prompt: "Search Settings")
+        .searchFocused($searching)
+        .onSubmit(of: .search) {
+            if let first = SettingsTab.search(model.settingsQuery).first { model.settingsTab = first.tab }
+        }
+        .onChange(of: model.settingsSearchRequests) { searching = true }
+    }
+
+    private var pages: some View {
         List(selection: Binding<SettingsTab?>(get: { model.settingsTab }, set: { if let tab = $0 { model.settingsTab = tab } })) {
             Section {
                 ForEach(SettingsTab.pages) { tab in
@@ -81,11 +101,70 @@ private struct SettingsSidebar: View {
     }
 }
 
+/// Edit > Search Settings (⌘F), while Settings is in front.
+struct SettingsCommands: Commands {
+    @FocusedValue(\.settingsInFront) private var settingsInFront
+
+    var body: some Commands {
+        CommandGroup(after: .textEditing) {
+            Button("Search Settings") { AppModel.shared.settingsSearchRequests += 1 }
+                .keyboardShortcut("f")
+                .disabled(settingsInFront != true)
+        }
+    }
+}
+
+extension FocusedValues {
+    @Entry var settingsInFront: Bool?
+}
+
+/// The settings that match Search Settings: the label, and the page and
+/// section it is on. Clicking one shows its page.
+private struct SettingsResults: View {
+    @Environment(AppModel.self) private var model
+    let results: [(entry: SettingsEntry, tab: SettingsTab)]
+
+    var body: some View {
+        if results.isEmpty {
+            ContentUnavailableView.search(text: model.settingsQuery)
+        } else {
+            List(selection: Binding<String?>(get: { nil }, set: { id in
+                if let tab = results.first(where: { $0.entry.id == id })?.tab { model.settingsTab = tab }
+            })) {
+                ForEach(results, id: \.entry.id) { result in
+                    Label {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(result.entry.title)
+                            Text([result.tab.title, result.entry.section].filter { !$0.isEmpty && $0 != result.entry.title }
+                                .joined(separator: " › "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    } icon: {
+                        Image(systemName: result.tab.symbol)
+                    }
+                    .tag(result.entry.id)
+                }
+            }
+            .listStyle(.sidebar)
+        }
+    }
+}
+
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, appearance
 
     var id: String { rawValue }
+
+    /// Search Settings: every label in Settings, and the pages by name.
+    static func search(_ query: String) -> [(entry: SettingsEntry, tab: SettingsTab)] {
+        let titles = Dictionary(uniqueKeysWithValues: allCases.map { ($0.rawValue, $0.title) })
+        let pages = allCases.map { SettingsEntry($0.title, page: $0.rawValue, words: $0.summary) }
+        return SettingsIndex.search(query, in: pages + SettingsIndex.entries, pageTitles: titles)
+            .compactMap { entry in SettingsTab(rawValue: entry.page).map { (entry, $0) } }
+    }
 
     /// Pages at the top of the sidebar.
     static let pages: [SettingsTab] = [.general, .appearance]

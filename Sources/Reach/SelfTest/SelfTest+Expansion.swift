@@ -31,10 +31,10 @@ extension SelfTest {
         }
         try? context.save()
         let expander = SnippetExpander(launcher: lm, settings: settings)
-        var front = "com.apple.TextEdit"
-        var secure = false
-        expander.frontApp = { front }
-        expander.isSecure = { secure }
+        let front = Shared("com.apple.TextEdit")
+        let secure = Shared(false)
+        expander.frontApp = { front.value }
+        expander.isSecure = { secure.value }
         expander.deleter = { deleted.append($0) }
         defer {
             (lm.paster, lm.pasteboard, lm.restoreDelay) = (paster, board, delay)
@@ -65,7 +65,7 @@ extension SelfTest {
         check("a keyword at the start of a word is deleted and its snippet pasted",
               deleted == [5] && pastes == 1 && pasteboard.string(forType: .string) == "Groeten, Sander",
               "deleted \(deleted), pasted \(pastes)")
-        check("in TextEdit and Safari alike", { front = "com.apple.Safari"; type(" zad"); return pastes == 2 && deleted.last == 3 }())
+        check("in TextEdit and Safari alike", { front.value = "com.apple.Safari"; type(" zad"); return pastes == 2 && deleted.last == 3 }())
         type(" ;zad")
         check("the longest keyword that was typed wins: “;zad” over “zad”", pastes == 3 && deleted.last == 4
               && pasteboard.string(forType: .string) == "Stationsplein 1, Utrecht", "pasted \(pastes)")
@@ -85,14 +85,14 @@ extension SelfTest {
         key(kVK_ANSI_A, flags: .command)
         type("d")
         check("so does a shortcut like ⌘A", pastes == 4)
-        secure = true
+        secure.value = true
         type(" zad")
         check("never in a password field", pastes == 4 && expander.buffer.text.isEmpty)
-        secure = false
-        front = Bundle.main.bundleIdentifier ?? ""
+        secure.value = false
+        front.value = Bundle.main.bundleIdentifier ?? ""
         type(" zad")
         check("never in Reach itself", pastes == 4)
-        front = "com.apple.TextEdit"
+        front.value = "com.apple.TextEdit"
         check("the typed text stays short", { type(String(repeating: "x", count: 200)); return expander.buffer.text.count == TypedBuffer.limit }())
         try? await Task.sleep(for: .milliseconds(200))
     }

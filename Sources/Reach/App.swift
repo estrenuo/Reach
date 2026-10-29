@@ -45,6 +45,7 @@ struct ReachApp: App {
                 .themed()
         }
         .windowResizability(.contentMinSize)
+        .commands { SettingsCommands() }
     }
 }
 

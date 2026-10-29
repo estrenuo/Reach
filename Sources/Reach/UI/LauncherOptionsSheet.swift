@@ -107,17 +107,20 @@ private struct ScreenSketch: View {
                 Rectangle().fill(.tertiary).frame(height: 4)
                 RoundedRectangle(cornerRadius: 2).strokeBorder(.secondary, lineWidth: 1)
                     .frame(width: 64, height: 40)
-                    .offset(x: -24, y: 28)
+                    .padding([.top, .leading], Space.xxl)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 Image(systemName: "cursorarrow")
                     .font(.system(size: 12))
-                    .offset(x: 48, y: 64)
+                    .padding(.trailing, Space.section)
+                    .padding(.top, Space.section * 2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
             if picked == index {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(Palette.accent)
                     .frame(width: width * 0.5, height: 12)
-                    .offset(y: height * 0.2)
+                    .padding(.top, height * 0.2)
                     .transition(.opacity)
             }
         }

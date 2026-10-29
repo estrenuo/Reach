@@ -119,6 +119,10 @@ final class AppModel {
     var settingsTab: SettingsTab = SettingsTab(rawValue: Store.settings.string(forKey: "settings.tab") ?? "") ?? .general {
         didSet { Store.settings.set(settingsTab.rawValue, forKey: "settings.tab") }
     }
+    /// What Search Settings looks for (S-036); empty shows the pages.
+    var settingsQuery = ""
+    /// Goes up by one for each Search Settings (⌘F), which focuses the field.
+    var settingsSearchRequests = 0
 
     init(container: ModelContainer) {
         self.container = container

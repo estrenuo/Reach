@@ -593,7 +593,13 @@ Depends: S-007
 Acceptance:
 - [snap] A results list under the search field.
 - [unit] Every settings label is indexed.
-Status: todo
+UX:
+- Flow: ⌘F (or click the field) -> type -> the sidebar lists matching settings -> click one, or Return for the first -> its page shows on the right
+- Surface: the system search field at the top of the Settings sidebar; results replace the pages while it has text
+- States: empty field shows the pages; no match shows "No Results for …"; clearing the field brings the pages back
+- Words: "Search Settings"; each result shows the label, with "Page › Section" under it
+- Access: Edit > Search Settings ⌘F, only while Settings is in front; a page's name and summary words also match
+Status: done
 
 ### S-037 Navigate Settings with the rail and menu bar
 As the user, I move between Settings pages with the left icon rail and the menu bar.

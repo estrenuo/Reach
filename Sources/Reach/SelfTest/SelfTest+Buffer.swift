@@ -17,8 +17,8 @@ extension SelfTest {
         func titles(_ urls: [URL]) -> [String] { urls.map(\.lastPathComponent) }
         var ran: [(ActionPanel.Item, [URL])] = []
         lm.perform = { item, urls in ran.append((item, urls)); return true }
-        var clock = ProcessInfo.processInfo.systemUptime
-        lm.now = { clock }
+        let clock = Shared(ProcessInfo.processInfo.systemUptime)
+        lm.now = { clock.value }
         // ⌥ with an arrow, as the real keyboard sends it.
         func option(_ code: UInt16, _ chars: String) -> Bool {
             var flags: NSEvent.ModifierFlags = .option
@@ -70,7 +70,7 @@ extension SelfTest {
         check("⌥⌫ empties the buffer", option(51, "\u{7f}") && lm.buffer.isEmpty)
         _ = option(126, up)
         launcher.hide()
-        clock += FileBuffer.idle + 1
+        clock.value += FileBuffer.idle + 1
         launcher.show()
         check("5 minutes unused empties the buffer", lm.buffer.isEmpty)
         launcher.hide()
