@@ -1,6 +1,7 @@
 import AppKit
 import IOKit.pwr_mgt
 import ReachKit
+import SwiftData
 import SwiftUI
 
 /// Screenshot mode for agents.
@@ -8,7 +9,7 @@ import SwiftUI
 /// writes <page>-light.png and <page>-dark.png for every sidebar page, and
 /// settings-<tab>-light.png and settings-<tab>-dark.png for every Settings tab, then quits.
 /// Each PNG gets a <page>-<mode>-layout.json with the grid probes (tools/check-layout.swift).
-/// APP_SNAPSHOT_PAGES=all,starred limits the pages. Add "settings" or "launcher" to include those.
+/// APP_SNAPSHOT_PAGES=snippets,collection,snippets-empty limits the pages. Add "settings" or "launcher" to include those.
 /// Add APP_ACCENT=<id> to see the pages in another accent.
 enum Snapshot {
     static func runIfRequested(model: AppModel, openSettings: OpenSettingsAction) {
@@ -36,11 +37,23 @@ enum Snapshot {
             try? await Task.sleep(for: .seconds(1.5))
             for mode in ["light", "dark"] {
                 NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                for page in SidebarItem.allCases where only?.contains(page.rawValue) ?? true {
-                    model.sidebar = page
+                // S-029: All Snippets, a collection with a snippet selected, and an empty collection.
+                let collections = (try? model.container.mainContext.fetch(FetchDescriptor<SnippetCollection>())) ?? []
+                let work = collections.first { $0.name == "Work" }
+                let pages: [(String, SnippetPage, Snippet?)] = [
+                    ("snippets", .all, nil),
+                    ("collection", work.map { .collection($0.id) } ?? .all,
+                     work?.snippets?.first { $0.name == "Email signature" }),
+                    ("snippets-empty", collections.first { $0.name == "Templates" }.map { .collection($0.id) } ?? .all, nil),
+                ]
+                for (name, page, snippet) in pages where only?.contains(name) ?? true {
+                    model.page = page
+                    model.selection = snippet?.id
                     try? await Task.sleep(for: .seconds(0.8))
-                    capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
+                    capture(to: "\(dir)/\(name)-\(mode).png")
                 }
+                model.page = .all
+                model.selection = nil
             }
             // Sample URLs for the URL history; the snapshot store is in /tmp.
             for url in ["https://developer.apple.com/documentation/swiftui", "https://en.wikipedia.org/wiki/Bowler_hat",

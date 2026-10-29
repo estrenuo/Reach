@@ -68,3 +68,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Separator | What goes between appended texts: a space, a new line, a blank line or nothing | delimiter |
 | Paste on Return | Return in the clipboard viewer also pastes the clip into the app in front | auto-paste |
 | Spelling language | The language Spell suggests words in, Automatic at first | dictionary language, locale |
+| Snippet | A saved text with a name, pasted from the launcher (S-030) | template, text block, clip (a clip is copied) |
+| Collection | A named group of snippets in the sidebar; every snippet is in one | folder, group, category |
+| All Snippets | The sidebar page with the snippets of every collection | library, everything |
+| Snippet keyword | A short word, without spaces, that finds or expands a snippet | abbreviation, shortcut, trigger (Keyword alone is a launcher keyword) |

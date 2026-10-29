@@ -5,11 +5,27 @@ import ReachKit
 @Model
 final class Snippet {
     var name: String
+    /// A short word to find the snippet by, like "sig" (S-029).
+    var keyword: String = ""
     var text: String = ""
-    var isStarred: Bool = false
     var createdAt: Date = Date.now
     /// A stable id for links, sync, and the agent CLI.
     var uuid: UUID = UUID()
+    /// Every snippet is in one collection; nil only for snippets from before S-029.
+    var collection: SnippetCollection?
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+/// A named group of snippets, like "Work" (S-029). Deleting one deletes its snippets.
+@Model
+final class SnippetCollection {
+    var name: String = ""
+    var createdAt: Date = Date.now
+    var uuid: UUID = UUID()
+    @Relationship(deleteRule: .cascade, inverse: \Snippet.collection) var snippets: [Snippet]? = []
 
     init(name: String) {
         self.name = name
@@ -68,25 +84,12 @@ final class ClipboardItem {
     var clipKind: ClipboardPolicy.Kind { ClipboardPolicy.Kind(rawValue: kind) ?? .text }
 }
 
-/// The sidebar pages. Snapshot mode walks through every case.
-enum SidebarItem: String, CaseIterable, Identifiable {
-    case all, starred
+/// What the snippets window's sidebar shows: every snippet, or one collection.
+enum SnippetPage: Hashable {
+    case all
+    case collection(PersistentIdentifier)
 
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .all: "All Snippets"
-        case .starred: "Starred"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .all: "text.quote"
-        case .starred: "star"
-        }
-    }
+    static let allTitle = "All Snippets"
 }
 
 /// App-wide state that menus, toolbars, and views share.
@@ -105,7 +108,8 @@ final class AppModel {
     private(set) var clipboard: ClipboardHistory?
     /// ⌘C twice appends to the last clip (S-028); nil in test runs, like the history.
     private(set) var doubleCopy: DoubleCopyWatcher?
-    var sidebar: SidebarItem? = .all
+    var page: SnippetPage? = .all
+    /// The selected snippet in the window.
     var selection: PersistentIdentifier?
     /// Settings reopens on the last tab.
     var settingsTab: SettingsTab = SettingsTab(rawValue: Store.settings.string(forKey: "settings.tab") ?? "") ?? .general {
@@ -115,6 +119,7 @@ final class AppModel {
     init(container: ModelContainer) {
         self.container = container
         launcherModel.history.attach(container)
+        adoptLooseSnippets()
     }
 
     /// Builds the panel and listens for the hotkey. Test runs install the
@@ -151,10 +156,62 @@ final class AppModel {
         }
     }
 
-    func addSnippet(name: String = "") {
+    static let defaultCollection = "Snippets"
+
+    /// The collection the window shows, nil on All Snippets.
+    var currentCollection: SnippetCollection? {
+        guard case .collection(let id) = page else { return nil }
+        return container.mainContext.model(for: id) as? SnippetCollection
+    }
+
+    /// A new snippet goes into the collection on screen; on All Snippets into
+    /// the oldest collection, or a new "Snippets" one when there is none.
+    @discardableResult
+    func addSnippet(name: String = "") -> Snippet {
+        let context = container.mainContext
         let snippet = Snippet(name: SnippetName.clean(name))
-        if sidebar == .starred { snippet.isStarred = true }
-        container.mainContext.insert(snippet)
+        context.insert(snippet)
+        snippet.collection = currentCollection ?? defaultCollection()
+        try? context.save()
         selection = snippet.id
+        return snippet
+    }
+
+    @discardableResult
+    func addCollection(name: String) -> SnippetCollection {
+        let collection = SnippetCollection(name: SnippetName.clean(name, fallback: "New Collection"))
+        container.mainContext.insert(collection)
+        try? container.mainContext.save()
+        page = .collection(collection.id)
+        selection = nil
+        return collection
+    }
+
+    /// Deletes the collection and its snippets; ⌘Z brings them back.
+    func delete(_ collection: SnippetCollection) {
+        if case .collection(collection.id) = page { page = .all }
+        selection = nil
+        container.mainContext.delete(collection)
+        try? container.mainContext.save()
+    }
+
+    /// Snippets from before collections go into "Snippets", so every snippet has one.
+    func adoptLooseSnippets() {
+        let context = container.mainContext
+        let loose = (try? context.fetch(FetchDescriptor<Snippet>(predicate: #Predicate { $0.collection == nil }))) ?? []
+        guard !loose.isEmpty else { return }
+        let home = defaultCollection()
+        loose.forEach { $0.collection = home }
+        try? context.save()
+    }
+
+    private func defaultCollection() -> SnippetCollection {
+        let context = container.mainContext
+        var oldest = FetchDescriptor<SnippetCollection>(sortBy: [SortDescriptor(\.createdAt)])
+        oldest.fetchLimit = 1
+        if let first = try? context.fetch(oldest).first { return first }
+        let home = SnippetCollection(name: Self.defaultCollection)
+        context.insert(home)
+        return home
     }
 }

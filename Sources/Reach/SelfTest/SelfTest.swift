@@ -56,8 +56,7 @@ enum SelfTest {
             check("the new snippet is selected", model.selection != nil)
 
             if let snippet = snippets().first(where: { $0.id == model.selection }) {
-                snippet.isStarred.toggle()
-                check("starring a snippet marks it starred", snippet.isStarred)
+                check("a new snippet always has a collection", snippet.collection != nil)
                 context.delete(snippet)
                 try? context.save()
                 check("deleting the snippet removes it", snippets().count == before)
@@ -90,6 +89,7 @@ enum SelfTest {
             await checkClipboard(model: model)
             await checkClipboardViewer(model: model)
             await checkMerging(model: model)
+            await checkSnippets(model: model)
             NSWorkspace.shared.notificationCenter.removeObserver(watch)
             sleeps.forEach(center.removeObserver)
             if screenIsLocked { blockers.insert("the screen was locked") }

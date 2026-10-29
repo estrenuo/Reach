@@ -64,7 +64,8 @@ protocol ResultSource: AnyObject {
 
 ## Data
 
-- SwiftData store at `~/Library/Application Support/Reach/Reach.store`: `Snippet`, `LearningEntry`. New fields need a default value so existing stores keep loading.
+- SwiftData store at `~/Library/Application Support/Reach/Reach.store`: `Snippet`, `SnippetCollection`, `LearningEntry`, `ClipboardItem`. New fields need a default value so existing stores keep loading.
+- Snippets (S-029): `SnippetCollection` owns its snippets (`deleteRule: .cascade`). The window is a `NavigationSplitView`: `CollectionSidebar`, `SnippetTable(page:)` and `SnippetEditor`, driven by `AppModel.page` (`SnippetPage.all` or `.collection(id)`) and `selection`. `AppModel.addSnippet` puts a new snippet in the open collection, else the oldest, else a new "Snippets"; `adoptLooseSnippets()` does the same at launch for snippets from before collections. The model context uses the window's undo manager, so ⌘Z undoes adds, edits and deletes. `SnippetName` and `SnippetSearch` (ReachKit) clean names and keywords and score a search.
 - Settings (hotkey, open at login, accent) live in `UserDefaults` or with the system (`SMAppService`), not in the store.
 - Results are built per query and never stored.
 

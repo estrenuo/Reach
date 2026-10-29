@@ -482,7 +482,14 @@ Acceptance:
 - [snap] Empty state with "+" in both panes.
 - [snap] Filled state: collections left, Name | Keyword | Snippet table right.
 - [unit] Snippets persist and can be searched by name or keyword.
-Status: todo
+UX:
+- Flow: All Snippets in the clipboard viewer, or the Reach window -> sidebar + names a new collection in a sheet (Return creates, Esc cancels) -> table + or ⌘N adds "New Snippet" to the selected collection and selects it -> the editor on the right edits Name, Keyword, Collection and the text; changes save as you type; ⌘Z undoes
+- Surface: sidebar page per collection plus All Snippets (a place people come back to); editor as an inspector column (details of the selection); confirmation dialog only for deleting a collection with snippets
+- States: no collections "No Collections"; an empty collection "No Snippets" with "Add Snippet"; nothing selected "No Snippet Selected"; a keyword another snippet has shows an orange warning with an icon; long names truncate
+- Words: "All Snippets", "Collections", "New Collection", "Rename Collection", "Rename…", "Delete…", "Add Snippet", "Name | Keyword | Snippet", "Delete “Work” and its 5 snippets?" with "You can undo this with ⌘Z."
+- Access: + and − are labelled with tooltips; the table reads its columns; the whole flow works from the keyboard
+- Scope: Starred is gone; a keyword has no spaces; snippets without a collection move into "Snippets" at launch
+Status: done
 
 ### S-030 Paste a snippet from the launcher
 As the user, I type `snip <name>` and ↩ pastes the snippet.
