@@ -67,24 +67,24 @@ extension SelfTest {
         lm.runAction(at: 0)
         check("↩ on an email address starts an email", opened.last?.absoluteString == "mailto:sander@example.com" && !launcher.isVisible)
 
-        func reopenCard() {
-            launcher.show()
+        func reopenCard() async {
+            await showAgain(launcher)
             lm.query = "sander"
             _ = lm.showActions()
         }
-        reopenCard()
+        await reopenCard()
         lm.runAction(at: 2)
         check("↩ on a phone number copies it", copied.last == "+31 6 1234 5678" && !launcher.isVisible)
-        reopenCard()
+        await reopenCard()
         lm.runAction(at: 3)
         check("↩ on a website opens it", opened.last?.absoluteString == "https://example.com")
-        reopenCard()
+        await reopenCard()
         lm.runAction(at: 4)
         check("↩ on an address shows it in Maps", opened.last?.absoluteString.hasPrefix(ContactField.mapsBase) == true)
-        reopenCard()
+        await reopenCard()
         lm.actions?.select(1)
         check("⌘C copies the selected detail", lm.copySelectedField() && copied.last == "sander.home@example.org")
-        reopenCard()
+        await reopenCard()
         lm.actions?.filter = "mob"
         check("typing filters the details", lm.actions?.rows.map(\.title) == ["+31 6 1234 5678"],
               lm.actions?.rows.map(\.title).joined(separator: ", ") ?? "")
@@ -93,7 +93,7 @@ extension SelfTest {
         check("Esc goes back to the results, query kept", lm.actions == nil && lm.query == "sander" && launcher.isVisible)
         check("⌘O opens the contact in Contacts", lm.openInContacts() && opened.last?.absoluteString == "addressbook://sample-sander")
 
-        launcher.show()
+        await showAgain(launcher)
         lm.query = "email sander"
         check("email and a name lists each address, first",
               lm.results.prefix(2).map(\.subtitle) == ["sander@example.com (work)", "sander.home@example.org (home)"]
@@ -102,7 +102,7 @@ extension SelfTest {
         lm.select(1)
         lm.openSelected()
         check("↩ starts the email to that address", opened.last?.absoluteString == "mailto:sander.home@example.org")
-        launcher.show()
+        await showAgain(launcher)
         lm.query = "email a.b+c@example.com"
         check("email and an address starts an email to it", lm.results.first?.url?.absoluteString == "mailto:a.b%2Bc@example.com")
         lm.query = "email "

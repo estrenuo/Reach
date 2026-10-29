@@ -39,7 +39,7 @@ extension SelfTest {
         lm.openSelected()
         check("↩ opens Dictionary.app at the word", opened.last?.absoluteString == "dict://serendipity" && !launcher.isVisible)
 
-        launcher.show()
+        await showAgain(launcher)
         lm.query = "define xqz"
         check("a word without a definition says so", lm.results.first?.title == "No definition for “xqz”"
               && lm.results.first?.isOpenable == false)
@@ -56,15 +56,12 @@ extension SelfTest {
               lm.results.map(\.title).joined(separator: ", "))
         lm.openSelected()
         check("↩ copies the spelling", copied.last == "receive" && pasted == 0 && !launcher.isVisible)
-        launcher.show()
+        await showAgain(launcher)
         lm.query = "spell recieve"
         _ = lm.pasteSelected()
         check("⌘↩ copies and pastes the spelling", copied.last == "receive" && pasted == 1)
 
-        launcher.show()
-        // Hide, show and a query in one run loop turn trip an AppKit assertion
-        // in the field editor's layout; a person cannot be that fast.
-        try? await Task.sleep(for: .milliseconds(300))
+        await showAgain(launcher)
         settings.language = "en_GB"
         lm.query = "spell serendip"
         check("spell asks in the chosen language", languages.last == "en_GB"

@@ -13,6 +13,8 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
     static let shared = QuickLook()
     /// The file on show, or nil when Quick Look is closed.
     private(set) var url: URL?
+    /// What the last ⇧ or ⌘Y did, for the self-test's failure lines.
+    private(set) var lastToggle = "none"
 
     /// When the launcher takes the keyboard back from Quick Look.
     private var handover = KeyboardHandover()
@@ -40,9 +42,12 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
     /// ⇧ or ⌘Y: closes Quick Look, or opens it on the result. False when there is nothing to show.
     func toggle(_ result: LaunchResult?) -> Bool {
         if isOpen {
+            lastToggle = "close"
             close()
             return true
         }
+        lastToggle = url == nil ? "open" : "open while opening"
+
         guard let file = Self.file(for: result), let panel = QLPreviewPanel.shared() else {
             // A fixed reason only: ids, paths and kind labels can hold file, folder or search names.
             let reason = result == nil ? "no result"

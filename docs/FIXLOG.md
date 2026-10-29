@@ -94,4 +94,18 @@ Rule: open the store only through `Store.makeContainer()`; a new `@Model` goes i
 Symptom: the self-test stopped with "Reach quit unexpectedly": an AppKit assertion, `!CGAffineTransformIsSingular` in `NSViewGetTransformToDescendant`, while the search field's text view laid out.
 Cause: the check hid the launcher (⌘↩), showed it again and set a new query in one run loop turn. The resize from the new results laid out the field editor while the previous hide and the entrance animation had not settled. A person cannot hide, show and type within one turn.
 Fix: the dictionary check waits 300 ms after `launcher.show()` before it types again.
-Rule: in the self-test, after a hide followed by a show, await a short sleep before setting the query.
+Rule: in the self-test, after a hide followed by a show, await a short sleep before setting the query. Use `SelfTest.showAgain(launcher)`, which waits before and after the show (added after a second crash on 2026-10-29, where a show right after a hide had no pause).
+
+## Focus checks failed while the display slept (S-024)
+
+Symptom: two self-test runs in a row failed the same 17 checks: Quick Look, Large Type and Esc, all with "key none, app inactive". The front app showed as BuildBetter, later as loginwindow.
+Cause: the display went to sleep from 10:38:44 to 10:43:07 (`pmset -g log`), exactly during both runs. While the display sleeps no window can take the keyboard, so every check that needs real focus fails. The code was fine: with the display on, 248 of 249 checks passed.
+Fix: the self-test keeps the display awake with `beginActivity(.idleDisplaySleepDisabled)`, wakes it at the start when it already sleeps, and ends with a NOTE when the display slept or the screen locked during the run. The Finder that the Quick Look check brings forward itself no longer shows in the NOTE. A rarer failure was real: Quick Look holds the keyboard for a moment after it opens, so a quick second ⇧ went down in its window and the launcher saw only the release. The key monitor now also takes ⇧ changes from the Quick Look panel. The failure line names the last toggle (open, close, open while opening), so a next failure explains itself.
+Rule: before you call a focus failure a bug, check `pmset -g log | grep "Display is turned"` and the NOTE line; rerun with the Mac awake and unlocked.
+
+## A contact source that answered at once crashed the launcher (S-024)
+
+Symptom: the self-test crashed with "Index out of range" in `LauncherModel.refresh`, on the first query.
+Cause: the test-run contacts loader called back synchronously, so `ContactsSource` called `later` while `refresh` was still building its list of answers. `ResultSource` says `later` must wait until `results` has returned.
+Fix: an answer that arrives while the loader runs inside `read` is used by `results` directly, with no `later` call.
+Rule: a source that may be answered at once checks whether it is still inside `results` before it calls `later`.

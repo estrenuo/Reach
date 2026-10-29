@@ -26,7 +26,7 @@ extension SelfTest {
         func send(_ e: NSEvent?) { if let e { _ = launcher.handle(e) } }
         func state() -> String {
             "launcher \(launcher.isVisible ? "shown" : "hidden"), key \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none"), "
-                + "Quick Look \(quickLook.isOpen ? "open" : "closed"), app \(NSApp.isActive ? "active" : "inactive")"
+                + "Quick Look \(quickLook.isOpen ? "open" : "closed"), app \(NSApp.isActive ? "active" : "inactive"), last toggle \(quickLook.lastToggle)"
         }
         func tapShift() async {
             clock += 1  // well after any typing
@@ -112,6 +112,8 @@ extension SelfTest {
         await realShift()
         check("with another app in front, a real ⇧ tap opens Quick Look and the launcher stays", quickLook.isOpen && launcher.isVisible, state())
         await realShift()
+        // Under load Quick Look's closing animation can take longer than the pause after the tap.
+        for _ in 0..<40 where quickLook.isOpen { try? await Task.sleep(for: .milliseconds(25)) }
         check("and a second real tap closes it", !quickLook.isOpen, state())
         launcher.hide()
 

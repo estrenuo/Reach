@@ -127,7 +127,11 @@ final class LauncherController {
     private func installKeys() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
-            guard let self, event.window === self.panel else { return event }
+            guard let self else { return event }
+            // Quick Look holds the keyboard for a moment after it opens; a ⇧ tap
+            // then still counts, so a quick second tap closes it.
+            let fromQuickLook = event.type == .flagsChanged && event.window is QLPreviewPanel
+            guard event.window === self.panel || fromQuickLook else { return event }
             return self.handle(event) ? nil : event
         }
     }

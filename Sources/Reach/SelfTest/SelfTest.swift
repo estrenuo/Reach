@@ -1,4 +1,5 @@
 import AppKit
+import IOKit.pwr_mgt
 import Quartz
 import SwiftData
 import ReachKit
@@ -15,6 +16,8 @@ enum SelfTest {
     static var exitCode: Int32 = 0
     private static var failures = 0
     private static var count = 0
+    /// Keeps the display awake: with it asleep no window can take the keyboard.
+    private static var awake: NSObjectProtocol?
 
     static func runIfRequested(model: AppModel) {
         guard requested else { return }
@@ -24,6 +27,23 @@ enum SelfTest {
             print("SELFTEST refused: set APP_STORE to a file in /tmp")
             finish(code: 1)
             return
+        }
+        // A sleeping display or a locked screen fails every focus check (FIXLOG).
+        awake = ProcessInfo.processInfo.beginActivity(options: [.idleDisplaySleepDisabled, .userInitiated],
+                                                      reason: "Reach self-test needs a window with the keyboard")
+        var blockers: Set<String> = []
+        if screenIsLocked { blockers.insert("the screen was locked") }
+        if CGDisplayIsAsleep(CGMainDisplayID()) != 0 {
+            // Wakes the display, as a key press would; it cannot unlock the screen.
+            var id = IOPMAssertionID(0)
+            _ = IOPMAssertionDeclareUserActivity("Reach self-test" as CFString, kIOPMUserActiveLocal, &id)
+        }
+        let center = NSWorkspace.shared.notificationCenter
+        let sleeps = [(NSWorkspace.screensDidSleepNotification, "the display slept"),
+                      (NSWorkspace.sessionDidResignActiveNotification, "the screen was locked")].map { name, reason in
+            center.addObserver(forName: name, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { _ = blockers.insert(reason) }
+            }
         }
         Task {
             try? await Task.sleep(for: .seconds(0.5))
@@ -50,7 +70,8 @@ enum SelfTest {
             let watch = NSWorkspace.shared.notificationCenter.addObserver(
                 forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { note in
                 let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-                if let app, app != .current { MainActor.assumeIsolated { _ = intruders.insert(app.localizedName ?? "?") } }
+                // Finder: the Quick Look check brings it to the front on purpose.
+                if let app, app != .current, app.bundleIdentifier != "com.apple.finder" { MainActor.assumeIsolated { _ = intruders.insert(app.localizedName ?? "?") } }
             }
             await checkLauncher(model: model)
             await checkQuickLook(model: model)
@@ -67,6 +88,12 @@ enum SelfTest {
             await checkLargeType(model: model)
             await checkContacts(model: model)
             NSWorkspace.shared.notificationCenter.removeObserver(watch)
+            sleeps.forEach(center.removeObserver)
+            if screenIsLocked { blockers.insert("the screen was locked") }
+            if failures > 0, !blockers.isEmpty {
+                print("NOTE \(blockers.sorted().joined(separator: " and ").capitalizedFirst) during the run. "
+                      + "Focus checks fail then; run again with the Mac unlocked.")
+            }
             if failures > 0, !intruders.isEmpty {
                 print("NOTE \(intruders.sorted().joined(separator: ", ")) came to the front during the run. "
                       + "Focus checks fail then; run again without using the Mac.")
@@ -75,6 +102,20 @@ enum SelfTest {
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
         }
+    }
+
+    /// Shows the launcher again after a check hid it. Hide, show and a query in
+    /// one run loop turn trip an AppKit assertion in the field editor (FIXLOG),
+    /// so this waits for the hide to settle and for the show to lay out.
+    static func showAgain(_ launcher: LauncherController) async {
+        try? await Task.sleep(for: .milliseconds(150))
+        launcher.show()
+        try? await Task.sleep(for: .milliseconds(300))
+    }
+
+    /// True while the login window covers the screen.
+    private static var screenIsLocked: Bool {
+        (CGSessionCopyCurrentDictionary() as? [String: Any])?["CGSSessionScreenIsLocked"] as? Bool == true
     }
 
     static func check(_ name: String, _ ok: Bool, _ detail: String = "") {
@@ -90,4 +131,8 @@ enum SelfTest {
         for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
         NSApp.terminate(nil)
     }
+}
+
+private extension String {
+    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }
