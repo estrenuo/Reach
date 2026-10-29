@@ -57,7 +57,7 @@ struct LauncherView: View {
         }
         .padding(Space.md)
         .frame(width: LauncherLayout.width, height: LauncherLayout.height(for: model), alignment: .top)
-        .launcherSurface(themes.theme.surface, cornerRadius: Radius.panel)
+        .launcherSurface(themes.theme)
         .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
         .opacity(appeared ? 1 : 0)
         .accessibilityElement(children: .contain)
@@ -90,7 +90,8 @@ struct LauncherView: View {
                 HStack(spacing: Space.sm) {
                     TextField("Search", text: $model.query)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 28))
+                        .font(LauncherStyle(theme: themes.theme).queryFont)
+                        .foregroundStyle(LauncherStyle(theme: themes.theme).text ?? .primary)
                         .focused($fieldFocused)
                         // Back from the action panel: focus, then the cursor after the query,
                         // since focusing a field selects all of its text.
@@ -109,7 +110,7 @@ struct LauncherView: View {
                 }
                 .padding(.horizontal, Space.lg)
                 .frame(height: LauncherLayout.fieldHeight)
-                .background(.quinary, in: RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
+                .background(.quinary, in: RoundedRectangle(cornerRadius: LauncherStyle(theme: themes.theme).innerRadius, style: .continuous))
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: LauncherLayout.markSize, height: LauncherLayout.markSize)
@@ -142,6 +143,7 @@ struct ResultRow: View {
     let error: String?
     /// Short rows for the folder listing while browsing.
     var compact = false
+    @Environment(\.launcherStyle) private var style
 
     private var iconSize: CGFloat { compact ? LauncherLayout.compactIconSize : LauncherLayout.iconSize }
 
@@ -156,15 +158,15 @@ struct ResultRow: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: iconSize, height: iconSize)
-                .foregroundStyle(selected ? Palette.onAccent : Palette.accentText)
+                .foregroundStyle(selected ? style.onSelection : Palette.accentText)
             VStack(alignment: .leading, spacing: 0) {
                 Text(result.title)
-                    .font(compact ? .body : .title3)
+                    .font(compact ? style.compactFont : style.rowFont)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.callout)
+                        .font(style.subtitleFont)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .opacity(0.8)
@@ -174,19 +176,19 @@ struct ResultRow: View {
             if !result.badge.isEmpty {
                 Text(result.badge)
                     .font(.callout)
-                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(selected ? AnyShapeStyle(style.onSelection.opacity(0.8)) : AnyShapeStyle(.secondary))
             }
             if result.isOpenable, selected || index < LauncherModel.maxResults {
                 Text(selected ? "↩" : "⌘\(index + 1)")
-                    .font(compact ? .body : .title3)
-                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
+                    .font(compact ? style.compactFont : style.rowFont)
+                    .foregroundStyle(selected ? AnyShapeStyle(style.onSelection) : AnyShapeStyle(.secondary))
             }
         }
-        .foregroundStyle(selected ? Palette.onAccent : .primary)
+        .foregroundStyle(selected ? style.onSelection : style.text ?? .primary)
         .padding(.horizontal, Space.md)
         .frame(height: compact ? LauncherLayout.compactRowHeight : LauncherLayout.rowHeight)
-        .background(selected ? Palette.accent : .clear,
-                    in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+        .background(selected ? style.selection : .clear,
+                    in: RoundedRectangle(cornerRadius: style.innerRadius, style: .continuous))
         .contentShape(Rectangle())
         .help(tooltip)
         .accessibilityElement(children: .ignore)

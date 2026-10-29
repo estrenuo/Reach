@@ -75,6 +75,9 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Placeholder | `{date}`, `{time}` or `{clipboard}` in a snippet, filled in when it is pasted | variable, token, macro |
 | Paste a Snippet | The `snip` keyword: `snip <name>` lists snippets, Return pastes one | insert, expand (Expand is for S-031) |
 | Theme | How the launcher looks: a mode (follows the Mac, light, dark) and a surface (glass, clear glass, solid) | skin, style, look |
+| Own theme | A theme people made by duplicating one; it can be changed, renamed and deleted | custom theme, user theme |
+| Built-in theme | One of the six themes Reach ships; it cannot be changed, only duplicated | default, preset, stock |
+| Duplicate Theme | Make an own copy of the picked theme, named "<name> Copy", and pick it | copy, clone, new theme |
 | Accent color | The color of the selected row and of buttons, picked apart from the theme | tint, highlight, theme color |
 | Show on Desktop Picture | Draws the theme preview on the desktop picture instead of the plain background | wallpaper, background toggle |
 | Expand | Replace a snippet keyword typed in any app with its snippet, as its last letter is typed | auto-expand, autocomplete, text replacement |

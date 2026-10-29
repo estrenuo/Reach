@@ -549,7 +549,14 @@ Screens: 38-appearance-themes.png
 Depends: S-032
 Acceptance:
 - [self] Clicking a part of the preview opens the colour/font editor for that part; built-in themes are read-only.
-Status: todo
+UX:
+- Flow: Settings > Appearance -> Duplicate Theme (or Duplicate in a thumbnail's context menu) -> the copy is picked -> click the background, the search field or the results in the preview -> a popover with that part's settings -> each change shows in the preview and the bar at once -> click outside to close
+- Surface: popover from the preview (a few related choices tied to one control); Rename Theme is an alert with a field
+- States: a built-in theme's popover says "Reach Light is built in" with "Duplicate to Edit"; an unset color says "Uses the system color" or "Uses the accent color"; sizes stay in range; a deleted picked theme leaves Reach picked, ⌘Z brings it back
+- Words: "Duplicate Theme", "Duplicate", "Rename…", "Delete", "Undo Delete Theme", "Duplicate to Edit"; popover sections "Background" (Appearance, Surface, Tint, Corners), "Search Field" (Font, Size, Text color), "Results" (Selection color, Font, Size, Text color); copies are named "<name> Copy"; footer "Click a part of the preview to change it."
+- Access: each part is a button "Change the search field" with a tooltip; hover outlines it with a dashed accent line; the selection text turns black or white by contrast
+- Scope: one font for the whole bar; no import or export of themes yet; the self-test checks the store and the bar, not the click itself (snapshots show both popovers)
+Status: done
 
 ### S-034 Tune the bar's behaviour and position
 As the user, I set the number of visible results, subtext mode, hidden shortcuts, and which screen the bar shows on.

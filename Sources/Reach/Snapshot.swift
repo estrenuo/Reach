@@ -187,6 +187,30 @@ enum Snapshot {
                             capture(to: "\(dir)/settings-clipboard-advanced-\(mode).png", window: settings)
                             ClipboardSettings.shared.page = .history
                         }
+                        if tab == .appearance {
+                            let themes = LauncherThemeStore.shared
+                            var own = themes.duplicate(LauncherTheme.named("reach-dark"))
+                            own.name = "Sunset"
+                            own.selectionColor = ThemeColor(red: 0.98, green: 0.55, blue: 0.2)
+                            own.fontName = "Avenir Next"
+                            own.cornerRadius = 12
+                            themes.update(own)
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-appearance-own-\(mode).png", window: settings)
+                            themes.editing = .results
+                            try? await Task.sleep(for: .seconds(0.8))
+                            let popover = NSApp.windows.first { $0.isVisible && String(describing: type(of: $0)).contains("Popover") }
+                            capture(to: "\(dir)/settings-theme-editor-\(mode).png", window: popover)
+                            themes.editing = nil
+                            themes.themeID = "reach-light"
+                            themes.editing = .background
+                            try? await Task.sleep(for: .seconds(0.8))
+                            let builtIn = NSApp.windows.first { $0.isVisible && String(describing: type(of: $0)).contains("Popover") }
+                            capture(to: "\(dir)/settings-theme-built-in-\(mode).png", window: builtIn)
+                            themes.editing = nil
+                            themes.reset()
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
                         if tab == .web {
                             WebSearchSettings.shared.page = .urls
                             try? await Task.sleep(for: .seconds(0.8))
