@@ -32,8 +32,26 @@ final class ClipboardSettings {
         didSet { Store.settings.set(maxSize.rawValue, forKey: "clipboard.maxSize") }
     }
 
+    /// Hold ⌘ and press C twice to append to the last clip (S-028). Off until people turn it on.
+    var appendsOnDoubleCopy: Bool {
+        didSet { Store.settings.set(appendsOnDoubleCopy, forKey: "clipboard.merge.on") }
+    }
+    /// The merged text goes back on the clipboard, so ⌘V pastes it.
+    var placesMergedText: Bool {
+        didSet { Store.settings.set(placesMergedText, forKey: "clipboard.merge.placeBack") }
+    }
+    var separator: ClipboardMerge.Separator {
+        didSet { Store.settings.set(separator.rawValue, forKey: "clipboard.merge.separator") }
+    }
+    var playsMergeSound: Bool {
+        didSet { Store.settings.set(playsMergeSound, forKey: "clipboard.merge.sound") }
+    }
+
+    /// Appending works on text clips only, so it needs Keep Plain Text.
+    var canAppend: Bool { keep[.text] == true }
+
     enum Page: String, CaseIterable {
-        case history = "History", advanced = "Advanced"
+        case history = "History", merging = "Merging", advanced = "Advanced"
     }
 
     /// The page Settings > Clipboard shows; not saved.
@@ -51,6 +69,10 @@ final class ClipboardSettings {
         pastesOnReturn = defaults.object(forKey: "clipboard.pasteOnReturn") as? Bool ?? true
         ignoredAppList = defaults.stringArray(forKey: "clipboard.ignoredApps") ?? Self.standardIgnoredApps
         maxSize = (defaults.object(forKey: "clipboard.maxSize") as? Int).flatMap(ClipboardPolicy.MaxSize.init) ?? .standard
+        appendsOnDoubleCopy = defaults.bool(forKey: "clipboard.merge.on")
+        placesMergedText = defaults.object(forKey: "clipboard.merge.placeBack") as? Bool ?? true
+        separator = defaults.string(forKey: "clipboard.merge.separator").flatMap(ClipboardMerge.Separator.init) ?? .space
+        playsMergeSound = defaults.object(forKey: "clipboard.merge.sound") as? Bool ?? true
     }
 
     /// The standard list, by name, for Settings.
@@ -77,6 +99,10 @@ final class ClipboardSettings {
         pastesOnReturn = true
         ignoredAppList = Self.standardIgnoredApps
         maxSize = .standard
+        appendsOnDoubleCopy = false
+        placesMergedText = true
+        separator = .space
+        playsMergeSound = true
         page = .history
     }
 }
@@ -95,6 +121,8 @@ final class ClipboardHistory {
     }
     /// The time, for retention. The self-test moves it forward.
     var now: () -> Date = { Date.now }
+    /// Plays a system sound by name after an append. The self-test swaps in a recorder.
+    var playSound: (String) -> Void = { NSSound(named: NSSound.Name($0))?.play() }
     private var changeCount: Int
     private var poller: Timer?
     private var purger: Timer?
@@ -226,6 +254,34 @@ final class ClipboardHistory {
         item.copiedAt = now()
         save()
         clipboardLog.notice("used a \(item.kind, privacy: .public) clip")
+    }
+
+    /// ⌘ held, C pressed twice (S-028): the text just copied is added to the
+    /// text clip before it, with the separator, and its own clip goes. False
+    /// when there is nothing to append to, or the copy was not kept (an ignored app).
+    @discardableResult
+    func appendLatest() -> Bool {
+        guard settings.canAppend, settings.appendsOnDoubleCopy else { return false }
+        // The second ⌘C may come before the poller saw the first.
+        poll()
+        guard let text = pasteboard.string(forType: .string), !text.isEmpty else { return false }
+        let recent = items
+        guard let latest = recent.first, latest.clipKind == .text, latest.text == text,
+              let previous = recent.dropFirst().first(where: { $0.clipKind == .text }) else { return false }
+        let merged = ClipboardMerge.merged(previous.text, text, separator: settings.separator)
+        guard settings.maxSize.fits(merged) else { return false }
+        previous.text = merged
+        previous.copiedAt = now()
+        context.delete(latest)
+        save()
+        if settings.placesMergedText {
+            pasteboard.clearContents()
+            pasteboard.setString(merged, forType: .string)
+            changeCount = pasteboard.changeCount
+        }
+        if let sound = ClipboardMerge.sound(enabled: settings.playsMergeSound) { playSound(sound) }
+        clipboardLog.notice("appended a text clip to the one before it")
+        return true
     }
 
     var items: [ClipboardItem] {

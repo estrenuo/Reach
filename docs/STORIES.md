@@ -466,7 +466,14 @@ Depends: S-025
 Acceptance:
 - [unit] The separator setting is used; a sound plays when enabled.
 - [snap] Merging tab, disabled while history is off.
-Status: todo
+UX:
+- Flow: Settings > Clipboard > Merging -> turn on "Append with ⌘C twice" -> in any app select text, hold ⌘ and press C twice within half a second -> the text is added to the text clip before it, its own clip goes, the merged text is on the clipboard, Purr plays; ⌘V pastes it. Undo: the viewer still has the earlier clip under its merged text; turn the setting off to stop
+- Surface: the Merging page between History and Advanced (changes values in place)
+- States: the page is disabled while Keep Plain Text is off, with "Turn on Keep Plain Text on the History page to append to the last clip."; the three options are disabled while Append is off; Access says whether Reach may see ⌘C, with "Open System Settings…"
+- Words: "Merging", "Append with ⌘C twice", "Put the merged text on the clipboard", "Separator" (Separate with a Space, a New Line, a Blank Line, No Separator), "Play a sound when appending"
+- Defaults: Append off; Put on the Clipboard on (Alfred has it off); Space; sound on
+- Privacy: a global key monitor runs only while Append is on; it looks at ⌘C and ⌘ only, never other keys, and takes no key away from the app; copies from ignored apps are never appended
+Status: done
 
 ### S-029 Create a snippet collection and snippets
 As the user, I create a collection and add snippets with a name, keyword and text.

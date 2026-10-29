@@ -19,6 +19,7 @@ struct ClipboardSettingsView: View {
         }
         switch settings.page {
         case .history: history
+        case .merging: ClipboardMergingSettings(settings: settings)
         case .advanced: ClipboardAdvancedSettings(settings: settings)
         }
     }

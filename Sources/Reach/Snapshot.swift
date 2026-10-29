@@ -159,6 +159,14 @@ enum Snapshot {
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if tab == .clipboard {
+                            ClipboardSettings.shared.page = .merging
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-clipboard-merging-off-\(mode).png", window: settings)
+                            ClipboardSettings.shared.keep[.text] = true
+                            ClipboardSettings.shared.appendsOnDoubleCopy = true
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-clipboard-merging-\(mode).png", window: settings)
+                            ClipboardSettings.shared.reset()
                             ClipboardSettings.shared.page = .advanced
                             try? await Task.sleep(for: .seconds(0.8))
                             capture(to: "\(dir)/settings-clipboard-advanced-\(mode).png", window: settings)

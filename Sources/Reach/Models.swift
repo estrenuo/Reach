@@ -103,6 +103,8 @@ final class AppModel {
     /// Keeps what is copied, per Settings > Clipboard (S-025). Test runs never
     /// watch the real clipboard; the self-test makes its own on a private pasteboard.
     private(set) var clipboard: ClipboardHistory?
+    /// ⌘C twice appends to the last clip (S-028); nil in test runs, like the history.
+    private(set) var doubleCopy: DoubleCopyWatcher?
     var sidebar: SidebarItem? = .all
     var selection: PersistentIdentifier?
     /// Settings reopens on the last tab.
@@ -143,6 +145,9 @@ final class AppModel {
             history.start()
             clipboard = history
             launcherModel.clipboard = history
+            let watcher = DoubleCopyWatcher(history: history)
+            watcher.follow()
+            doubleCopy = watcher
         }
     }
 
