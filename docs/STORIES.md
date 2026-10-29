@@ -565,7 +565,14 @@ Depends: S-032
 Acceptance:
 - [snap] Options sheet with both columns.
 - [unit] Visible results 3–9; "show on" default/mouse/active screen.
-Status: todo
+UX:
+- Flow: Settings > Appearance -> Launcher Options… -> a sheet: Results on the left, Position on the right -> each change applies to the next query or show -> Done or Escape closes it
+- Surface: sheet (a few related settings people set once, tied to one button), two columns like the reference
+- States: Visible results is a menu of 3 to 9, so no wrong value can be typed; Active Screen without a window in front uses the mouse screen; the sketch draws the bar on the screen the choice picks
+- Words: "Launcher Options…", sections "Results" and "Position"; "Visible results"; "Show subtext" with "Always", "Selected Row Only", "Never"; "Hide result shortcuts" ("The keys still work."); "Show on" with "Mouse Screen", "Main Screen", "Active Screen"
+- Access: every control has a label and a description; the sketch reads "The launcher shows on the left screen"; Done is the default button
+- Scope: "default screen" became Mouse Screen, how Reach always worked; no saved drag position yet; always-on subtext leaves the short browse rows alone
+Status: done
 
 ### S-035 Hide the menu bar icon
 As the user, I hide the menu bar icon and still reach Settings by typing `settings` in the bar.

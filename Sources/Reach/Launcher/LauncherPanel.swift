@@ -120,10 +120,9 @@ final class LauncherController {
         model.didHide()
     }
 
-    /// Centred on the screen with the mouse, a fifth of the way down.
+    /// Centred on the chosen screen (the mouse's at first), a fifth of the way down.
     private func place() {
-        let mouse = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main else { return }
+        guard let screen = LauncherOptionsStore.shared.screenForBar() ?? NSScreen.main else { return }
         let area = screen.visibleFrame
         let height = LauncherLayout.height(for: model)
         let top = area.maxY - area.height * 0.2

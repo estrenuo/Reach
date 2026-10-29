@@ -209,6 +209,12 @@ enum Snapshot {
                             capture(to: "\(dir)/settings-theme-built-in-\(mode).png", window: builtIn)
                             themes.editing = nil
                             themes.reset()
+                            LauncherOptionsStore.shared.visibleResults = 6
+                            LauncherOptionsStore.shared.screen = .activeWindow
+                            LauncherOptionsStore.shared.isEditing = true
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-launcher-options-\(mode).png", window: settings?.attachedSheet)
+                            LauncherOptionsStore.shared.reset()
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if tab == .web {

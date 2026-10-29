@@ -168,7 +168,8 @@ final class LauncherModel {
         let found = pinned + ranked
         let fallbacks = Fallbacks.results(for: kind.text)
         let split = FallbackList.split(found: found.count, fallbacks: fallbacks.count,
-                                       mode: webSearches.settings.fallbackMode, limit: Self.maxResults)
+                                       mode: webSearches.settings.fallbackMode,
+                                       limit: LauncherOptions.clampedVisible(LauncherOptionsStore.shared.visibleResults))
         setResults(hints + found.prefix(split.results) + fallbacks.prefix(split.fallbacks))
     }
 

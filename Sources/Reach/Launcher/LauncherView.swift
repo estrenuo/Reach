@@ -144,12 +144,19 @@ struct ResultRow: View {
     /// Short rows for the folder listing while browsing.
     var compact = false
     @Environment(\.launcherStyle) private var style
+    private var options = LauncherOptionsStore.shared
 
     private var iconSize: CGFloat { compact ? LauncherLayout.compactIconSize : LauncherLayout.iconSize }
 
     private var subtitle: String? {
         if let error { return error }
-        return selected && !result.subtitle.isEmpty ? result.subtitle : nil
+        guard !result.subtitle.isEmpty else { return nil }
+        switch options.subtext {
+        // Short browse rows have no room for a second line on every row.
+        case .always: return selected || !compact ? result.subtitle : nil
+        case .selected: return selected ? result.subtitle : nil
+        case .never: return nil
+        }
     }
 
     var body: some View {
@@ -178,7 +185,7 @@ struct ResultRow: View {
                     .font(.callout)
                     .foregroundStyle(selected ? AnyShapeStyle(style.onSelection.opacity(0.8)) : AnyShapeStyle(.secondary))
             }
-            if result.isOpenable, selected || index < LauncherModel.maxResults {
+            if result.isOpenable, !options.hidesShortcuts, selected || index < LauncherModel.maxResults {
                 Text(selected ? "↩" : "⌘\(index + 1)")
                     .font(compact ? style.compactFont : style.rowFont)
                     .foregroundStyle(selected ? AnyShapeStyle(style.onSelection) : AnyShapeStyle(.secondary))

@@ -7,6 +7,7 @@ import SwiftUI
 struct AppearanceSettings: View {
     @Bindable private var themes = LauncherThemeStore.shared
     @Bindable private var store = ThemeStore.shared
+    @Bindable private var options = LauncherOptionsStore.shared
     @State private var renaming: LauncherTheme?
     @State private var newName = ""
     @Environment(\.undoManager) private var undoManager
@@ -34,11 +35,14 @@ struct AppearanceSettings: View {
             }
             .padding(.vertical, Space.xs)
             HStack {
+                Button("Launcher Options…") { options.isEditing = true }
+                    .help("Set how many results show, their subtext and shortcuts, and which screen the launcher uses")
                 Spacer()
                 Button("Duplicate Theme") { themes.duplicate(themes.theme) }
                     .help("Make an own copy of \(themes.theme.name) to change")
             }
         }
+        .sheet(isPresented: $options.isEditing) { LauncherOptionsSheet() }
         .alert("Rename Theme", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $newName)
             Button("Rename") { rename() }
