@@ -44,6 +44,7 @@ final class LauncherModel {
     let system: SystemSource
     let shell: ShellSource
     let dictionary = DictionarySource()
+    let contacts = ContactsSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -91,7 +92,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, dictionary, typedURLs, apps, system, history, webSearches, files, paths]
+        sources = [calculator, shell, dictionary, typedURLs, contacts, apps, system, history, webSearches, files, paths]
     }
 
     func didShow() {
@@ -218,6 +219,11 @@ final class LauncherModel {
             rewriteQuery(completion)
             return
         }
+        if result.contact != nil {
+            selection = index
+            _ = showActions()
+            return
+        }
         if let run = result.system {
             runCommand(run, result: result)
             return
@@ -308,7 +314,14 @@ final class LauncherModel {
 
     /// → on a file, folder or app: shows its action panel. False for other results.
     func showActions() -> Bool {
-        guard actions == nil, let result = selectedResult, let url = result.url, url.isFileURL else { return false }
+        guard actions == nil, let result = selectedResult else { return false }
+        // A contact's card (S-024).
+        if let contact = result.contact {
+            actions = ActionPanel(contact: contact, result: result)
+            onResultsChange()
+            return true
+        }
+        guard let url = result.url, url.isFileURL else { return false }
         actions = ActionPanel(target: result, url: url)
         onResultsChange()
         return true
@@ -448,6 +461,15 @@ final class LauncherModel {
             guard !opened.isEmpty, !opened.contains(false) else { panel.failure = "Unable to open “\(target.title)”."; return }
         case .web(let search):
             guard opener(search) else { panel.failure = "Unable to open the search."; return }
+        case .field(let field):
+            switch field.action {
+            case .email(let url), .open(let url), .map(let url):
+                guard opener(url) else { panel.failure = "Unable to open “\(field.value)”."; return }
+            case .copy:
+                copier(field.value)
+            }
+            // Using a card's detail picks the contact, for Learning.
+            onOpened(query, target)
         default:
             guard perform(item, panel.urls) else {
                 let name = panel.rows.indices.contains(index) ? panel.rows[index].title : "the action"
@@ -461,6 +483,28 @@ final class LauncherModel {
         if !panel.isMany, case .action(.open) = item { onOpened(query, target) }
         if !panel.isMany, case .app = item { onOpened(query, target) }
         onHide()
+    }
+
+    /// ⌘O on a contact, or in its card: opens it in Contacts.app. False for other results.
+    func openInContacts() -> Bool {
+        guard let result = actions?.contact != nil ? actions?.target : selectedResult,
+              result.contact != nil, let url = result.url else { return false }
+        guard opener(url) else {
+            if let actions { actions.failure = "Unable to open Contacts." } else { errors[result.id] = "Unable to open Contacts." }
+            return true
+        }
+        onOpened(query, result)
+        onHide()
+        return true
+    }
+
+    /// ⌘C in a contact card: copies the selected detail and hides. False elsewhere.
+    func copySelectedField() -> Bool {
+        guard let value = actions?.selectedValue else { return false }
+        copier(value)
+        if let target = actions?.target { onOpened(query, target) }
+        onHide()
+        return true
     }
 
     /// Esc on a confirmation row goes back to the results. Otherwise it clears

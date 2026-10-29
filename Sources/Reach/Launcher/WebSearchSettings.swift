@@ -100,7 +100,9 @@ final class WebSearchSettings {
         let dictionary = DictionarySettings.shared
         let lookups = DictionaryLookup.Mode.allCases.filter { dictionary.isOn[$0] != false }
             .map { (dictionary.keyword($0).lowercased(), $0.title) }
-        return Dictionary(FileMode.allCases.map { (keywords[$0].word.lowercased(), $0.title) } + lookups,
+        let contacts = ContactsSettings.shared
+        let email = contacts.emailOn ? [(contacts.emailKeyword.lowercased(), "Email a Contact")] : []
+        return Dictionary(FileMode.allCases.map { (keywords[$0].word.lowercased(), $0.title) } + lookups + email,
                           uniquingKeysWith: { first, _ in first })
     }
 

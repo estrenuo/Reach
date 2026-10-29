@@ -397,7 +397,14 @@ Depends: S-002
 Acceptance:
 - [snap] A contact card view in the bar (name, fields; ↩ copies a field).
 - [unit] Name order and title follow the Advanced settings.
-Status: todo
+UX:
+- Flow: type a name -> the contact row (name, company) -> ↩ or → shows its card in the launcher -> ↩ on a detail emails, opens the website, shows the address in Maps, or copies it; ⌘C copies any detail; ⌘O opens Contacts.app -> Esc goes back to the results. `email <name>` -> one row per address -> ↩ starts the email; `email <address>` emails it.
+- Surface: the action panel, as a card (one input people repeat while they watch the result); settings in their own Settings > Contacts tab
+- States: no access "Allow Reach to see your contacts" (after `email`, with a link to System Settings); keyword alone "Type a name to email"; no address "No contact named “x” has an email address"; part of the keyword offers "Email a Contact…"; a filter with no match "No details match “x”"
+- Words: "Contact", "Card", "Filter details", "Open in Contacts", "Email a Contact", "Search contacts", "Show last name first", "Show title", "Show job title"
+- Access: keyboard only; VoiceOver reads "Card for <name>", each detail with its kind and label, "Contact, <name>" on the preview
+- Not now: Alfred's custom field actions, Gmail compose, file attachment subject lines, a Maps URL setting, the notes field (it needs a special entitlement from Apple)
+Status: done
 
 ---
 

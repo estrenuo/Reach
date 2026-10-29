@@ -52,7 +52,7 @@ enum Snapshot {
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
                 let sources = model.launcherModel.sources
-                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.shell, model.launcherModel.dictionary, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
+                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.shell, model.launcherModel.dictionary, model.launcherModel.contacts, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
                 defer { model.launcherModel.sources = sources }
                 // Sample apps for `quit`, not the ones running on this Mac.
                 model.launcherModel.system.running = { ["Mail", "Safari", "Music", "Notes"].map {
@@ -65,7 +65,9 @@ enum Snapshot {
                                        "serendipitous": "serendipitous | ˌserənˈdɪpɪtəs | adjective occurring or discovered by chance in a happy or beneficial way"][$0] }
                 dictionary.completions = { word, _ in word.hasPrefix("serendip") ? ["serendipitous"] : [] }
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                // Sample contacts, never the person's own address book.
+                model.launcherModel.contacts.use(SelfTest.sampleContacts)
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -80,7 +82,7 @@ enum Snapshot {
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name == "confirm" { model.launcherModel.openSelected() }
-                        if name == "actions" {
+                        if name == "actions" || name == "contact-card" {
                             _ = model.launcherModel.showActions()
                             try? await Task.sleep(for: .seconds(0.5))
                         }

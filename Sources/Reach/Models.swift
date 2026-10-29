@@ -97,10 +97,12 @@ final class AppModel {
         HotkeyCenter.shared.onPress = { controller.toggle() }
         HotkeyCenter.shared.onSelection = { controller.showSelection() }
         HotkeyCenter.shared.start(register: !Self.isTestRun)
-        // Snapshots and the self-test never sleep, lock or restart the Mac, or run shell commands.
+        // Snapshots and the self-test never sleep, lock or restart the Mac, run shell commands, or read contacts.
         if Self.isTestRun {
             launcherModel.runSystem = { _ in true }
             launcherModel.runShell = { _ in true }
+            // Nor read the person's contacts, or ask for access to them.
+            launcherModel.contacts.loader = { $0([]) }
         }
         // Starts following which app was used last, for `quit`.
         _ = AppRecency.shared

@@ -17,6 +17,8 @@ final class ActionPanel {
         case text(TextAction, String)
         /// A web search for selected text.
         case web(URL)
+        /// A line of a contact card (S-024).
+        case field(ContactField)
 
         /// For the log: the action without the text or the search it carries.
         var logName: String {
@@ -25,6 +27,7 @@ final class ActionPanel {
             case .app(let app): "open with \(app.lastPathComponent)"
             case .text(let action, _): "text \(action.rawValue)"
             case .web(let search): "web search on \(search.host() ?? "?")"
+            case .field(let field): "contact \(field.kind.rawValue)"
             }
         }
     }
@@ -36,6 +39,8 @@ final class ActionPanel {
     let urls: [URL]
     /// The selected text; nil for a file.
     let text: String?
+    /// The contact a card shows; nil for files and text (S-024).
+    let contact: Contact?
     /// Opened by the selection hotkey: there are no results to go back to.
     var fromSelection = false
     /// Opened with ⌥→ on the buffer: an action empties it.
@@ -57,6 +62,7 @@ final class ActionPanel {
         self.url = url
         urls = [url]
         text = nil
+        contact = nil
         refresh()
     }
 
@@ -69,6 +75,7 @@ final class ActionPanel {
         url = items.first
         urls = items
         text = nil
+        contact = nil
         refresh()
     }
 
@@ -83,13 +90,25 @@ final class ActionPanel {
         url = nil
         urls = []
         self.text = text
+        contact = nil
         fromSelection = true
+        refresh()
+    }
+
+    /// A contact's card: its fields, then Open in Contacts. `result` is its row in the results.
+    init(contact: Contact, result: LaunchResult) {
+        target = result
+        url = result.url
+        urls = result.url.map { [$0] } ?? []
+        text = nil
+        self.contact = contact
         refresh()
     }
 
     /// The path, or where the text came from, for the header.
     var detail: String {
         if isMany { return names.joined(separator: ", ") }
+        if contact != nil { return target.subtitle.isEmpty ? "Contact" : target.subtitle }
         if let url { return (url.path as NSString).abbreviatingWithTildeInPath }
         return target.subtitle
     }
@@ -100,7 +119,9 @@ final class ActionPanel {
     var footer: String {
         if let failure { return failure }
         switch selectedItem {
+        case .action(.open) where contact != nil: return "Open the contact in Contacts (⌘O)"
         case .action(let action): return isMany ? action.summaryForMany : action.summary
+        case .field(let field): return field.summary + " (⌘C copies it)"
         case .app(let app): return "Open “\(target.title)” with \(Self.appName(app))"
         case .text(let action, _): return action.summary
         case .web: return "Open the search in your browser"
@@ -135,7 +156,24 @@ final class ActionPanel {
 
     private func refresh() {
         failure = nil
-        if let text {
+        if let contact {
+            let text = filter.trimmingCharacters(in: .whitespaces)
+            let fields = contact.fields.filter { field in
+                text.isEmpty || Matcher.score(query: text, title: field.value) != nil
+                    || Matcher.score(query: text, title: field.label) != nil
+            }
+            let open = text.isEmpty || Matcher.score(query: text, title: Self.openInContacts) != nil
+            items = fields.map { .field($0) } + (open && url != nil ? [.action(.open)] : [])
+            rows = fields.map { field in
+                LaunchResult(id: "field:\(field.id)", title: field.value.split(whereSeparator: \.isNewline).joined(separator: ", "),
+                             subtitle: "", icon: .symbol(Self.symbol(field.kind)), url: URL(string: "reach-field://\(field.kind.rawValue)"),
+                             kindLabel: field.kind == .phone ? "Phone" : field.kind.rawValue.capitalized, badge: field.label)
+            } + (open && url != nil ? [LaunchResult(id: "contact:open", title: Self.openInContacts, subtitle: "",
+                                                    icon: ContactsSource.icon, url: url, kindLabel: "Action")] : [])
+            if rows.isEmpty {
+                rows = [hint(contact.fields.isEmpty ? "No details for this contact" : "No details match “\(text)”")]
+            }
+        } else if let text {
             let actions = TextAction.filtered(by: filter)
             // Short titles, the whole text in the search.
             let short = TextAction.headline(text, limit: 14)
@@ -191,6 +229,24 @@ final class ActionPanel {
         LaunchResult(id: "hint:actions", title: title, subtitle: "", icon: .symbol("questionmark.circle"), url: nil)
     }
 
+    static let openInContacts = "Open in Contacts"
+
+    static func symbol(_ kind: ContactField.Kind) -> String {
+        switch kind {
+        case .email: "envelope"
+        case .phone: "phone"
+        case .url: "link"
+        case .address: "map"
+        case .birthday: "gift"
+        }
+    }
+
+    /// The selected field's value, for ⌘C; nil on Open in Contacts.
+    var selectedValue: String? {
+        if case .field(let field) = selectedItem { return field.value }
+        return nil
+    }
+
     static let allOff = "All actions are off. Turn them on in Settings > Actions."
 
     static func appName(_ app: URL) -> String {
@@ -217,6 +273,9 @@ enum ActionRunner {
             return NSPasteboard.general.setString(text, forType: .string)
         case .web(let search):
             return workspace.open(search)
+        case .field:
+            // The model opens or copies fields itself.
+            return false
         case .app(let app):
             guard !urls.isEmpty else { return false }
             workspace.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())

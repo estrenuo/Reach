@@ -30,6 +30,7 @@ struct SettingsView: View {
             case .system: SystemSettingsView()
             case .terminal: TerminalSettingsView()
             case .dictionary: DictionarySettingsView()
+            case .contacts: ContactsSettingsView()
             case .actions: ActionsSettings()
             case .previews: PreviewsSettings()
             case .appearance: AppearanceSettings()
@@ -43,7 +44,7 @@ struct SettingsView: View {
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, search, web, system, terminal, dictionary, actions, previews, appearance
+    case general, search, web, system, terminal, dictionary, contacts, actions, previews, appearance
 
     var id: String { rawValue }
 
@@ -55,6 +56,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .system: "System"
         case .terminal: "Terminal"
         case .dictionary: "Dictionary"
+        case .contacts: "Contacts"
         case .actions: "Actions"
         case .previews: "Previews"
         case .appearance: "Appearance"
@@ -69,6 +71,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .system: "power"
         case .terminal: "apple.terminal"
         case .dictionary: "character.book.closed"
+        case .contacts: "person.crop.circle"
         case .actions: "arrow.right.square"
         case .previews: "eye"
         case .appearance: "paintpalette"

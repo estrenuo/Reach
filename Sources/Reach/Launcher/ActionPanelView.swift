@@ -1,3 +1,4 @@
+import ReachKit
 import SwiftUI
 
 /// The action panel: the result in a header, a filter field, the actions
@@ -11,14 +12,14 @@ struct ActionPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
             header
-            TextField(panel.choosingApp ? "Filter apps" : "Filter actions", text: $panel.filter)
+            TextField(placeholder, text: $panel.filter)
                 .textFieldStyle(.plain)
                 .font(.title2)
                 .focused($filterFocused)
                 // A tick later: on appear the field is not in the window yet,
                 // and focus set then is lost, so typing went nowhere.
                 .onAppear { DispatchQueue.main.async { filterFocused = true } }
-                .accessibilityLabel(panel.choosingApp ? "Filter apps" : "Filter actions")
+                .accessibilityLabel(placeholder)
                 .padding(.horizontal, Space.md)
                 .frame(height: LauncherLayout.filterHeight)
                 .background(.quinary, in: RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
@@ -53,6 +54,8 @@ struct ActionPanelView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .accessibilityLabel("Preview, \(panel.names.joined(separator: ", "))")
+                    } else if let contact = panel.contact {
+                        ContactPreview(contact: contact, name: panel.target.title, detail: panel.detail)
                     } else {
                         PreviewPane(result: panel.target)
                     }
@@ -68,6 +71,11 @@ struct ActionPanelView: View {
                 .padding(.horizontal, Space.md)
                 .frame(height: LauncherLayout.footerHeight)
         }
+    }
+
+    private var placeholder: String {
+        if panel.contact != nil { return "Filter details" }
+        return panel.choosingApp ? "Filter apps" : "Filter actions"
     }
 
     private var isSymbol: Bool {
@@ -98,7 +106,7 @@ struct ActionPanelView: View {
         .padding(.horizontal, Space.sm)
         .frame(height: LauncherLayout.markSize)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Actions for \(panel.target.title), \(panel.detail)")
+        .accessibilityLabel(panel.contact != nil ? "Card for \(panel.target.title), \(panel.detail)" : "Actions for \(panel.target.title), \(panel.detail)")
     }
 
     private var list: some View {
@@ -122,5 +130,37 @@ struct ActionPanelView: View {
                 proxy.scrollTo(panel.rows[panel.selection].id)
             }
         }
+    }
+}
+
+/// The right side of a contact card: the initials in a circle, the name, and the work line.
+private struct ContactPreview: View {
+    let contact: Contact
+    let name: String
+    let detail: String
+
+    var body: some View {
+        VStack(spacing: Space.sm) {
+            Text(contact.initials)
+                .font(.system(size: 40, weight: .medium, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: 96, height: 96)
+                .background(Palette.accent.gradient, in: Circle())
+            Text(name)
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+            if !detail.isEmpty, detail != "Contact" {
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        }
+        .padding(Space.md)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Contact, \(name)")
     }
 }

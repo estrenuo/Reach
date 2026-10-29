@@ -1,4 +1,5 @@
 import AppKit
+import ReachKit
 import SwiftUI
 
 /// One result in the launcher. Built on the fly for every query, never stored.
@@ -33,6 +34,10 @@ struct LaunchResult: Identifiable, Equatable {
     var system: SystemRun?
     /// A shell command Return runs in the terminal app (S-021). It has no URL.
     var shell: ShellRun?
+    /// A contact: Return opens its card in the launcher (S-024).
+    var contact: Contact?
+    /// A short word at the end of the row, like "work" on a card's email address.
+    var badge = ""
 
     var isOpenable: Bool { url != nil || answer != nil || completes != nil || system != nil || shell != nil }
 }

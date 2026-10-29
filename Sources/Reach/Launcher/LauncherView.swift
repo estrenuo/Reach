@@ -162,6 +162,11 @@ struct ResultRow: View {
                 }
             }
             Spacer(minLength: Space.sm)
+            if !result.badge.isEmpty {
+                Text(result.badge)
+                    .font(.callout)
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+            }
             if result.isOpenable, selected || index < LauncherModel.maxResults {
                 Text(selected ? "↩" : "⌘\(index + 1)")
                     .font(compact ? .body : .title3)
@@ -186,7 +191,7 @@ struct ResultRow: View {
     }
 
     private var accessibilityText: String {
-        let parts = [result.kindLabel, result.title, error ?? result.subtitle].filter { !$0.isEmpty }
+        let parts = [result.kindLabel, result.badge, result.title, error ?? result.subtitle].filter { !$0.isEmpty }
         return parts.joined(separator: ", ") + ", result \(index + 1) of \(count)"
     }
 }

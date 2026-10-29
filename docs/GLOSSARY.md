@@ -54,4 +54,8 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Terminal app | The app shell commands run in: Terminal, Ghostty or iTerm | shell, console |
 | Define | Look up what a word means in the macOS dictionaries; Return opens Dictionary.app at the word | definition, look up, meaning |
 | Spell | Suggest how to write a word; Return copies the spelling | spell check, correct |
+| Contact | A person or company from Contacts.app, found by name or company | person, address book entry |
+| Card | A contact's details in the launcher: addresses, numbers, websites, birthday | contact viewer, details view |
+| Detail | One line of a card, like an email address or phone number | field, entry |
+| Email a Contact | The `email` keyword: `email <name>` lists each address, Return starts the email | mail, compose |
 | Spelling language | The language Spell suggests words in, Automatic at first | dictionary language, locale |

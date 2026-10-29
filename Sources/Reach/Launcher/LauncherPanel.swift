@@ -155,6 +155,8 @@ final class LauncherController {
             _ = QuickLook.shared.toggle(previewTarget)
             return true
         }
+        // ⌘O opens a contact in Contacts.app (S-024).
+        if flags == .command, event.charactersIgnoringModifiers == "o", model.openInContacts() { return true }
         if model.actions != nil { return handleActions(event, flags: flags) }
         if flags == .option, handleBuffer(event.keyCode) { return true }
         if flags == .command, let key = event.charactersIgnoringModifiers {
@@ -231,6 +233,8 @@ final class LauncherController {
     /// Keys in the action panel. ← on an empty filter goes back, like Esc.
     private func handleActions(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
         guard let actions = model.actions else { return false }
+        // ⌘C in a card copies the detail, unless text in the filter is selected.
+        if flags == .command, event.charactersIgnoringModifiers == "c", !filterHasSelection, model.copySelectedField() { return true }
         if flags == .command, let key = event.charactersIgnoringModifiers, let number = Int(key), (1...9).contains(number) {
             model.runAction(at: number - 1)
             return true
@@ -244,6 +248,12 @@ final class LauncherController {
         default: return false
         }
         return true
+    }
+
+    /// True when text in the field is selected, so ⌘C copies it as usual.
+    private var filterHasSelection: Bool {
+        guard let editor = panel.firstResponder as? NSTextView else { return false }
+        return editor.selectedRange().length > 0
     }
 
     /// True when the text cursor, or the selection, reaches the end of the query.
