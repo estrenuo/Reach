@@ -46,12 +46,12 @@ protocol ResultSource: AnyObject {
 ```
 
 - Fast sources return results at once. Slow ones (Spotlight) return nil and call `later`; the model keeps the previous results on screen until every source has answered.
-- The model merges the answers: non-openable hints first, then openable results ranked by `Ranking.order` with Learning (at most 9), then `Fallbacks` when nothing openable came back.
-- Adapters: `AppIndex` (apps at the top level of the search scope's folders), `FileSearch` (Spotlight: `open`/`find` by name, `in` by contents, `tags` by Finder tag, and the Default Results types for a query without a keyword), `PathBrowser` (folder listings for `~/` and `/`), and `FakeSource` in the self-test.
+- The model merges the answers: non-openable hints first, then a calculation's answer (a result with `answer` instead of a URL: ↩ copies it through `copier`, ⌘↩ also pastes through `paster`), then openable results ranked by `Ranking.order` with Learning (9 in all), then `Fallbacks` when nothing openable came back.
+- Adapters: `CalculatorSource` (the answer row for `2*21` or `=sqrt(16)`, from `Calculator` in ReachKit), `AppIndex` (apps at the top level of the search scope's folders), `FileSearch` (Spotlight: `open`/`find` by name, `in` by contents, `tags` by Finder tag, and the Default Results types for a query without a keyword), `PathBrowser` (folder listings for `~/` and `/`), and `FakeSource` in the self-test.
 - Search settings (`SearchSettings`, S-014): the keywords, Don't Show, Default Results and the scope. `QueryKind(query, keywords:)` in ReachKit reads the keyword with the current words, and `SpotlightPredicate` builds the query string, so both are unit-tested without Spotlight.
 - Browsing (`QueryKind.path`) is the one exception to the merge: the folder listing keeps its own order (A to Z, or best match), has no cap of 9 and no fallbacks, and the launcher switches to `BrowseView` (list, Preview, footer). → / Tab enter a folder and ← goes up, through `LauncherModel.enter`, `complete` and `back`.
 
-**To add a kind of result** (calculator, web search keyword, system command): write one class that conforms to `ResultSource`, add it to `LauncherModel.sources` in `init`, and add a self-test check. If it needs a keyword, add a case to `QueryKind` in ReachKit with a unit test.
+**To add a kind of result** (web search keyword, system command): write one class that conforms to `ResultSource`, add it to `LauncherModel.sources` in `init`, and add a self-test check. If it needs a keyword, add a case to `QueryKind` in ReachKit with a unit test.
 
 ## Data
 

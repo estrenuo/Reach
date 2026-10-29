@@ -28,6 +28,9 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Action panel | The list of actions for the selected result, opened with → | context menu, actions view |
 | Action | One thing the action panel can do with a result: Reveal in Finder, Copy Path, Move to Trash | command, operation |
 | Move to Trash | Put a file in the Trash, where it can be put back | Delete (that cannot be undone) |
+| Calculation | A query the calculator answers: `2*21`, or with `=` in front for functions like `=sqrt(16)` | sum, formula, expression (in UI text) |
+| Answer | The calculator's result row; ↩ copies it, ⌘↩ pastes it | result value, output |
+| Paste | Put the answer in the app you were in, as ⌘V does | type, insert |
 | Reach | The app itself | Alfred, the launcher (that is the panel) |
 | Quick Look | The system's full-size preview of the selected result, opened by tapping ⇧ or ⌘Y | preview (that is the launcher's right side), peek |
 | Buffer | Files, folders and apps collected with ⌥↑ to run one action on all of them with ⌥→ | basket, cart, selection (that is S-011), stack |

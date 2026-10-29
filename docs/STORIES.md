@@ -251,7 +251,14 @@ Depends: S-002
 Acceptance:
 - [unit] Standard mode handles + − × ÷ ^ % and brackets; `=` mode adds functions; decimal separator follows the locale setting.
 - [snap] One result row with a calculator icon and the answer.
-Status: todo
+UX:
+- Flow: type `2*21` -> the answer is the first result, selected, above apps and files -> ↩ copies it and hides the launcher; ⌘↩ copies it, hides, and pastes it into the app you were in. `=` before the query adds functions (`=sqrt(16)`) and the constants `pi` and `e`. Esc clears the query as always.
+- Surface: one result row at the top of the list (inline answer to the query)
+- States: `=` alone -> hint "Type a calculation"; a number alone (`2048`), an unfinished sum (`2*`) or `1/0` -> no answer row, the usual results and fallbacks; no Accessibility permission -> ⌘↩ still copies
+- Words: the row's title is the answer with thousands grouped (1.234.567,5), the copy has no grouping (1234567,5); subtitle "↩ copies the answer, ⌘↩ pastes it"; VoiceOver kind "Calculation"
+- Numbers: the macOS decimal separator, and a point always works too; no Settings tab yet
+- Access: ↩ and ⌘↩ from the keyboard; the row reads "Calculation, 42"
+Status: done
 
 ### S-016 Use and add custom web searches
 As the user, I type `wiki alfred` to search a site, and add my own search with a URL template containing `{query}`.

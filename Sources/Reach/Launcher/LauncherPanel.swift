@@ -168,6 +168,7 @@ final class LauncherController {
                 return true
             }
         }
+        if flags == .command, [36, 76].contains(event.keyCode), model.pasteSelected() { return true }
         switch event.keyCode {
         case 126: model.move(-1)
         case 125: model.move(1)

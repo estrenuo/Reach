@@ -34,6 +34,7 @@ final class LauncherModel {
     let apps: AppIndex
     let files: FileSearch
     let paths: PathBrowser
+    let calculator: CalculatorSource
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -44,6 +45,10 @@ final class LauncherModel {
 
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
     @ObservationIgnored var opener: @MainActor (URL) -> Bool = { LauncherModel.openInWorkspace($0) }
+    /// Puts an answer on the clipboard. The self-test swaps in a recorder.
+    @ObservationIgnored var copier: @MainActor (String) -> Void = { Paster.copy($0) }
+    /// Presses ⌘V in the app behind the launcher once it has hidden.
+    @ObservationIgnored var paster: @MainActor () -> Void = { Paster.pressPaste() }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
     @ObservationIgnored var perform: @MainActor (ActionPanel.Item, [URL]) -> Bool = { ActionRunner.run($0, on: $1) }
     /// Seconds for the buffer's 5 minutes. The self-test moves it forward.
@@ -59,11 +64,13 @@ final class LauncherModel {
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
 
-    init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser()) {
+    init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser(),
+         calculator: CalculatorSource = CalculatorSource()) {
         self.apps = apps
         self.files = files
         self.paths = paths
-        sources = [apps, files, paths]
+        self.calculator = calculator
+        sources = [calculator, apps, files, paths]
     }
 
     func didShow() {
@@ -99,13 +106,14 @@ final class LauncherModel {
 
     /// Shows the merged answers once every source has answered, so the
     /// previous results stay on screen while Spotlight searches.
-    /// Order: hints, then openable results ranked with Learning, then
-    /// fallbacks when nothing openable came back.
+    /// Order: hints, then a calculation's answer, then openable results ranked
+    /// with Learning, then fallbacks when nothing openable came back.
     private func publish(_ kind: QueryKind) {
         guard answers.allSatisfy({ $0 != nil }) else { return }
         let all = answers.compactMap { $0 }.joined()
         let hints = all.filter { !$0.result.isOpenable }.map(\.result)
-        let openable = all.filter(\.result.isOpenable)
+        let calculations = all.filter { $0.result.answer != nil }.map(\.result)
+        let openable = all.filter { $0.result.url != nil }
         if browsing != nil {
             // A folder listing keeps its own order (A to Z, or best match).
             setResults(hints + openable.prefix(PathBrowser.limit).map(\.result))
@@ -114,9 +122,10 @@ final class LauncherModel {
         let byID = Dictionary(openable.map { ($0.result.id, $0.result) }, uniquingKeysWith: { first, _ in first })
         let ranked = Ranking.order(openable.map { (id: $0.result.id, score: $0.score) },
                                    learned: learning?.picks(for: query) ?? [:])
-            .prefix(Self.maxResults)
+            .prefix(Self.maxResults - calculations.count)
             .compactMap { byID[$0] }
-        setResults(hints + ranked + (ranked.isEmpty ? Fallbacks.results(for: kind.text) : []))
+        let found = calculations + ranked
+        setResults(hints + found + (found.isEmpty ? Fallbacks.results(for: kind.text) : []))
     }
 
     private func setResults(_ new: [LaunchResult]) {
@@ -170,8 +179,14 @@ final class LauncherModel {
     /// Opens result `index`, then hides the launcher. On failure the launcher
     /// stays open with the error as the result's subtitle.
     func open(at index: Int) {
-        guard results.indices.contains(index), let url = results[index].url else { return }
+        guard results.indices.contains(index) else { return }
         let result = results[index]
+        if let answer = result.answer {
+            copier(answer)
+            onHide()
+            return
+        }
+        guard let url = result.url else { return }
         let missing = url.isFileURL && !FileManager.default.fileExists(atPath: url.path)
         let worked = !missing && (result.reveals ? perform(.action(.reveal), [url]) : opener(url))
         guard worked else {
@@ -181,6 +196,16 @@ final class LauncherModel {
         }
         onOpened(query, result)
         onHide()
+    }
+
+    /// ⌘↩ on a calculation: copies the answer and pastes it into the app
+    /// behind the launcher. False for other results, so ⌘↩ opens them.
+    func pasteSelected() -> Bool {
+        guard let answer = selectedResult?.answer else { return false }
+        copier(answer)
+        onHide()
+        paster()
+        return true
     }
 
     private func rewriteQuery(_ new: String) {

@@ -21,8 +21,10 @@ struct LaunchResult: Identifiable, Equatable {
     var isFolder = false
     /// Return reveals it in Finder instead of opening it (the `find` keyword, S-014).
     var reveals = false
+    /// The text Return copies, for a calculation (S-015). It has no URL.
+    var answer: String?
 
-    var isOpenable: Bool { url != nil }
+    var isOpenable: Bool { url != nil || answer != nil }
 }
 
 /// File icons from the workspace, cached per path.
