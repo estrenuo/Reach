@@ -48,4 +48,22 @@ struct ClipboardPolicyTests {
         #expect(ClipboardPolicy.Retention.allCases.map(\.title) == ["24 Hours", "7 Days", "1 Month", "3 Months"])
         #expect(ClipboardPolicy.purgeInterval == 3600)
     }
+
+    @Test func viewerTitles() {
+        #expect(ClipboardPolicy.title(kind: .text, text: "\n   Hallo Reach  \nsecond line") == "Hallo Reach")
+        #expect(ClipboardPolicy.title(kind: .files, text: "/tmp/a.txt\n/Users/me/Notes") == "a.txt, Notes")
+        #expect(ClipboardPolicy.title(kind: .image, text: "") == "Image")
+        #expect(ClipboardPolicy.title(kind: .text, text: String(repeating: "x", count: 500)).count == 200)
+    }
+
+    @Test func viewerFilter() {
+        #expect(ClipboardPolicy.matches("", text: "anything", app: ""))
+        #expect(ClipboardPolicy.matches("cafe", text: "Het Café", app: "Notes"))
+        #expect(ClipboardPolicy.matches("hallo textedit", text: "Hallo Reach", app: "TextEdit"))
+        #expect(!ClipboardPolicy.matches("hallo safari", text: "Hallo Reach", app: "TextEdit"))
+    }
+
+    @Test func viewerHotkey() {
+        #expect(KeyCombo.clipboard.display(key: "C") == "⌃⌥⌘C")
+    }
 }

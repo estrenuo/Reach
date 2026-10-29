@@ -67,7 +67,25 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", "")]
+                // S-026: sample clips, never what this Mac copied.
+                let context = model.container.mainContext
+                let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
+                let sampleClips = [("Meeting notes\nShip the clipboard viewer on Friday.\nAsk Ada about the snippets.", "Notes", 3),
+                               ("https://example.com/docs/clipboard", "Safari", 25),
+                               ("/Applications/Safari.app\n/Applications/Mail.app", "Finder", 90),
+                               ("let viewer = ClipboardViewer(history: clips)", "Xcode", 300)]
+                    .map { text, app, minutes in
+                        let item = ClipboardItem(kind: text.hasPrefix("/") ? .files : .text, text: text, sourceApp: app)
+                        item.copiedAt = Date.now.addingTimeInterval(TimeInterval(-minutes * 60))
+                        context.insert(item)
+                        return item
+                    }
+                defer {
+                    sampleClips.forEach(context.delete)
+                    try? context.save()
+                    ClipboardSettings.shared.reset()
+                }
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -84,6 +102,12 @@ enum Snapshot {
                         if name == "confirm" { model.launcherModel.openSelected() }
                         if name == "actions" || name == "contact-card" {
                             _ = model.launcherModel.showActions()
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
+                        if name.hasPrefix("clipboard") {
+                            ClipboardSettings.shared.keep[.text] = true
+                            model.launcherModel.clipboard = name == "clipboard" ? clips : nil
+                            model.launcherModel.showClipboard()
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name.hasPrefix("buffer") {

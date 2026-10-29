@@ -21,6 +21,20 @@ struct ClipboardSettingsView: View {
             Text("Reach keeps what you copy for the time you choose, then forgets it. Copies from password managers and Keychain Access, and copies that apps mark as private, are never kept.")
                 .foregroundStyle(.secondary)
         }
+        Section("Viewer") {
+            LabeledContent {
+                Text(HotkeyCenter.shared.clipboardRegistered || AppModel.isTestRun
+                     ? KeyCombo.clipboard.display(key: "C") : "In use by another app")
+                    .foregroundStyle(.secondary)
+            } label: {
+                Text("Show the clipboard viewer")
+                Text("Or type “clipboard” in the launcher.")
+            }
+            Toggle(isOn: $settings.pastesOnReturn) {
+                Text("Paste on Return")
+                Text("Return also pastes the clip into the app in front. Off: Return only copies it.")
+            }
+        }
         Section {
             LabeledContent {
                 if access != .alwaysAllow {

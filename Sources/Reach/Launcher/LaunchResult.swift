@@ -38,8 +38,14 @@ struct LaunchResult: Identifiable, Equatable {
     var contact: Contact?
     /// A short word at the end of the row, like "work" on a card's email address.
     var badge = ""
+    /// A row Return acts on without a URL, like a clip in the clipboard viewer (S-026).
+    var acts = false
+    /// The Clipboard History row: Return opens the clipboard viewer (S-026).
+    var opensClipboard = false
 
-    var isOpenable: Bool { url != nil || answer != nil || completes != nil || system != nil || shell != nil }
+    var isOpenable: Bool {
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard
+    }
 }
 
 /// File icons from the workspace, cached per path.

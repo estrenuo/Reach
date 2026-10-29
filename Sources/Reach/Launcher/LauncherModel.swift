@@ -33,6 +33,9 @@ final class LauncherModel {
     /// The command a confirmation row stands for, while it shows (S-019).
     /// Return runs it; Esc or typing goes back to the results.
     private(set) var confirming: LaunchResult?
+    /// The clipboard viewer while it shows (S-026), from ⌃⌥⌘C or the Clipboard History row.
+    /// Set in LauncherModel+Clipboard.swift.
+    var viewer: ClipboardViewer?
 
     let apps: AppIndex
     let files: FileSearch
@@ -45,6 +48,7 @@ final class LauncherModel {
     let shell: ShellSource
     let dictionary = DictionarySource()
     let contacts = ContactsSource()
+    let clipboardRow = ClipboardSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -81,6 +85,10 @@ final class LauncherModel {
     @ObservationIgnored var onURLOpened: @MainActor (URL) -> Void = { _ in }
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
+    /// Opens the snippets window; set by the launcher view, which can reach openWindow.
+    @ObservationIgnored var openSnippets: @MainActor () -> Void = {}
+    /// The history the clipboard viewer lists. Nil in test runs, which bring their own.
+    @ObservationIgnored var clipboard: ClipboardHistory?
 
     init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser(),
          calculator: CalculatorSource = CalculatorSource(), webSearches: WebSearchSource = WebSearchSource(),
@@ -92,11 +100,12 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, dictionary, typedURLs, contacts, apps, system, history, webSearches, files, paths]
+        sources = [calculator, shell, dictionary, typedURLs, contacts, apps, system, clipboardRow, history, webSearches, files, paths]
     }
 
     func didShow() {
         actions = nil
+        viewer = nil
         confirming = nil
         if buffer.isStale(at: now()) { buffer.clear() }
         query = ""
@@ -107,6 +116,7 @@ final class LauncherModel {
 
     func didHide() {
         actions = nil
+        viewer = nil
         confirming = nil
         sources.forEach { $0.cancel() }
     }
@@ -217,6 +227,11 @@ final class LauncherModel {
         }
         if let completion = result.completes {
             rewriteQuery(completion)
+            return
+        }
+        if result.opensClipboard {
+            selection = index
+            showClipboard(fromLauncher: true)
             return
         }
         if result.contact != nil {

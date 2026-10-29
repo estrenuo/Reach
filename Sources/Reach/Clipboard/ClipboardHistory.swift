@@ -19,6 +19,10 @@ final class ClipboardSettings {
     var retention: [ClipboardPolicy.Kind: ClipboardPolicy.Retention] {
         didSet { for (kind, days) in retention { Store.settings.set(days.rawValue, forKey: "clipboard.retention." + kind.rawValue) } }
     }
+    /// ↩ in the clipboard viewer also pastes into the app in front (S-026). Off: ↩ only copies.
+    var pastesOnReturn: Bool {
+        didSet { Store.settings.set(pastesOnReturn, forKey: "clipboard.pasteOnReturn") }
+    }
 
     private init() {
         let defaults = Store.settings
@@ -29,6 +33,7 @@ final class ClipboardSettings {
             let saved = ClipboardPolicy.Retention(rawValue: defaults.integer(forKey: "clipboard.retention." + kind.rawValue))
             return (kind, saved ?? ClipboardPolicy.standardRetention(kind))
         })
+        pastesOnReturn = defaults.object(forKey: "clipboard.pasteOnReturn") as? Bool ?? true
     }
 
     var kindsOn: Set<ClipboardPolicy.Kind> { Set(keep.filter(\.value).keys) }
@@ -45,6 +50,7 @@ final class ClipboardSettings {
     func reset() {
         keep = Dictionary(uniqueKeysWithValues: ClipboardPolicy.Kind.allCases.map { ($0, false) })
         retention = Dictionary(uniqueKeysWithValues: ClipboardPolicy.Kind.allCases.map { ($0, ClipboardPolicy.standardRetention($0)) })
+        pastesOnReturn = true
     }
 }
 
@@ -166,6 +172,27 @@ final class ClipboardHistory {
             clipboardLog.notice("purged \(expired.count, privacy: .public) expired clips")
         }
         return expired.count
+    }
+
+    /// Puts a clip back on the pasteboard and moves it to the top (S-026).
+    /// Its own write is not a new copy, so the next poll skips it.
+    func use(_ item: ClipboardItem) {
+        pasteboard.clearContents()
+        switch item.clipKind {
+        case .text:
+            pasteboard.setString(item.text, forType: .string)
+        case .image:
+            if let data = item.imageData {
+                // Kept as it came: PNG starts with its signature, the rest is TIFF.
+                pasteboard.setData(data, forType: data.starts(with: [0x89, 0x50, 0x4E, 0x47]) ? .png : .tiff)
+            }
+        case .files:
+            pasteboard.writeObjects(item.text.split(separator: "\n").map { NSURL(fileURLWithPath: String($0)) })
+        }
+        changeCount = pasteboard.changeCount
+        item.copiedAt = now()
+        save()
+        clipboardLog.notice("used a \(item.kind, privacy: .public) clip")
     }
 
     var items: [ClipboardItem] {

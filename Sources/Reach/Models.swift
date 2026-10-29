@@ -126,6 +126,7 @@ final class AppModel {
         launcherModel.onURLOpened = { [launcherModel] url in launcherModel.history.record(url) }
         HotkeyCenter.shared.onPress = { controller.toggle() }
         HotkeyCenter.shared.onSelection = { controller.showSelection() }
+        HotkeyCenter.shared.onClipboard = { controller.toggleClipboard() }
         HotkeyCenter.shared.start(register: !Self.isTestRun)
         // Snapshots and the self-test never sleep, lock or restart the Mac, run shell commands, or read contacts.
         if Self.isTestRun {
@@ -141,6 +142,7 @@ final class AppModel {
             let history = ClipboardHistory(context: container.mainContext)
             history.start()
             clipboard = history
+            launcherModel.clipboard = history
         }
     }
 

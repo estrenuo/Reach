@@ -31,6 +31,7 @@ enum LauncherLayout {
 
     @MainActor static func height(for model: LauncherModel) -> CGFloat {
         if model.actions != nil { return actionsHeight }
+        if model.viewer != nil { return browseHeight }
         return model.browsing != nil ? browseHeight : height(rows: model.results.count)
     }
 }
@@ -41,10 +42,13 @@ struct LauncherView: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
-            if let actions = model.actions {
+            if let viewer = model.viewer {
+                ClipboardViewerView(model: model, viewer: viewer)
+            } else if let actions = model.actions {
                 ActionPanelView(model: model, panel: actions)
             } else {
                 search
@@ -61,6 +65,10 @@ struct LauncherView: View {
             model.openSettings = {
                 NSApp.activate()
                 openSettings()
+            }
+            model.openSnippets = {
+                NSApp.activate()
+                openWindow(id: "main")
             }
         }
         .onChange(of: model.showCount, initial: true) {

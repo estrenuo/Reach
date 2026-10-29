@@ -88,4 +88,29 @@ public enum ClipboardPolicy {
     public static func isExpired(_ date: Date, kind: Kind, retention: (Kind) -> Retention, now: Date) -> Bool {
         now.timeIntervalSince(date) > retention(kind).seconds
     }
+
+    /// A clip's row in the clipboard viewer (S-026): the first line of text,
+    /// the names of copied files, or "Image".
+    public static func title(kind: Kind, text: String) -> String {
+        switch kind {
+        case .image:
+            return "Image"
+        case .files:
+            let names = text.split(separator: "\n").map { ($0 as Substring).split(separator: "/").last.map(String.init) ?? String($0) }
+            return names.joined(separator: ", ")
+        case .text:
+            let line = text.split(whereSeparator: \.isNewline).lazy
+                .map { $0.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty } ?? ""
+            return String(line.prefix(200))
+        }
+    }
+
+    /// True when a clip shows for the viewer's filter: every word of the
+    /// filter is in the text or the app it came from. Case and accents are ignored.
+    public static func matches(_ filter: String, text: String, app: String) -> Bool {
+        let words = Matcher.fold(filter).split(whereSeparator: \.isWhitespace)
+        guard !words.isEmpty else { return true }
+        let haystack = Matcher.fold(text + "\n" + app)
+        return words.allSatisfy { haystack.contains($0) }
+    }
 }

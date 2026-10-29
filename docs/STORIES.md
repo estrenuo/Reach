@@ -434,7 +434,14 @@ Acceptance:
 - [snap] Empty state: "All Snippets" row, a hint on the right, a footer hint.
 - [snap] Filled state: list left, full preview right.
 - [self] Auto-paste on ↩ when enabled; the used item moves to the top.
-Status: todo
+UX:
+- Flow: ⌃⌥⌘C anywhere (⌥⌘C stays Alfred's for now), or type "clipboard" and ↩ on Clipboard History -> the launcher shows the viewer, newest clip selected -> type to filter by the whole text or the app -> ↩ pastes the clip into the app in front and it moves to the top; ⌘C only copies; ⌘1–9 pick a row; Esc clears the filter, then hides (or goes back to the results, from the row); ⌃⌥⌘C again hides
+- Surface: the launcher panel in its browse layout, list left and preview right (a panel people type into and watch)
+- States: empty "All Snippets" with "View all snippets and collections" on the right and "Type to filter clipboard and snippets" in the footer; history off adds "Turn On Clipboard History…" (opens Settings > Clipboard); a filter without clips "No clips match “x”"; filled rows show the first line, the time and, when selected, "From TextEdit"; the footer says when and from which app
+- Words: "Clipboard History", "All Snippets", "Filter clipboard", "Paste on Return", "Show the clipboard viewer"
+- Access: keyboard only; VoiceOver reads "Text, 12:14, Meeting notes, From Notes, result 2 of 5" and the preview text
+- Snippets: ↩ on All Snippets opens the snippets window until S-029 adds collections
+Status: done
 
 ### S-027 Exclude apps and limit clip size
 As the user, I add apps whose copies are never stored and set a maximum clip size.

@@ -95,6 +95,13 @@ final class LauncherController {
         }
     }
 
+    /// The clipboard hotkey: shows the clipboard viewer, or hides it when it shows.
+    func toggleClipboard() {
+        if isVisible, model.viewer != nil { return hide() }
+        show()
+        model.showClipboard()
+    }
+
     func hide() {
         guard isVisible else { return }
         QuickLook.shared.close()
@@ -161,6 +168,7 @@ final class LauncherController {
         }
         // ⌘O opens a contact in Contacts.app (S-024).
         if flags == .command, event.charactersIgnoringModifiers == "o", model.openInContacts() { return true }
+        if model.viewer != nil { return handleClipboard(event, flags: flags) }
         if model.actions != nil { return handleActions(event, flags: flags) }
         if flags == .option, handleBuffer(event.keyCode) { return true }
         if flags == .command, let key = event.charactersIgnoringModifiers {
@@ -249,6 +257,24 @@ final class LauncherController {
         case 36, 76: model.runAction(at: actions.selection)
         case 53: model.cancelActions()
         case 123 where flags.isEmpty && actions.filter.isEmpty: model.cancelActions()
+        default: return false
+        }
+        return true
+    }
+
+    /// Keys in the clipboard viewer (S-026).
+    private func handleClipboard(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+        guard let viewer = model.viewer else { return false }
+        if flags == .command, event.charactersIgnoringModifiers == "c", !filterHasSelection, model.copySelectedClip() { return true }
+        if flags == .command, let key = event.charactersIgnoringModifiers, let number = Int(key), (1...9).contains(number) {
+            model.useClip(at: number - 1)
+            return true
+        }
+        switch event.keyCode {
+        case 126: viewer.move(-1)
+        case 125: viewer.move(1)
+        case 36, 76: model.useClip(at: viewer.selection)
+        case 53: model.cancelClipboard()
         default: return false
         }
         return true
