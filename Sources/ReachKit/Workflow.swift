@@ -56,6 +56,15 @@ public enum PlistValue: Equatable, Sendable {
         }
     }
 
+    public var double: Double? {
+        switch self {
+        case .int(let value): Double(value)
+        case .double(let value): value
+        case .string(let value): Double(value)
+        default: nil
+        }
+    }
+
     public var array: [PlistValue]? { if case .array(let value) = self { value } else { nil } }
     public var dict: [String: PlistValue]? { if case .dict(let value) = self { value } else { nil } }
 }
@@ -126,6 +135,8 @@ public struct Workflow: Equatable, Sendable, Identifiable {
     /// The fields of Configure Workflow… (S-043) and the values saved in prefs.plist.
     public var settings: [WorkflowSetting] = []
     public var configuration: [String: String] = [:]
+    /// Where each object's card sits on the canvas (S-044), from uidata.
+    public var positions: [String: WorkflowPoint] = [:]
 
     public init(id: String, folder: URL, bundleID: String = "", name: String, author: String = "", version: String = "",
                 description: String = "", readme: String = "", category: String = "", webAddress: String = "",
@@ -179,6 +190,10 @@ public struct Workflow: Equatable, Sendable, Identifiable {
         variables = (values["variables"]?.dict ?? [:]).compactMapValues(\.string)
         dontExport = (values["variablesdontexport"]?.array ?? []).compactMap(\.string)
         settings = (values["userconfigurationconfig"]?.array ?? []).compactMap(WorkflowSetting.init)
+        positions = (values["uidata"]?.dict ?? [:]).compactMapValues { value in
+            guard let x = value.dict?["xpos"]?.double, let y = value.dict?["ypos"]?.double else { return nil }
+            return WorkflowPoint(x: x, y: y)
+        }
     }
 
     public func object(_ uid: String) -> WorkflowObject? { objects.first { $0.uid == uid } }

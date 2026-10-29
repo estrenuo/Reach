@@ -720,7 +720,13 @@ Screens: 30-workflows-editor-canvas.png, 31-workflows-palette-inputs.png
 Depends: S-042
 Acceptance:
 - [snap] Coloured object cards per category and curved connection lines.
-Status: todo
+UX:
+- Flow: select a workflow in the Workflows window → its canvas fills the detail pane below the header → scroll to see more; hover a card for its full text
+- Surface: the detail pane of the Workflows window; read only, nothing to drag or connect (the full editor is under Later)
+- States: no objects = "No Objects"; a card is colored by category (trigger red, input purple, action blue, utility gray, output green) with its kind ("Script Filter") and what it does (keyword, URL, text, first script line); a line with a key held shows ⌃ ⌥ ⇧ ⌘ halfway along
+- Words: "No Objects", "This workflow has nothing on its canvas."
+- Note: cards sit where Alfred's uidata puts them; objects without a position go in columns by how many lines lead to them
+Status: done
 
 ### S-045 Debug a workflow
 As the user, I open the debugger and see a timestamped log of each run.

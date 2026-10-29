@@ -137,6 +137,9 @@ extension SelfTest {
             return
         }
         check("Add Example installs Hello World and selects it", example.name == "Hello World" && library.workflows.count == before + 1)
+        let placed = WorkflowLayout.positions(example)
+        check("the canvas places every object where uidata says", placed.count == example.objects.count
+              && placed["HELLO"] == WorkflowPoint(x: 40, y: 80))
         library.filter = "hel"
         check("Filter Workflows finds it by name", library.shown.map(\.id) == [example.id])
         library.filter = "zzz"

@@ -3,7 +3,7 @@ import ReachKit
 import SwiftUI
 
 /// The selected workflow: its name, author and version, an on/off switch,
-/// and what it adds to the launcher.
+/// and its objects on a canvas (S-044).
 struct WorkflowDetail: View {
     let workflow: Workflow
     private var library = WorkflowLibrary.shared
@@ -18,23 +18,8 @@ struct WorkflowDetail: View {
                 .padding(Space.margin)
                 .gridArea("workflow-header")
             Divider()
-            Form {
-                Section("Keywords") {
-                    if workflow.scriptFilters.isEmpty {
-                        Text("This workflow has no script filter, so it adds no keyword to the launcher.")
-                            .foregroundStyle(.secondary)
-                    }
-                    ForEach(workflow.scriptFilters, id: \.uid) { filter in
-                        LabeledContent {
-                            Text(filter.keyword).monospaced()
-                        } label: {
-                            Text(filter.placeholder)
-                            if !filter.subtext.isEmpty { Text(filter.subtext) }
-                        }
-                    }
-                }
-            }
-            .formStyle(.grouped)
+            WorkflowCanvasView(workflow: workflow)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
