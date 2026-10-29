@@ -30,6 +30,9 @@ final class LauncherModel {
     /// Items collected with ⌥↑ for one action on all of them (S-013). Kept while
     /// the launcher hides; emptied by an action, ⌥⌫, or 5 minutes unused.
     private(set) var buffer = FileBuffer()
+    /// The command a confirmation row stands for, while it shows (S-019).
+    /// Return runs it; Esc or typing goes back to the results.
+    private(set) var confirming: LaunchResult?
 
     let apps: AppIndex
     let files: FileSearch
@@ -38,6 +41,7 @@ final class LauncherModel {
     let webSearches: WebSearchSource
     let typedURLs = TypedURLSource()
     let history = URLHistory()
+    let system: SystemSource
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -52,6 +56,8 @@ final class LauncherModel {
     @ObservationIgnored var copier: @MainActor (String) -> Void = { Paster.copy($0) }
     /// Presses ⌘V in the app behind the launcher once it has hidden.
     @ObservationIgnored var paster: @MainActor () -> Void = { Paster.pressPaste() }
+    /// Runs a system command. The self-test and snapshots swap in a recorder.
+    @ObservationIgnored var runSystem: @MainActor (SystemRun) -> Bool = { SystemRunner.run($0) }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
     @ObservationIgnored var perform: @MainActor (ActionPanel.Item, [URL]) -> Bool = { ActionRunner.run($0, on: $1) }
     /// Seconds for the buffer's 5 minutes. The self-test moves it forward.
@@ -70,17 +76,20 @@ final class LauncherModel {
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
 
     init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser(),
-         calculator: CalculatorSource = CalculatorSource(), webSearches: WebSearchSource = WebSearchSource()) {
+         calculator: CalculatorSource = CalculatorSource(), webSearches: WebSearchSource = WebSearchSource(),
+         system: SystemSource = SystemSource()) {
         self.apps = apps
         self.files = files
         self.paths = paths
         self.calculator = calculator
         self.webSearches = webSearches
-        sources = [calculator, typedURLs, apps, history, webSearches, files, paths]
+        self.system = system
+        sources = [calculator, typedURLs, apps, system, history, webSearches, files, paths]
     }
 
     func didShow() {
         actions = nil
+        confirming = nil
         if buffer.isStale(at: now()) { buffer.clear() }
         query = ""
         setResults([])
@@ -90,11 +99,13 @@ final class LauncherModel {
 
     func didHide() {
         actions = nil
+        confirming = nil
         sources.forEach { $0.cancel() }
     }
 
     func refresh() {
         errors = [:]
+        confirming = nil
         generation += 1
         let asked = generation
         let kind = files.settings.queryKind(query)
@@ -200,6 +211,10 @@ final class LauncherModel {
             rewriteQuery(completion)
             return
         }
+        if let run = result.system {
+            runCommand(run, result: result)
+            return
+        }
         guard let url = result.url else { return }
         let missing = url.isFileURL && !FileManager.default.fileExists(atPath: url.path)
         let worked = !missing && (result.reveals ? perform(.action(.reveal), [url]) : opener(url))
@@ -210,6 +225,29 @@ final class LauncherModel {
         }
         if result.remembers { onURLOpened(url) }
         onOpened(query, result)
+        onHide()
+    }
+
+    /// A command with Confirm on shows one row that asks first; Return on that
+    /// row runs it. A failed command stays on screen with the error under it.
+    private func runCommand(_ run: SystemRun, result: LaunchResult) {
+        if run.confirms, confirming == nil {
+            confirming = result
+            var row = result
+            row.id = "confirm:\(result.id)"
+            row.title = run.command.question
+            row.subtitle = run.command.confirmHelp
+            row.system?.confirms = false
+            setResults([row])
+            return
+        }
+        let shown = confirming ?? result
+        guard runSystem(run) else {
+            errors[results[selection].id] = "Unable to run “\(shown.title)”."
+            return
+        }
+        confirming = nil
+        onOpened(query, shown)
         onHide()
     }
 
@@ -385,8 +423,13 @@ final class LauncherModel {
         onHide()
     }
 
-    /// Esc clears the query; with an empty query it hides the launcher.
+    /// Esc on a confirmation row goes back to the results. Otherwise it clears
+    /// the query; with an empty query it hides the launcher.
     func cancel() {
+        if confirming != nil {
+            refresh()
+            return
+        }
         if query.isEmpty { onHide() } else { query = "" }
     }
 

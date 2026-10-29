@@ -44,3 +44,6 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Search scope | The folders Reach looks in for apps and files, in Settings > Search | search paths, locations, index |
 | Default results | What a query without a keyword shows: apps, plus the file types ticked in Settings > Search | normal results, global search |
 | Don't Show | File kinds that file search keywords leave out, like Mail messages or plist files | hide, filter, exclude (Skip is for Previews) |
+| System command | A macOS command run by keyword: Sleep, Lock Screen, Restart, Eject | system action, power command |
+| Confirm | A system command setting: Return first shows a row that asks, a second Return runs it | prompt, are you sure |
+| Eject | Unmount a disk and make it safe to unplug | unmount, remove |

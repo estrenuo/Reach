@@ -52,9 +52,9 @@ enum Snapshot {
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
                 let sources = model.launcherModel.sources
-                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
+                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
                 defer { model.launcherModel.sources = sources }
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -68,6 +68,7 @@ enum Snapshot {
                                 """, source: "TextEdit"))
                             try? await Task.sleep(for: .seconds(0.5))
                         }
+                        if name == "confirm" { model.launcherModel.openSelected() }
                         if name == "actions" {
                             _ = model.launcherModel.showActions()
                             try? await Task.sleep(for: .seconds(0.5))

@@ -29,8 +29,10 @@ struct LaunchResult: Identifiable, Equatable {
     var isPinned = false
     /// Opening it adds its URL to the URL history (S-017).
     var remembers = false
+    /// A system command Return runs (S-019). It has no URL.
+    var system: SystemRun?
 
-    var isOpenable: Bool { url != nil || answer != nil || completes != nil }
+    var isOpenable: Bool { url != nil || answer != nil || completes != nil || system != nil }
 }
 
 /// File icons from the workspace, cached per path.

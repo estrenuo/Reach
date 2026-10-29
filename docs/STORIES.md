@@ -316,7 +316,16 @@ Acceptance:
 - [snap] System page: rows with checkbox, keyword field and Confirm checkbox.
 - [self] Confirm-flagged commands show a confirmation row before running.
 - [unit] Commands and apps are mixed in one ranked list.
-Status: todo
+UX:
+- Flow: type a keyword or part of a title (`sleep`, `shut`) -> the command ranks among the apps -> ↩ runs it and the launcher hides; with Confirm on, ↩ shows one row "Restart your Mac?" -> ↩ runs, Esc or typing goes back to the results
+- Surface: rows in the launcher (one more kind of result); the confirmation replaces the results in place (keeps the keyboard flow, no alert); Settings > System tab (a place people come back to)
+- States: `eject` lists each disk, `eject us` picks one; "No disks to eject" when there are none, Eject All then hides; a failed command shows "Unable to run “Toggle Mute”." under its row
+- Words: Alfred's set; titles "Lock Screen", "Shut Down", "Toggle Mute"; sections Commands, Sound, Disks; "Confirm"; questions like "Empty the Trash?" with "↩ empties it, esc cancels"
+- Defaults: every command on; Empty Trash, Log Out, Restart and Shut Down ask first
+- Access: the Confirm checkbox reads "Confirm Restart"; keyword fields read "Keyword for Restart"; a keyword already in use shows why under the field
+- Snapshots: launcher-system-<mode>.png, launcher-confirm-<mode>.png, settings-system-<mode>.png
+- Later: Alfred's Eject scope picker and exclude list
+Status: done
 
 ### S-020 Quit, hide or force-quit apps by keyword
 As the user, I type `quit Safari` and the running app quits.

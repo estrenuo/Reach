@@ -27,6 +27,7 @@ struct SettingsView: View {
             case .general: GeneralSettings()
             case .search: SearchSettingsView()
             case .web: WebSearchSettingsView()
+            case .system: SystemSettingsView()
             case .actions: ActionsSettings()
             case .previews: PreviewsSettings()
             case .appearance: AppearanceSettings()
@@ -40,7 +41,7 @@ struct SettingsView: View {
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, search, web, actions, previews, appearance
+    case general, search, web, system, actions, previews, appearance
 
     var id: String { rawValue }
 
@@ -49,6 +50,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "General"
         case .search: "Search"
         case .web: "Web Search"
+        case .system: "System"
         case .actions: "Actions"
         case .previews: "Previews"
         case .appearance: "Appearance"
@@ -60,6 +62,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .search: "magnifyingglass"
         case .web: "globe"
+        case .system: "power"
         case .actions: "arrow.right.square"
         case .previews: "eye"
         case .appearance: "paintpalette"
