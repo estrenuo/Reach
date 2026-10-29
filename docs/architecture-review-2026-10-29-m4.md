@@ -74,3 +74,14 @@ Proposal: move Large Type and the confirm flow for system commands into extensio
 ## Also found
 
 - "Ask before deleting snippets" in Settings > General does nothing. Deleting a collection always asks, and deleting a snippet can be undone. Remove it, or make it decide whether deleting a collection asks.
+
+## Outcome
+
+Done on 2026-10-29, as the user chose (the clipboard loan, the snapshot sources, the dead toggle):
+
+- `ClipboardLoan` and `Paster` in `Clipboard/ClipboardLoan.swift`, used by snippet pasting (24c2697). The self-test passed 348 of 348 before and after, with the S-030 and S-031 checks unchanged.
+- The selection hotkey reads through the loan (c40c87a), a bug fix with a FIXLOG entry and 4 new self-test checks (352 of 352).
+- Snapshot mode takes the launcher's own sources (20a29ac). The layout files are the same as before, and the typed URL state looks the same.
+- "Ask before deleting snippets" is gone from Settings > General, and the Accessibility row says what it is for today.
+
+Left for later: "A key monitor that follows a setting" (when a third watcher comes), "LauncherModel growth".

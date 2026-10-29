@@ -87,8 +87,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 }
 
 struct GeneralSettings: View {
-    @AppStorage("confirmDelete", store: Store.settings) private var confirmDelete = true
-
     var body: some View {
         Section("Launcher") {
             HotkeyRecorder()
@@ -101,11 +99,8 @@ struct GeneralSettings: View {
                 }
             } label: {
                 Text("Accessibility")
-                Text("Needed later for pasting and snippet expansion.")
+                Text("Needed for pasting, the selection hotkey, ⌘C twice and expanding snippets.")
             }
-        }
-        Section("Snippets") {
-            Toggle("Ask before deleting snippets", isOn: $confirmDelete)
         }
     }
 }
