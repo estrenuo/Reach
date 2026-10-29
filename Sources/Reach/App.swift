@@ -87,10 +87,14 @@ enum Store {
     /// launch. Those runs never read or write the real settings this way.
     static let settings: UserDefaults = {
         guard isOverridden else { return .standard }
-        let name = "com.sanderrobijns.reach.testrun"
-        UserDefaults.standard.removePersistentDomain(forName: name)
-        return UserDefaults(suiteName: name) ?? .standard
+        UserDefaults.standard.removePersistentDomain(forName: settingsDomain)
+        return UserDefaults(suiteName: settingsDomain) ?? .standard
     }()
+
+    /// The defaults domain `settings` saves in, for the sync folder (S-039).
+    static var settingsDomain: String {
+        isOverridden ? "com.sanderrobijns.reach.testrun" : Bundle.main.bundleIdentifier ?? "com.sanderrobijns.reach"
+    }
 
     static var url: URL {
         if let path = ProcessInfo.processInfo.environment["APP_STORE"], !path.isEmpty {

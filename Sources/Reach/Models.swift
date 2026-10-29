@@ -95,7 +95,12 @@ enum SnippetPage: Hashable {
 /// App-wide state that menus, toolbars, and views share.
 @Observable
 final class AppModel {
-    static let shared = AppModel(container: Store.makeContainer())
+    static let shared: AppModel = {
+        let container = Store.makeContainer()
+        // A newer setup from the sync folder goes in before any setting is read (S-039).
+        SyncService.shared.start(container: container)
+        return AppModel(container: container)
+    }()
     /// Snapshots and the self-test run with the snippets window and no real hotkey.
     static let isTestRun = Store.isOverridden
         && (ProcessInfo.processInfo.environment["APP_SNAPSHOT"] != nil || CommandLine.arguments.contains("--selftest"))

@@ -1,3 +1,4 @@
+import AppKit
 import ReachKit
 import SwiftUI
 
@@ -6,6 +7,8 @@ import SwiftUI
 struct AdvancedSettings: View {
     @Environment(AppModel.self) private var model
     @Bindable private var options = AdvancedOptions.shared
+    private var sync = SyncService.shared
+    @State private var restartAfterSync = false
     @State private var learned = 0
     @State private var confirmingClear = false
 
@@ -57,6 +60,48 @@ struct AdvancedSettings: View {
             Text("Hold a key with Return to search the web for what you typed, whatever result is selected. ⌘↩ on a calculation still pastes the answer.")
                 .foregroundStyle(.secondary)
         }
+
+        Section {
+            LabeledContent {
+                HStack(spacing: Space.sm) {
+                    if sync.folder != nil {
+                        Button("Reveal") { sync.reveal() }
+                    }
+                    Button("Set Folder…") { chooseSyncFolder() }
+                }
+            } label: {
+                Text("Sync folder")
+                Text(sync.folder?.path(percentEncoded: false) ?? "Not syncing. Settings, snippets, themes and workflows stay on this Mac.")
+                    .truncationMode(.middle)
+            }
+            if sync.folder != nil {
+                Button("Stop Syncing") { sync.stop() }
+            }
+            if let error = sync.error {
+                Label(error, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Sync")
+        } footer: {
+            Text("Point another Mac to the same folder to use the same settings, snippets, themes and workflows.")
+                .foregroundStyle(.secondary)
+        }
+        .alert("Reach uses the setup from this folder after a restart.", isPresented: $restartAfterSync) {
+            Button("Restart Now") { SyncService.relaunch() }
+            Button("Later", role: .cancel) {}
+        }
+    }
+
+    private func chooseSyncFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Set Folder"
+        panel.message = "Choose a folder another Mac can reach, such as one in iCloud Drive."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        restartAfterSync = sync.setFolder(url)
     }
 
     private func binding(for modifier: ReturnModifier) -> Binding<String?> {

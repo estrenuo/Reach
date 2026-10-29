@@ -639,7 +639,13 @@ As the user, I point Settings to an iCloud Drive folder so another Mac uses the 
 Screens: 43-advanced.png
 Acceptance:
 - [unit] All settings, snippets, themes and workflows live under that folder; the window has Set folder and Reveal buttons.
-Status: todo
+UX:
+- Flow: Settings > Advanced > Sync → Set Folder… → choose a folder (iCloud Drive) → an empty folder gets this Mac's setup; a folder with a setup is read, and an alert offers "Restart Now" so every setting is read again. Reveal shows `<folder>/Reach` in Finder; Stop Syncing keeps the files
+- Surface: a section in the Advanced tab; the system open panel picks the folder
+- States: not set = "Not syncing. Settings, snippets, themes and workflows stay on this Mac."; set = the path, Reveal and Stop Syncing; a write failure shows under the folder
+- Words: "Sync", "Sync folder", "Set Folder…", "Reveal", "Stop Syncing", "Restart Now", "Later"
+- Note: settings and themes go to `Reach/Preferences.plist`, snippets to `Reach/Snippets.json`, workflows to `Reach/Workflows/`. At launch a folder newer than this Mac's last sync is read first; changes are written 2 s later. The folder setting itself and window places stay per Mac
+Status: done
 
 ### S-040 See how much I use the launcher
 As the user, I open Usage and see a 28-day stacked chart by kind of use.

@@ -114,4 +114,6 @@ public enum SettingsIndex {
                words: "previous last typed ctrl up down")
         + page("advanced", "Alternative Actions", ["Alternative Actions", "Nothing"],
                words: "modifier return control option command fallback web search")
+        + page("advanced", "Sync", ["Sync", "Sync folder", "Set Folder…", "Reveal", "Stop Syncing", "Restart Now", "Later"],
+               words: "icloud drive dropbox another mac share backup")
 }
