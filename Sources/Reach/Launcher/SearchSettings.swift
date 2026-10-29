@@ -3,7 +3,7 @@ import ReachKit
 
 /// Settings > Search (S-014): the file search keywords, the kinds they leave
 /// out, the file types the default results add, and the search scope. Saved
-/// in UserDefaults, except in test and snapshot runs.
+/// in `Store.settings`.
 @Observable
 final class SearchSettings {
     static let shared = SearchSettings()
@@ -36,13 +36,13 @@ final class SearchSettings {
     ]
 
     private init() {
-        let defaults = Store.isOverridden ? nil : UserDefaults.standard
-        keywords = defaults?.data(forKey: Self.keywordsKey)
+        let defaults = Store.settings
+        keywords = defaults.data(forKey: Self.keywordsKey)
             .flatMap { try? JSONDecoder().decode(FileKeywords.self, from: $0) } ?? FileKeywords()
-        hidden = defaults?.stringArray(forKey: Self.hiddenKey).map { Set($0.compactMap(HiddenKind.init(rawValue:))) }
+        hidden = defaults.stringArray(forKey: Self.hiddenKey).map { Set($0.compactMap(HiddenKind.init(rawValue:))) }
             ?? HiddenKind.standard
-        types = Set((defaults?.stringArray(forKey: Self.typesKey) ?? []).compactMap(ResultType.init(rawValue:)))
-        scope = defaults?.stringArray(forKey: Self.scopeKey) ?? Self.standardScope
+        types = Set((defaults.stringArray(forKey: Self.typesKey) ?? []).compactMap(ResultType.init(rawValue:)))
+        scope = defaults.stringArray(forKey: Self.scopeKey) ?? Self.standardScope
     }
 
     func queryKind(_ query: String) -> QueryKind {
@@ -58,7 +58,6 @@ final class SearchSettings {
     }
 
     private func save(_ value: Any?, _ key: String) {
-        guard !Store.isOverridden else { return }
-        UserDefaults.standard.set(value, forKey: key)
+        Store.settings.set(value, forKey: key)
     }
 }

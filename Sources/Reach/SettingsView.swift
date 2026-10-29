@@ -65,7 +65,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 }
 
 struct GeneralSettings: View {
-    @AppStorage("confirmDelete") private var confirmDelete = true
+    @AppStorage("confirmDelete", store: Store.settings) private var confirmDelete = true
 
     var body: some View {
         Section("Launcher") {

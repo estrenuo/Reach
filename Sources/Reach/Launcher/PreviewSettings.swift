@@ -2,7 +2,7 @@ import Foundation
 import ReachKit
 
 /// Settings > Previews: whether ⇧ opens Quick Look, and what it skips (S-012).
-/// Saved in UserDefaults, except in test and snapshot runs.
+/// Saved in `Store.settings`.
 @Observable
 final class PreviewSettings {
     static let shared = PreviewSettings()
@@ -21,10 +21,10 @@ final class PreviewSettings {
     }
 
     private init() {
-        let defaults = Store.isOverridden ? nil : UserDefaults.standard
-        quickLook = defaults?.object(forKey: Self.quickLookKey) as? Bool ?? true
-        skips = PreviewSkips(types: defaults?.stringArray(forKey: Self.typesKey) ?? [],
-                             folders: defaults?.stringArray(forKey: Self.foldersKey) ?? [])
+        let defaults = Store.settings
+        quickLook = defaults.object(forKey: Self.quickLookKey) as? Bool ?? true
+        skips = PreviewSkips(types: defaults.stringArray(forKey: Self.typesKey) ?? [],
+                             folders: defaults.stringArray(forKey: Self.foldersKey) ?? [])
     }
 
     /// True when Quick Look and the Preview dates leave this file alone.
@@ -33,7 +33,6 @@ final class PreviewSettings {
     }
 
     private func save(_ value: Any, _ key: String) {
-        guard !Store.isOverridden else { return }
-        UserDefaults.standard.set(value, forKey: key)
+        Store.settings.set(value, forKey: key)
     }
 }

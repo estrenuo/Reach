@@ -65,10 +65,18 @@ Rule: when a change to timing code makes a flaky test fail every time, test the 
 
 Rule: check a new search against your own home folder, not only the test files; the noise lives in caches.
 
-## Reentrant NSTableView warning in the snapshot run (end of M2)
+## Reentrant NSTableView warning in the snapshot run (end of M2, open)
 
-- Symptom: one full snapshot run logged "Application performed a reentrant operation in its NSTableView delegate" before the first capture. Three short runs did not.
-- Cause, likely: seed data went into the `@Query` from the window's `.task`, while the snippet list laid itself out for the first time.
-- Fix: seed data goes in from `applicationWillFinishLaunching`, before SwiftUI builds the window. Not reproducible on demand, so verified only by runs without the warning.
+- Symptom: full snapshot runs log "Application performed a reentrant operation in its NSTableView delegate". Short runs of the main window and Settings do not.
+- Cause: not found. The warning showed up first in the log, but `NSLog` goes straight to stderr while snapshot mode's `print` is buffered, so its place in the log says nothing about when it happened.
+- Tried: putting seed data in from `applicationWillFinishLaunching` instead of the window's `.task`. The warning came back in the next full run, so the change was reverted.
 
-Rule: put test data in before the first window exists, never from a view's `.task`.
+Rule: a log line's position means nothing when stdout is buffered and stderr is not; set `setvbuf(stdout, nil, _IOLBF, 0)` before reading order into a log.
+
+## Settings and window snapshots fell back after the settings store (end of M2)
+
+- Symptom: with `.defaultAppStorage(Store.settings)` on the Window and Settings scenes, every capture of those windows fell back to the blank-glass copy (12 of 12). The commit before gave 0 of 12.
+- Cause: not found in full; the modifier on the scene root changed something screencapture relies on. Bisected by building the commit before and running the same short snapshot run.
+- Fix: the store goes on the one property that needs it, `@AppStorage("confirmDelete", store: Store.settings)`, not on the scenes.
+
+Rule: hand a store to the property that uses it, not to a whole scene; and when snapshots change after a refactor, build the commit before and run the same pages.

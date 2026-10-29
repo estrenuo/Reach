@@ -24,11 +24,9 @@ final class HotkeyCenter {
 
     private var ref: EventHotKeyRef?
     private var handlerInstalled = false
-    /// Test and snapshot runs never write the real setting.
-    private let persists = !Store.isOverridden
 
     private init() {
-        let defaults = UserDefaults.standard
+        let defaults = Store.settings
         if let data = defaults.data(forKey: "hotkey.combo"),
            let saved = try? JSONDecoder().decode(KeyCombo.self, from: data) {
             combo = saved
@@ -63,10 +61,8 @@ final class HotkeyCenter {
         combo = new
         keyName = newName
         isRegistered = true
-        if persists {
-            UserDefaults.standard.set(try? JSONEncoder().encode(new), forKey: "hotkey.combo")
-            UserDefaults.standard.set(newName, forKey: "hotkey.key")
-        }
+        Store.settings.set(try? JSONEncoder().encode(new), forKey: "hotkey.combo")
+        Store.settings.set(newName, forKey: "hotkey.key")
         return true
     }
 

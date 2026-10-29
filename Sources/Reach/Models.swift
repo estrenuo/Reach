@@ -64,9 +64,9 @@ final class AppModel {
     private(set) var launcher: LauncherController?
     var sidebar: SidebarItem? = .all
     var selection: PersistentIdentifier?
-    /// Settings reopens on the last tab. Test and snapshot runs leave it alone.
-    var settingsTab: SettingsTab = SettingsTab(rawValue: UserDefaults.standard.string(forKey: "settings.tab") ?? "") ?? .general {
-        didSet { if !Store.isOverridden { UserDefaults.standard.set(settingsTab.rawValue, forKey: "settings.tab") } }
+    /// Settings reopens on the last tab.
+    var settingsTab: SettingsTab = SettingsTab(rawValue: Store.settings.string(forKey: "settings.tab") ?? "") ?? .general {
+        didSet { Store.settings.set(settingsTab.rawValue, forKey: "settings.tab") }
     }
 
     init(container: ModelContainer) {

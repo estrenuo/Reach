@@ -76,4 +76,6 @@ Done on 2026-10-29 in two commits, as the user chose (the self-test split and th
 - The self-test split into `Sources/Reach/SelfTest/` (b7bf36f). Two runs gave PASS lines identical to the run before the move. A third run failed only "file search answers within 200 ms" (786 and 453 ms) while the Mac was busy right after the full snapshot run; HEAD passed at that moment and the split passed twice after. A timing check, not the move.
 - `KeyboardHandover` in ReachKit holds Quick Look's keyboard rule with the clock passed in, with 3 unit tests (51 in all). `onResign` is one condition. Two self-test runs identical to the baseline, including the real ⇧ events. The flaky mid-animation check is not touched by this.
 
-Left for later: "Saved settings behind one store" and "LauncherModel growth".
+Later the same night, at the user's request: "Saved settings behind one store", designed twice. A `SettingsStore` protocol with an in-memory adapter could not serve `@AppStorage`; `UserDefaults` itself is the seam, with two instances (`.standard`, and a test-run suite emptied at launch), so every save format stays the same by construction. A new self-test check proves a test run writes only to the suite. Reach's own keys in the real preferences were the same before and after a self-test and a full snapshot run. It also closed two leaks: `ThemeStore` and `confirmDelete` wrote the real settings in test runs.
+
+Left for later: "LauncherModel growth".

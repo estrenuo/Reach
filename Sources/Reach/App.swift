@@ -99,6 +99,16 @@ enum Store {
         !(ProcessInfo.processInfo.environment["APP_STORE"] ?? "").isEmpty
     }
 
+    /// Where settings are saved: the app's own UserDefaults, or for test,
+    /// snapshot and seed runs a separate suite that starts empty at every
+    /// launch. Those runs never read or write the real settings this way.
+    static let settings: UserDefaults = {
+        guard isOverridden else { return .standard }
+        let name = "com.sanderrobijns.reach.testrun"
+        UserDefaults.standard.removePersistentDomain(forName: name)
+        return UserDefaults(suiteName: name) ?? .standard
+    }()
+
     static var url: URL {
         if let path = ProcessInfo.processInfo.environment["APP_STORE"], !path.isEmpty {
             return URL(fileURLWithPath: path)

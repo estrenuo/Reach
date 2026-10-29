@@ -18,6 +18,13 @@ extension SelfTest {
         func wait(until done: () -> Bool) async {
             for _ in 0..<150 where !done() { try? await Task.sleep(for: .milliseconds(20)) }
         }
+        // Store.settings: a test run saves into its own suite, never the real settings.
+        let real = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["actions.off"] as? [String]
+        ActionSettings.shared.set(.getInfo, on: false)
+        check("a test run saves settings apart from the real ones", Store.settings !== UserDefaults.standard
+              && Store.settings.stringArray(forKey: "actions.off") == ["getInfo"]
+              && UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["actions.off"] as? [String] == real)
+        ActionSettings.shared.set(.getInfo, on: true)
         launcher.show()
 
         lm.query = "in "
