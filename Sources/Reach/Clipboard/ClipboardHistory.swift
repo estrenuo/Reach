@@ -160,11 +160,14 @@ final class ClipboardHistory {
     /// clipboard a snippet put back is not a new copy (S-030).
     func skipCurrent() { changeCount = pasteboard.changeCount }
 
+    /// True while Reach borrows the clipboard (`ClipboardLoan`): polls wait.
+    var isPaused = false
+
     /// Stores the pasteboard's contents when they changed and are kept. True when a clip was stored.
     @discardableResult
     func poll() -> Bool {
         let count = pasteboard.changeCount
-        guard count != changeCount else { return false }
+        guard !isPaused, count != changeCount else { return false }
         changeCount = count
         // With every kind off, nothing is read at all: no macOS paste alert.
         guard settings.isOn else { return false }
