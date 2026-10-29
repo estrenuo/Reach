@@ -13,7 +13,7 @@ private func settingsLabels() throws -> [(file: String, label: String)] {
     let pattern = /\b(Section|Toggle|Picker|LabeledContent|Text|Button|EditableList)\((?:title: )?"((?:[^"\\]|\\.)*)"/
     let generic: Set<String> = ["Cancel", "Done", "Remove", "Move Up", "Move Down", "Delete", "Duplicate", "Rename", "Rename…",
                                 "Reset", "Clear", "Clear…", "Filter", "Page", "Edit…", "Edit Fallbacks", "Open System Settings…",
-                                "No custom searches", "Features", "Always", "Never", "Selected Row Only",
+                                "No custom searches", "Features", "Search Settings", "Always", "Never", "Selected Row Only",
                                 "Mouse Screen", "Main Screen", "Active Screen",
                                 // Sample values in text fields.
                                 "ddg", "http", "https"]
