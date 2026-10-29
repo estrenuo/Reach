@@ -95,8 +95,10 @@ public struct ContactField: Equatable, Sendable, Identifiable {
         case .email:
             return Self.mailURL(to: value).map(Action.email) ?? .copy
         case .url:
+            // Only web pages: a contact from a shared card could hold file:// or an app's scheme.
             let text = value.contains("://") ? value : "https://" + value
-            return URL(string: text).map(Action.open) ?? .copy
+            guard let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased()) else { return .copy }
+            return .open(url)
         case .address:
             let line = value.split(whereSeparator: \.isNewline).joined(separator: ", ")
             return line.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed)

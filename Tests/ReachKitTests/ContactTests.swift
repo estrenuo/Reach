@@ -45,6 +45,9 @@ struct ContactTests {
         #expect(ContactField(.url, value: "example.com").action == .open(URL(string: "https://example.com")!))
         #expect(ContactField(.address, value: "Damrak 1\nAmsterdam").action
                 == .map(URL(string: "https://maps.apple.com/?q=Damrak%201,%20Amsterdam")!))
+        #expect(ContactField(.url, value: "http://example.com/a").action == .open(URL(string: "http://example.com/a")!))
+        #expect(ContactField(.url, value: "file:///Applications/Calculator.app").action == .copy)
+        #expect(ContactField(.url, value: "x-other-app://run").action == .copy)
         #expect(ContactField(.phone, value: "+31 6").action == .copy)
         #expect(ContactField(.email, value: "not an address").action == .copy)
     }
