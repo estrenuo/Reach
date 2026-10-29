@@ -116,3 +116,10 @@ Symptom: a security review of S-026 found that a file clip whose name holds a li
 Cause: `ClipboardItem.text` keeps a file list as one path per line, and macOS file names may contain line breaks.
 Fix: `ClipboardHistory` does not keep a file list with a line break in any path; the self-test copies such a name and checks it is skipped.
 Rule: text joined with a separator never holds values that may contain that separator; refuse them or store a real list.
+
+## A snippet put a password back on the clipboard (S-030)
+
+Symptom: a security review of S-030 found that pasting a snippet right after copying a password would fill it into `{clipboard}` and put it back on the clipboard afterwards.
+Cause: `pasteSnippet` saved and restored every pasteboard item, also those marked Concealed. The restore changes `changeCount`, so a password manager no longer clears its copy, and the password stays on the clipboard.
+Fix: a clipboard with a private or machine-made marker (`ClipboardPolicy.ignoredTypes`) is not filled in and not put back; the clipboard is left empty after the paste. The self-test pastes over a concealed copy and checks both.
+Rule: code that reads or rewrites the pasteboard checks the nspasteboard.org markers first, not only the code that stores clips.

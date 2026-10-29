@@ -89,6 +89,17 @@ extension SelfTest {
               pasteboard.string(forType: .string) == "copied meanwhile" && pastes == 2)
 
         await showAgain(launcher)
+        pasteboard.declareTypes([.string, NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")], owner: nil)
+        pasteboard.setString("secret-password", forType: .string)
+        lm.query = "snip zgr"
+        lm.open(at: 0)
+        check("a private copy is not filled in for {clipboard}",
+              pasteboard.string(forType: .string)?.hasPrefix("Hallo , het is") == true && pastes == 3)
+        try? await Task.sleep(for: .milliseconds(300))
+        check("nor put back afterwards: the clipboard is left empty",
+              pasteboard.string(forType: .string) == nil && pasteboard.pasteboardItems?.isEmpty != false)
+
+        await showAgain(launcher)
         launcher.toggleClipboard()
         lm.viewer?.filter = "zebra gr"
         let viewer = lm.viewer
@@ -96,7 +107,7 @@ extension SelfTest {
               viewer?.selected?.row.title == "Zebra greeting" && viewer?.footer == "Snippet in Paste test",
               viewer?.rows.map(\.title).joined(separator: ", ") ?? "no viewer")
         lm.useClip(at: viewer?.selection ?? 0)
-        check("↩ on a snippet there pastes it", pastes == 3 && pasteboard.string(forType: .string)?.hasPrefix("Hallo") == true)
+        check("↩ on a snippet there pastes it", pastes == 4 && pasteboard.string(forType: .string)?.hasPrefix("Hallo") == true)
         try? await Task.sleep(for: .milliseconds(300))
     }
 }

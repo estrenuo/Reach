@@ -66,10 +66,13 @@ extension LauncherModel {
     /// Return on a snippet: fills in its placeholders, pastes it into the app in
     /// front, and puts the clipboard from before back once the paste is done.
     /// The snippet is marked transient, so no clipboard history keeps it.
+    /// A private copy, like a password, is neither filled in nor put back: the
+    /// clipboard is left empty, so the password manager's own clearing still holds.
     func pasteSnippet(_ text: String) {
         let board = pasteboard
-        let filled = SnippetText.expand(text, date: .now, clipboard: board.string(forType: .string))
-        let saved = SnippetClipboard.save(board)
+        let isPrivate = SnippetClipboard.isPrivate(board)
+        let filled = SnippetText.expand(text, date: .now, clipboard: isPrivate ? nil : board.string(forType: .string))
+        let saved = isPrivate ? [] : SnippetClipboard.save(board)
         board.clearContents()
         let item = NSPasteboardItem()
         item.setString(filled, forType: .string)
@@ -91,6 +94,11 @@ extension LauncherModel {
 /// Keeps a copy of the clipboard while a snippet passes through it.
 enum SnippetClipboard {
     static let transient = NSPasteboard.PasteboardType("org.nspasteboard.TransientType")
+
+    /// Marked private or machine-made (nspasteboard.org), like a password.
+    static func isPrivate(_ board: NSPasteboard) -> Bool {
+        !Set(board.types?.map(\.rawValue) ?? []).isDisjoint(with: ClipboardPolicy.ignoredTypes)
+    }
 
     /// Copies every item's data now: the items themselves die with `clearContents`.
     static func save(_ board: NSPasteboard) -> [NSPasteboardItem] {
