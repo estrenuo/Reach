@@ -74,6 +74,12 @@ struct StatusMenu: View {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Seed data goes in before SwiftUI builds the window: inserting while the
+    /// snippet list lays itself out for the first time is a reentrant table update.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        SeedData.insertIfRequested(into: AppModel.shared)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if AppModel.isTestRun {
             // Snapshots and the self-test need a normal app with a front window.

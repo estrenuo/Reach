@@ -15,7 +15,6 @@ struct ContentView: View {
             SnippetDetail()
         }
         .task {
-            SeedData.insertIfRequested(into: model)
             SelfTest.runIfRequested(model: model)
             Snapshot.runIfRequested(model: model, openSettings: openSettings)
         }
