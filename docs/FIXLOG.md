@@ -123,3 +123,10 @@ Symptom: a security review of S-030 found that pasting a snippet right after cop
 Cause: `pasteSnippet` saved and restored every pasteboard item, also those marked Concealed. The restore changes `changeCount`, so a password manager no longer clears its copy, and the password stays on the clipboard.
 Fix: a clipboard with a private or machine-made marker (`ClipboardPolicy.ignoredTypes`) is not filled in and not put back; the clipboard is left empty after the paste. The self-test pastes over a concealed copy and checks both.
 Rule: code that reads or rewrites the pasteboard checks the nspasteboard.org markers first, not only the code that stores clips.
+
+## The selection hotkey leaked into Clipboard History and put passwords back (M4 check-in)
+
+Symptom: the M4 architecture review found that the selection hotkey's ⌘C fallback put a copied password back on the clipboard, Clipboard History kept the selected text as a clip and then the restored clipboard as one more copy, and its ⌘C could count as a press for ⌘C twice.
+Cause: `SelectionReader.copiedText` (S-018) had its own copy of "save the clipboard, use it, put it back", written before the clipboard history; the S-030 fixes went only into the snippet copy.
+Fix: both use `ClipboardLoan`, which skips private copies, pauses the history for the loan and tells it the restore is not a new copy. `Paster.pressCopy` marks its ⌘C, and `DoubleCopyWatcher` skips marked keys. New self-test checks run the ⌘C fallback on a private pasteboard.
+Rule: one module borrows the clipboard; a second copy of save and restore code is a bug waiting for the next fix.

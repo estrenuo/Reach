@@ -69,28 +69,18 @@ enum SelectionReader {
     }
 
     /// Presses ⌘C in the front app and reads what it copied, then puts the
-    /// pasteboard back the way it was.
-    private static func copiedText() async -> String? {
-        let board = NSPasteboard.general
-        let saved = board.pasteboardItems?.map { item in
-            item.types.compactMap { type in item.data(forType: type).map { (type, $0) } }
-        } ?? []
+    /// clipboard back through a `ClipboardLoan`: a password is not put back,
+    /// and Clipboard History keeps neither the selection nor the restore.
+    /// The self-test passes a private pasteboard and a fake ⌘C.
+    static func copiedText(board: NSPasteboard = .general, history: ClipboardHistory? = AppModel.shared.clipboard,
+                           pressCopy: () -> Void = { Paster.pressCopy() }, wait: Duration = .milliseconds(200)) async -> String? {
+        let loan = ClipboardLoan(board, history: history)
+        defer { loan.giveBack() }
         let before = board.changeCount
-        let source = CGEventSource(stateID: .combinedSessionState)
-        for down in [true, false] {
-            let event = CGEvent(keyboardEventSource: source, virtualKey: 8, keyDown: down)  // C
-            event?.flags = .maskCommand
-            event?.post(tap: .cghidEventTap)
-        }
-        try? await Task.sleep(for: .milliseconds(200))
+        pressCopy()
+        try? await Task.sleep(for: wait)
         guard board.changeCount != before else { return nil }
-        let text = board.string(forType: .string)
-        board.clearContents()
-        board.writeObjects(saved.map { pairs in
-            let item = NSPasteboardItem()
-            for (type, data) in pairs { item.setData(data, forType: type) }
-            return item
-        })
-        return text
+        loan.took()
+        return board.string(forType: .string)
     }
 }

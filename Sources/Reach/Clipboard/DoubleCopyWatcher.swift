@@ -37,6 +37,8 @@ final class DoubleCopyWatcher {
     }
 
     private func handle(_ event: NSEvent) {
+        // Reach's own ⌘C, for the selection hotkey, is not a press.
+        if event.cgEvent?.getIntegerValueField(.eventSourceUserData) == Paster.marker { return }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if event.type == .flagsChanged {
             if !flags.contains(.command) { tap.released() }
