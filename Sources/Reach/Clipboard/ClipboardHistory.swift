@@ -156,6 +156,10 @@ final class ClipboardHistory {
     var isRunning: Bool { poller != nil }
     var purgesHourly: Bool { purger?.timeInterval == ClipboardPolicy.purgeInterval }
 
+    /// Takes what is on the pasteboard now as seen, so it is not stored: the
+    /// clipboard a snippet put back is not a new copy (S-030).
+    func skipCurrent() { changeCount = pasteboard.changeCount }
+
     /// Stores the pasteboard's contents when they changed and are kept. True when a clip was stored.
     @discardableResult
     func poll() -> Bool {

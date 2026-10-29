@@ -497,7 +497,14 @@ Screens: 62-alfred-snippets-keyword.png
 Depends: S-029
 Acceptance:
 - [self] The snippet text is pasted into the front app; `{date}` and `{clipboard}` placeholders are filled in.
-Status: todo
+UX:
+- Flow: type `snip` (or `sni`, ↩ on "Paste a Snippet…") -> every snippet by name; `snip <name or keyword>` finds one, a full keyword first -> ↩ pastes it into the app in front -> the clipboard from before comes back; in the clipboard viewer, typing also finds snippets below the clips, ↩ pastes
+- Surface: rows in the launcher (results people pick from), like `email`
+- States: no snippets "No Snippets" with "Add snippets in the Reach window"; no match "No snippet matches “x”"; a row shows the first line and the snippet keyword
+- Words: "Paste a Snippet…", "Press ↩ to type a name", footer "Snippet in Work"; placeholders `{date}` (29 Oct 2026), `{time}` (14:05), `{clipboard}`
+- Access: VoiceOver reads "Snippet" before the name; ⌘1–9 pick a row
+- Scope: the pasted text is marked transient, so Clipboard History never keeps it; a copy made right after the paste is not overwritten
+Status: done
 
 ### S-031 Expand snippets automatically while typing
 As the user, I type a snippet keyword in any app and it is replaced by the snippet.

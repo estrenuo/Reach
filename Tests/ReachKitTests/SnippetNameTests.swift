@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import ReachKit
 
@@ -30,4 +31,22 @@ func cleans(_ input: String, expected: String) {
     let keyword = SnippetSearch.score("addr", name: "Home", keyword: "addr") ?? 0
     let name = SnippetSearch.score("addr", name: "Address book", keyword: "") ?? 0
     #expect(keyword > name)
+}
+
+@Test func placeholdersAreFilledIn() {
+    let date = Date(timeIntervalSince1970: 1_793_282_700)  // 29 Oct 2026, 14:05 UTC
+    let utc = TimeZone(identifier: "UTC")!
+    let en = Locale(identifier: "en_GB")
+    let filled = SnippetText.expand("On {date} at {time}: {clipboard}", date: date, clipboard: "hello", locale: en, timeZone: utc)
+    #expect(filled == "On 29 Oct 2026 at 14:05: hello")
+    // Clipboard text is not filled in a second time.
+    #expect(SnippetText.expand("{clipboard}", date: date, clipboard: "{date}", locale: en, timeZone: utc) == "{date}")
+    #expect(SnippetText.expand("{clipboard}!", date: date, clipboard: nil) == "!")
+    #expect(SnippetText.expand("{name} and {}", date: date, clipboard: "x") == "{name} and {}")
+}
+
+@Test func previewIsTheFirstLine() {
+    #expect(SnippetText.preview("  Met vriendelijke groet,\nSander") == "Met vriendelijke groet,")
+    #expect(SnippetText.preview("") == "")
+    #expect(SnippetText.preview(String(repeating: "a", count: 200)).count == 121)
 }

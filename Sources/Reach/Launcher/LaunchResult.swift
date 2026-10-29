@@ -42,9 +42,11 @@ struct LaunchResult: Identifiable, Equatable {
     var acts = false
     /// The Clipboard History row: Return opens the clipboard viewer (S-026).
     var opensClipboard = false
+    /// A snippet's text: Return fills in its placeholders and pastes it (S-030).
+    var pastes: String?
 
     var isOpenable: Bool {
-        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil
     }
 }
 

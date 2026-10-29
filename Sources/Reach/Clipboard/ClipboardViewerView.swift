@@ -82,6 +82,14 @@ private struct ClipPreview: View {
             hint(ClipboardViewer.isOff)
         case .clip(let item):
             clip(item)
+        case .snippet(let snippet):
+            ScrollView {
+                Text(snippet.text)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityLabel("Preview, \(snippet.text)")
         case .noMatch, nil:
             Color.clear
         }

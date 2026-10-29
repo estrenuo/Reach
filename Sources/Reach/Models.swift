@@ -119,6 +119,7 @@ final class AppModel {
     init(container: ModelContainer) {
         self.container = container
         launcherModel.history.attach(container)
+        launcherModel.snippets.context = container.mainContext
         adoptLooseSnippets()
     }
 

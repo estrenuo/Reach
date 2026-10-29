@@ -4,7 +4,7 @@ import ReachKit
 extension LauncherModel {
     /// ⌃⌥⌘C or ↩ on the Clipboard History row: the viewer, newest clip selected.
     func showClipboard(fromLauncher: Bool = false) {
-        viewer = ClipboardViewer(history: clipboard, fromLauncher: fromLauncher)
+        viewer = ClipboardViewer(history: clipboard, snippets: { [snippets] in snippets.matches($0) }, fromLauncher: fromLauncher)
         onResultsChange()
     }
 
@@ -25,6 +25,8 @@ extension LauncherModel {
             clipboard?.use(item)
             onHide()
             if viewer.settings.pastesOnReturn { paster() }
+        case .snippet(let snippet):
+            pasteSnippet(snippet.text)
         case .noMatch:
             return
         }

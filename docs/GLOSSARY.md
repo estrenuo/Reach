@@ -72,3 +72,5 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Collection | A named group of snippets in the sidebar; every snippet is in one | folder, group, category |
 | All Snippets | The sidebar page with the snippets of every collection | library, everything |
 | Snippet keyword | A short word, without spaces, that finds or expands a snippet | abbreviation, shortcut, trigger (Keyword alone is a launcher keyword) |
+| Placeholder | `{date}`, `{time}` or `{clipboard}` in a snippet, filled in when it is pasted | variable, token, macro |
+| Paste a Snippet | The `snip` keyword: `snip <name>` lists snippets, Return pastes one | insert, expand (Expand is for S-031) |

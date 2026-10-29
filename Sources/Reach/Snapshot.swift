@@ -65,7 +65,7 @@ enum Snapshot {
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
                 let sources = model.launcherModel.sources
-                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.shell, model.launcherModel.dictionary, model.launcherModel.contacts, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
+                model.launcherModel.sources = [model.launcherModel.calculator, model.launcherModel.shell, model.launcherModel.dictionary, model.launcherModel.contacts, model.launcherModel.snippets, model.launcherModel.apps, model.launcherModel.system, model.launcherModel.webSearches, model.launcherModel.typedURLs, model.launcherModel.history, samples, model.launcherModel.paths]
                 defer { model.launcherModel.sources = sources }
                 // Sample apps for `quit`, not the ones running on this Mac.
                 model.launcherModel.system.running = { ["Mail", "Safari", "Music", "Notes"].map {
@@ -80,7 +80,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -119,8 +119,9 @@ enum Snapshot {
                         }
                         if name.hasPrefix("clipboard") {
                             ClipboardSettings.shared.keep[.text] = true
-                            model.launcherModel.clipboard = name == "clipboard" ? clips : nil
+                            model.launcherModel.clipboard = name == "clipboard-empty" ? nil : clips
                             model.launcherModel.showClipboard()
+                            if name == "clipboard-snippets" { model.launcherModel.viewer?.filter = "follow" }
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name.hasPrefix("buffer") {

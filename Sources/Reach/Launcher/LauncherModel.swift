@@ -49,6 +49,7 @@ final class LauncherModel {
     let dictionary = DictionarySource()
     let contacts = ContactsSource()
     let clipboardRow = ClipboardSource()
+    let snippets = SnippetSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -63,6 +64,10 @@ final class LauncherModel {
     @ObservationIgnored var copier: @MainActor (String) -> Void = { Paster.copy($0) }
     /// Presses ⌘V in the app behind the launcher once it has hidden.
     @ObservationIgnored var paster: @MainActor () -> Void = { Paster.pressPaste() }
+    /// Where a snippet goes on its way into the app in front (S-030). The self-test uses its own.
+    @ObservationIgnored var pasteboard: NSPasteboard = .general
+    /// How long after ⌘V the clipboard from before a snippet comes back.
+    @ObservationIgnored var restoreDelay: Duration = .milliseconds(800)
     /// Runs a system command. The self-test and snapshots swap in a recorder.
     @ObservationIgnored var runSystem: @MainActor (SystemRun) -> Bool = { SystemRunner.run($0) }
     /// Runs a shell command in the terminal app. The self-test and snapshots swap in a recorder.
@@ -100,7 +105,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, dictionary, typedURLs, contacts, apps, system, clipboardRow, history, webSearches, files, paths]
+        sources = [calculator, shell, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, history, webSearches, files, paths]
     }
 
     func didShow() {
@@ -227,6 +232,11 @@ final class LauncherModel {
         }
         if let completion = result.completes {
             rewriteQuery(completion)
+            return
+        }
+        if let text = result.pastes {
+            onOpened(query, result)
+            pasteSnippet(text)
             return
         }
         if result.opensClipboard {
