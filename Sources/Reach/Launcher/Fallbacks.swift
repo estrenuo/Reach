@@ -1,24 +1,17 @@
 import ReachKit
 
-/// Web searches offered when the query has no results: Google, Amazon and
-/// Wikipedia from the built-in web searches, whether their keyword is on or
-/// not. S-018 makes the list editable.
+/// The fallback web searches (S-018): the ones chosen in Settings > Search,
+/// in their order. The launcher shows them for a query with no results, or
+/// below every result list; the action panel offers them for selected text.
 enum Fallbacks {
-    /// Built-in ids, with the site name VoiceOver reads.
-    static let names = [("google", "Google"), ("amazon", "Amazon"), ("wiki", "Wikipedia")]
-
-    static var engines: [(WebSearch, String)] {
-        names.compactMap { id, name in WebSearches.builtIn.first { $0.id == id }.map { ($0, name) } }
-    }
-
-    static func results(for query: String) -> [LaunchResult] {
+    static func results(for query: String, settings: WebSearchSettings = .shared) -> [LaunchResult] {
         guard !query.isEmpty else { return [] }
-        return engines.compactMap { engine, name in
-            guard let url = WebSearchURL.make(template: engine.url, query: query) else { return nil }
+        return settings.fallbacks.compactMap { search in
+            guard let url = WebSearchURL.make(template: search.url, query: query) else { return nil }
             return LaunchResult(
-                id: "fallback:\(name)", title: engine.title(for: query),
-                subtitle: url.host() ?? "", icon: .symbol(engine.symbol), url: url,
-                kindLabel: "Web search, \(name)")
+                id: "fallback:\(search.id)", title: search.title(for: query),
+                subtitle: url.host() ?? "", icon: .symbol(search.symbol), url: url,
+                kindLabel: "Web search")
         }
     }
 }

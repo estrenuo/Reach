@@ -100,6 +100,21 @@ enum Snapshot {
                         // Only titled windows: the menu bar icon and the launcher have windows too.
                         let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
+                        if tab == .search {
+                            // The Fallbacks section sits below the fold.
+                            if let scroll = settings?.contentView?.firstDescendant(of: NSScrollView.self),
+                               let document = scroll.documentView {
+                                document.scroll(NSPoint(x: 0, y: document.isFlipped ? document.bounds.maxY : 0))
+                                try? await Task.sleep(for: .seconds(0.5))
+                                capture(to: "\(dir)/settings-search-end-\(mode).png", window: settings)
+                                document.scroll(NSPoint(x: 0, y: document.isFlipped ? 0 : document.bounds.maxY))
+                            }
+                            WebSearchSettings.shared.editingFallbacks = true
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-fallbacks-\(mode).png", window: settings?.attachedSheet)
+                            WebSearchSettings.shared.editingFallbacks = false
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
                         if tab == .web {
                             WebSearchSettings.shared.page = .urls
                             try? await Task.sleep(for: .seconds(0.8))
@@ -196,3 +211,12 @@ final class SampleFiles: ResultSource {
     }
 }
 
+
+private extension NSView {
+    func firstDescendant<T: NSView>(of type: T.Type) -> T? {
+        for view in subviews {
+            if let match = view as? T ?? view.firstDescendant(of: type) { return match }
+        }
+        return nil
+    }
+}

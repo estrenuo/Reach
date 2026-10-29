@@ -13,6 +13,8 @@ final class WebSearchSettings {
     /// The page Settings > Web Search shows; not saved.
     enum Page: String, CaseIterable { case searches = "Searches", urls = "URLs" }
     var page = Page.searches
+    /// The Edit Fallbacks sheet is open; not saved. Snapshot mode opens it.
+    var editingFallbacks = false
 
     // URLs (S-017)
     var recognizesURLs: Bool { didSet { Store.settings.set(recognizesURLs, forKey: "url.recognize") } }
@@ -22,6 +24,14 @@ final class WebSearchSettings {
     var withoutSlashes: Bool { didSet { Store.settings.set(withoutSlashes, forKey: "url.withoutSlashes") } }
     var keepsHistory: Bool { didSet { Store.settings.set(keepsHistory, forKey: "url.history") } }
     var retention: URLRetention { didSet { Store.settings.set(retention.rawValue, forKey: "url.retention") } }
+
+    // Fallbacks (S-018)
+    /// Web search ids, in the order the fallbacks show.
+    var fallbackIDs: [String] { didSet { Store.settings.set(fallbackIDs, forKey: "fallback.ids") } }
+    var fallbackMode: FallbackMode { didSet { Store.settings.set(fallbackMode.rawValue, forKey: "fallback.mode") } }
+
+    /// The fallbacks as searches, in order; ones that were removed are left out.
+    var fallbacks: [WebSearch] { FallbackList.searches(ids: fallbackIDs, from: searches) }
 
     /// The ids of the built-ins that are on.
     private var on: Set<String> {
@@ -42,6 +52,8 @@ final class WebSearchSettings {
         withoutSlashes = defaults.bool(forKey: "url.withoutSlashes")
         keepsHistory = defaults.object(forKey: "url.history") as? Bool ?? true
         retention = defaults.string(forKey: "url.retention").flatMap(URLRetention.init(rawValue:)) ?? .month
+        fallbackIDs = defaults.stringArray(forKey: "fallback.ids") ?? FallbackList.standard
+        fallbackMode = defaults.string(forKey: "fallback.mode").flatMap(FallbackMode.init(rawValue:)) ?? .noResults
     }
 
     /// The URL `query` names under the current settings, or nil.
@@ -98,5 +110,7 @@ final class WebSearchSettings {
         withoutSlashes = false
         keepsHistory = true
         retention = .month
+        fallbackIDs = FallbackList.standard
+        fallbackMode = .noResults
     }
 }

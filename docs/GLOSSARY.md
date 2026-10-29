@@ -19,7 +19,8 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Built-in search | A web search that comes with Reach; you can switch it off, not change it | default search, preset |
 | Typed URL | A web address typed in the search field, like example.com; Return opens it | link, address bar |
 | URL history | The URLs you opened from Reach, found again by any part of them | browsing history, recent URLs |
-| Fallback | A web search offered when the query has no results | default search, backup |
+| Fallback | A web search for what you typed, shown when the query has no results (or always, below them), in the order of the fallback list | default search, backup |
+| Edit Fallbacks | The sheet that picks and orders the fallbacks | fallback editor, configure |
 | Learning | The launcher remembering which result you opened for a query and ranking it first | knowledge, latching, AI |
 | Settings | The app's settings window | Preferences |
 | Menu bar icon | The app's icon in the macOS menu bar, with its menu | status item, tray icon |

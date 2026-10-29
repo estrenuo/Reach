@@ -299,7 +299,14 @@ Depends: S-016
 Acceptance:
 - [snap] Fallbacks sheet with a reorderable list.
 - [unit] The setting "only when there are no results" is respected.
-Status: todo
+UX:
+- Flow: Settings > Search > Fallbacks -> Show fallbacks picker (Only when there are no results, Always, below the results) -> "Edit Fallbacks…" -> sheet: drag, Move Up/Down, + adds any web search that takes words, − removes, Reset -> Done; the launcher and the selected-text actions follow the list
+- Surface: section under Search Scope (changes values on screen); sheet "Edit Fallbacks" (one short task: a reorderable list)
+- States: empty list "No fallbacks: a query without results shows nothing."; Always shares the nine rows, results first; a removed custom search drops out
+- Words: "Show fallbacks", "Web searches" with "Google, Amazon, Wikipedia" under it, "Edit Fallbacks…", "Reset" with tooltip "Put back Google, Amazon and Wikipedia"
+- Access: Return closes the sheet (Done); the chevron buttons and context menu move rows without dragging
+- Snapshots: settings-search-end-<mode>.png, settings-fallbacks-<mode>.png
+Status: done
 
 ### S-019 Run system commands by keyword
 As the user, I type `sleep`, `lock`, `emptytrash`, `restart` or `eject` and run it; dangerous ones ask for confirmation.

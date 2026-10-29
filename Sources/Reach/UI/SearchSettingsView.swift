@@ -40,6 +40,7 @@ struct SearchSettingsView: View {
                      items: $settings.scope, label: Self.folderLabel, add: Self.chooseFolder, dropped: Self.folder(of:),
                      minimum: 1, resetHelp: "Put back the standard folders",
                      reset: { settings.scope = SearchSettings.standardScope })
+        FallbacksSection()
     }
 
     /// The path is the name: four folders are called Applications.

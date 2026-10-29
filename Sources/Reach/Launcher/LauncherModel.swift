@@ -114,8 +114,8 @@ final class LauncherModel {
     /// Shows the merged answers once every source has answered, so the
     /// previous results stay on screen while Spotlight searches.
     /// Order: hints, then pinned results (a calculation's answer, a typed URL),
-    /// then openable results ranked with Learning, then fallbacks when nothing
-    /// openable came back.
+    /// then openable results ranked with Learning, then fallbacks: when nothing
+    /// openable came back, or always below the results (S-018).
     private func publish(_ kind: QueryKind) {
         guard answers.allSatisfy({ $0 != nil }) else { return }
         let all = answers.compactMap { $0 }.joined()
@@ -130,10 +130,12 @@ final class LauncherModel {
         let byID = Dictionary(openable.map { ($0.result.id, $0.result) }, uniquingKeysWith: { first, _ in first })
         let ranked = Ranking.order(openable.map { (id: $0.result.id, score: $0.score) },
                                    learned: learning?.picks(for: query) ?? [:])
-            .prefix(Self.maxResults - pinned.count)
             .compactMap { byID[$0] }
         let found = pinned + ranked
-        setResults(hints + found + (found.isEmpty ? Fallbacks.results(for: kind.text) : []))
+        let fallbacks = Fallbacks.results(for: kind.text)
+        let split = FallbackList.split(found: found.count, fallbacks: fallbacks.count,
+                                       mode: webSearches.settings.fallbackMode, limit: Self.maxResults)
+        setResults(hints + found.prefix(split.results) + fallbacks.prefix(split.fallbacks))
     }
 
     private func setResults(_ new: [LaunchResult]) {
