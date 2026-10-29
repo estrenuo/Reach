@@ -2,21 +2,25 @@ import ReachKit
 import ServiceManagement
 import SwiftUI
 
-/// The Settings window (Command-Comma). One tab per topic, at most about
-/// six. Each tab is a grouped Form that sizes to its content, so the
-/// window grows to fit and shows no scroll bar it does not need.
+/// The Settings window (Command-Comma): a sidebar with the pages, and the
+/// features grouped under their own heading with a one-line summary each
+/// (S-037). Each page is a grouped Form; the window has a fixed size, and a
+/// page scrolls only when it is taller than the window.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        @Bindable var model = model
-        TabView(selection: $model.settingsTab) {
-            ForEach(SettingsTab.allCases) { tab in
-                page(tab)
-                    .tabItem { Label(tab.title, systemImage: tab.symbol) }
-                    .tag(tab)
-            }
+        NavigationSplitView {
+            SettingsSidebar()
+                // The Settings scene ignores the column width alone; the frame holds it.
+                .frame(minWidth: 240)
+                .navigationSplitViewColumnWidth(240)
+                .toolbar(removing: .sidebarToggle)
+        } detail: {
+            page(model.settingsTab)
+                .navigationTitle(model.settingsTab.title)
         }
+        .frame(minWidth: 860, idealWidth: 900, minHeight: 600, idealHeight: 640)
         .noInitialFocus()
     }
 
@@ -39,17 +43,54 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .fitsContent()
-        // Twelve tabs: wide enough that the tab bar does not overflow.
-        .frame(width: 820)
+        // One page per tab: a page's scroll position never carries over to the next.
+        .id(tab)
     }
 }
 
-/// The Settings tabs. Snapshot mode walks through every case.
+/// The pages, then the features with an icon, a title and a summary.
+private struct SettingsSidebar: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        List(selection: Binding<SettingsTab?>(get: { model.settingsTab }, set: { if let tab = $0 { model.settingsTab = tab } })) {
+            Section {
+                ForEach(SettingsTab.pages) { tab in
+                    Label(tab.title, systemImage: tab.symbol).tag(tab)
+                }
+            }
+            Section("Features") {
+                ForEach(SettingsTab.features) { tab in
+                    Label {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(tab.title)
+                            Text(tab.summary)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    } icon: {
+                        Image(systemName: tab.symbol)
+                    }
+                    .tag(tab)
+                    .help(tab.summary)
+                }
+            }
+        }
+        .listStyle(.sidebar)
+    }
+}
+
+/// The Settings pages. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, appearance
 
     var id: String { rawValue }
+
+    /// Pages at the top of the sidebar.
+    static let pages: [SettingsTab] = [.general, .appearance]
+    /// Pages under Features, in the order the launcher meets them.
+    static let features: [SettingsTab] = allCases.filter { !pages.contains($0) }
 
     var title: String {
         switch self {
@@ -65,6 +106,24 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "Actions"
         case .previews: "Previews"
         case .appearance: "Appearance"
+        }
+    }
+
+    /// The line under a feature's title in the sidebar.
+    var summary: String {
+        switch self {
+        case .general: "Hotkey and permissions"
+        case .search: "Apps, files and fallbacks"
+        case .web: "Web searches and typed URLs"
+        case .system: "Sleep, lock, quit apps"
+        case .terminal: "Run a command with >"
+        case .dictionary: "Define and spell words"
+        case .contacts: "Find and email people"
+        case .clipboard: "History and merging"
+        case .snippets: "Collections and expansion"
+        case .actions: "The action panel"
+        case .previews: "Quick Look in the launcher"
+        case .appearance: "Themes and launcher options"
         }
     }
 

@@ -44,7 +44,7 @@ struct ReachApp: App {
                 .environment(model)
                 .themed()
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
     }
 }
 

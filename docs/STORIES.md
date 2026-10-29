@@ -602,7 +602,14 @@ Depends: S-007
 Acceptance:
 - [snap] Icon rail with labels; Features shows a second column with icon, title and subtitle per feature.
 - [self] Menu bar: Close ⌘W, Search ⌘F, Filter Workflows ⇧⌘F, standard Edit/View/Window menus.
-Status: todo
+UX:
+- Flow: ⌘, -> Settings opens on the last page -> click a page in the sidebar -> the page shows on the right with its name as the window title
+- Surface: the Settings window becomes a sidebar window, like System Settings: General and Appearance at the top, the features under a "Features" heading with a summary line each (the reference's second column folded into the sidebar, the native way)
+- States: a fixed window of 900 × 632 that can grow; a page taller than the window scrolls with a system scroll bar
+- Words: page names as before; summaries like "Apps, files and fallbacks", "History and merging"
+- Access: each sidebar row is a label with its summary as help
+- Scope: Search ⌘F comes with S-036, Filter Workflows ⇧⌘F with S-042
+Status: done
 
 ### S-038 Advanced: clear knowledge, query history, alternative actions
 As the user, I clear what the app learned (Learning), restore my last query with ⌃↑, and choose what ctrl↩ / ⌥↩ / ⌘↩ do.

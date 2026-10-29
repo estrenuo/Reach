@@ -159,8 +159,8 @@ enum Snapshot {
                         let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
                         if tab == .search {
-                            // The Fallbacks section sits below the fold.
-                            if let scroll = settings?.contentView?.firstDescendant(of: NSScrollView.self),
+                            // The Fallbacks section sits below the fold. The page's scroll view is wider than the sidebar's.
+                            if let scroll = settings?.contentView?.descendants(of: NSScrollView.self).max(by: { $0.frame.width < $1.frame.width }),
                                let document = scroll.documentView {
                                 document.scroll(NSPoint(x: 0, y: document.isFlipped ? document.bounds.maxY : 0))
                                 try? await Task.sleep(for: .seconds(0.5))
@@ -315,10 +315,8 @@ final class SampleFiles: ResultSource {
 
 
 private extension NSView {
-    func firstDescendant<T: NSView>(of type: T.Type) -> T? {
-        for view in subviews {
-            if let match = view as? T ?? view.firstDescendant(of: type) { return match }
-        }
-        return nil
+    /// Every view of `type` below this one.
+    func descendants<T: NSView>(of type: T.Type) -> [T] {
+        subviews.flatMap { view in [view as? T].compactMap { $0 } + view.descendants(of: type) }
     }
 }
