@@ -7,6 +7,8 @@ struct LaunchResult: Identifiable, Equatable {
     enum Icon: Equatable {
         case file(String)
         case symbol(String)
+        /// An image file, such as a workflow's icon.png (S-041).
+        case image(String)
     }
 
     /// A stable id across queries: the path for apps and files, the engine for fallbacks.
@@ -46,9 +48,11 @@ struct LaunchResult: Identifiable, Equatable {
     var pastes: String?
     /// The Reach Settings row: Return opens Settings (S-035).
     var opensSettings = false
+    /// A row from a workflow's script filter: Return runs what is connected to it (S-041).
+    var workflow: WorkflowRun?
 
     var isOpenable: Bool {
-        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || workflow != nil
     }
 }
 
@@ -64,6 +68,12 @@ enum IconCache {
             if let cached = cache[path] { return Image(nsImage: cached) }
             let image = NSWorkspace.shared.icon(forFile: path)
             cache[path] = image
+            return Image(nsImage: image)
+        case .image(let path):
+            let key = "image:" + path
+            if let cached = cache[key] { return Image(nsImage: cached) }
+            let image = NSImage(contentsOfFile: path) ?? NSWorkspace.shared.icon(forFile: path)
+            cache[key] = image
             return Image(nsImage: image)
         }
     }

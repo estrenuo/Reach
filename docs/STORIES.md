@@ -676,7 +676,13 @@ Depends: S-002
 Acceptance:
 - [unit] Accepts the Script Filter JSON format (items with title, subtitle, arg, icon, valid, mods).
 - [self] The placeholder title and "please wait" text show while the script runs.
-Status: todo
+UX:
+- Flow: copy a workflow folder (Alfred's `info.plist` format) into the Workflows folder → type its keyword → part of the keyword offers the workflow and ↩ completes it → type text after the keyword → the placeholder row with its running subtext (else "Please wait…") → the script's rows replace it → ↩ runs the objects connected to the filter (Open URL, Open File, Reveal, Run Script, Copy to Clipboard, Large Type); ⌃↩ ⌥↩ ⌘↩ use the row's `mods` or the matching connection line
+- Surface: rows in the launcher, pinned above ranked results, with the workflow's name as kind label and its icon.png
+- States: keyword typed without required text = the placeholder row, not openable; script running = placeholder + "Please wait…"; script fails or prints no JSON = the placeholder with the first error line and a warning symbol; a row with `valid: false` and `autocomplete` completes the query
+- Words: "Please wait…", "Nothing in <workflow> uses this result.", "This workflow is no longer installed.", "Reach does not run this script language."
+- Note: scripts run off the main thread with Alfred's `alfred_*` environment variables, and a new query stops the old script. Languages: bash, zsh, ruby, perl, python3, osascript (AppleScript, JavaScript) and an external file. Filters that let Alfred filter run once per launcher opening and Reach filters their rows. The Workflows folder is in Application Support/Reach, or in the sync folder (S-039)
+Status: done
 
 ### S-042 List, filter, enable and remove workflows
 As the user, I see my workflows in Settings, filter them, switch one off or remove it.

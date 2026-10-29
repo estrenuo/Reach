@@ -60,6 +60,7 @@ final class LauncherModel {
     let clipboardRow = ClipboardSource()
     let settingsRow = SettingsSource()
     let snippets = SnippetSource()
+    let workflows = WorkflowSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -119,7 +120,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, webSearches, files, paths]
+        sources = [calculator, shell, workflows, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, webSearches, files, paths]
     }
 
     func didShow() {
@@ -132,6 +133,8 @@ final class LauncherModel {
         if advanced.restoresLastQuery, let last = queryHistory.restorable(at: now()) { query = last }
         showCount += 1
         apps.refreshIfStale()
+        workflows.library.reloadIfStale()
+        workflows.forget()
     }
 
     func didHide() {
@@ -151,6 +154,7 @@ final class LauncherModel {
         if case .path(let path) = kind { browsing = path } else { browsing = nil }
         sources.forEach { $0.cancel() }
         webSearches.typed = query
+        workflows.typed = query
         answers = sources.enumerated().map { index, source in
             source.results(for: kind) { [weak self] late in
                 guard let self, self.generation == asked else { return }
@@ -219,6 +223,9 @@ final class LauncherModel {
     /// ⌃↩, ⌥↩ or ⌘↩: runs the web search chosen for that modifier with the
     /// typed text. False when none is chosen, so the key does what it did before.
     func runAlternative(_ modifier: ReturnModifier) -> Bool {
+        if let result = selectedResult, let run = result.workflow, runWorkflow(run, result: result, modifier: modifier) {
+            return true
+        }
         let text = query.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty,
               let search = modifier.search(in: advanced.alternatives, from: webSearches.settings.searches),
@@ -230,6 +237,11 @@ final class LauncherModel {
         rememberQuery()
         onHide()
         return true
+    }
+
+    /// Shows `message` under the result with this id; the launcher stays open.
+    func showError(_ message: String, on id: String) {
+        errors[id] = message
     }
 
     /// Moves the selection without wrapping around.
@@ -284,6 +296,10 @@ final class LauncherModel {
         }
         if let completion = result.completes {
             rewriteQuery(completion)
+            return
+        }
+        if let run = result.workflow {
+            runWorkflow(run, result: result)
             return
         }
         if let text = result.pastes {

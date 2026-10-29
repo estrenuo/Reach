@@ -12,6 +12,8 @@ public enum UsageKind: String, CaseIterable, Codable, Sendable, Identifiable {
     case snippets
     /// A snippet keyword expanded while typing.
     case expansion
+    /// A workflow row run from the launcher (S-041).
+    case workflows
 
     public var id: String { rawValue }
 
@@ -22,6 +24,7 @@ public enum UsageKind: String, CaseIterable, Codable, Sendable, Identifiable {
         case .clipboard: "Clipboard"
         case .snippets: "Snippets"
         case .expansion: "Expansion"
+        case .workflows: "Workflows"
         }
     }
 }
