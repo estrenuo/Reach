@@ -146,6 +146,9 @@ enum Snapshot {
                     LargeType.shared.hide()
                 }
             }
+            if only == nil || only?.contains("workflows") == true {
+                await captureWorkflows(model: model, dir: dir)
+            }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
                 openSettings()
@@ -239,6 +242,55 @@ enum Snapshot {
             for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
             NSApp.terminate(nil)
         }
+    }
+
+    /// S-042: the Workflows window with nothing selected and with sample workflows.
+    private static func captureWorkflows(model: AppModel, dir: String) async {
+        let library = WorkflowLibrary.shared
+        // The launcher view hands over openWindow when it first shows.
+        model.launcher?.show()
+        try? await Task.sleep(for: .seconds(0.5))
+        model.launcher?.hide()
+        let saved = library.workflows.map(\.folder)
+        // Only sample workflows in the shots, in the /tmp library.
+        let parked = FileManager.default.temporaryDirectory.appending(path: "Reach-parked-workflows-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: parked, withIntermediateDirectories: true)
+        for folder in saved { try? FileManager.default.moveItem(at: folder, to: parked.appending(path: folder.lastPathComponent)) }
+        library.reload()
+        defer {
+            for folder in library.workflows.map(\.folder) { try? FileManager.default.removeItem(at: folder) }
+            for folder in saved { try? FileManager.default.moveItem(at: parked.appending(path: folder.lastPathComponent), to: folder) }
+            try? FileManager.default.removeItem(at: parked)
+            library.selection = nil
+            library.reload()
+        }
+        model.launcherModel.openWorkflows()
+        try? await Task.sleep(for: .seconds(1))
+        let window = { NSApp.windows.first { $0.isVisible && $0.identifier?.rawValue.hasPrefix(WorkflowLibrary.windowID) == true } }
+        for mode in ["light", "dark"] {
+            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+            library.selection = nil
+            try? await Task.sleep(for: .seconds(0.8))
+            capture(to: "\(dir)/workflows-empty-\(mode).png", window: window())
+        }
+        library.addExample()
+        if let folder = try? WorkflowFolder.addExample(into: library.folder) {
+            try? WorkflowFolder.update(folder) {
+                $0["name"] = "GitHub Repos"
+                $0["createdby"] = "Ada Lovelace"
+                $0["version"] = "2.1"
+                $0["description"] = "Search your repositories."
+                $0["disabled"] = true
+            }
+        }
+        library.reload()
+        library.selection = library.workflows.first { $0.name == "Hello World" }?.id
+        for mode in ["light", "dark"] {
+            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+            try? await Task.sleep(for: .seconds(0.8))
+            capture(to: "\(dir)/workflows-\(mode).png", window: window())
+        }
+        window()?.close()
     }
 
     /// Captures the real window with screencapture, so glass, sidebars, and

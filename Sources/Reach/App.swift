@@ -39,6 +39,18 @@ struct ReachApp: App {
             }
         }
 
+        // S-042: the installed workflows. Window > Workflows (⇧⌘K), the menu bar icon, or Settings > Workflows.
+        Window("Workflows", id: WorkflowLibrary.windowID) {
+            WorkflowsView()
+                .environment(model)
+                .themed()
+                .overlay { if GridOverlay.enabled { GridOverlay() } }
+        }
+        .defaultSize(width: 1000, height: 640)
+        .defaultLaunchBehavior(.suppressed)
+        .windowToolbarStyle(.unified)
+        .commands { WorkflowCommands() }
+
         Settings {
             SettingsView()
                 .environment(model)

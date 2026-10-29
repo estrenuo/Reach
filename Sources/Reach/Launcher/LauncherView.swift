@@ -72,6 +72,10 @@ struct LauncherView: View {
                 NSApp.activate()
                 openWindow(id: "main")
             }
+            model.openWorkflows = {
+                NSApp.activate()
+                openWindow(id: WorkflowLibrary.windowID)
+            }
         }
         .onChange(of: model.showCount, initial: true) {
             fieldFocused = true

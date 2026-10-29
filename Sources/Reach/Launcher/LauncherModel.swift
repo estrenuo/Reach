@@ -107,6 +107,8 @@ final class LauncherModel {
     @ObservationIgnored var canOpenSettings = false
     /// Opens the snippets window; set by the launcher view, which can reach openWindow.
     @ObservationIgnored var openSnippets: @MainActor () -> Void = {}
+    /// Opens the Workflows window (S-042); set by the launcher view too.
+    @ObservationIgnored var openWorkflows: @MainActor () -> Void = {}
     /// The history the clipboard viewer lists. Nil in test runs, which bring their own.
     @ObservationIgnored var clipboard: ClipboardHistory?
 

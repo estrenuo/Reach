@@ -103,6 +103,8 @@ public enum SettingsIndex {
         + page("actions", "Selection", ["Selection", "Act on the selection"], words: "hotkey selected")
         + page("previews", "Quick Look", ["Quick Look", "Tap ⇧ to Quick Look the selected result"], words: "preview shift")
         + page("previews", "Quick Look", ["Skip These File Types", "Skip These Folders"], words: "preview exclude ignore")
+        + page("workflows", "Workflows", ["Workflows", "Installed", "Open Workflows…", "Workflows folder", "Show in Finder"],
+               words: "alfred script filter keyword extension plugin install")
         + page("appearance", "Theme", ["Theme", "Duplicate Theme", "Show on Desktop Picture", "Accent color"],
                words: "look color colour dark light font")
         + page("appearance", "Launcher Options", ["Launcher Options…", "Visible results", "Show subtext",

@@ -691,7 +691,13 @@ Depends: S-041
 Acceptance:
 - [snap] List with icon, name and author; filter field; +, −; empty canvas with start cards when nothing is selected.
 - [unit] Removing moves the workflow folder to the Trash.
-Status: todo
+UX:
+- Flow: Window > Workflows (⇧⌘K), the menu bar icon's "Workflows…", or Settings > Workflows > "Open Workflows…" → the Workflows window: workflows by name on the left, the selected one on the right → + (Install Workflow… ⌘O) takes a workflow folder or an .alfredworkflow file → the switch, the context menu or Workflow > Turn Off Workflow (⇧⌘D) switches one off → − or Remove Workflow… (⌘⌫) asks, then moves the folder to the Trash
+- Surface: its own window (a sidebar list with a filter field and +/− below, a detail pane), not a Settings tab, since S-044 puts a canvas there; Settings > Workflows has the count and the folder
+- States: no workflows = "No Workflows" in the list and three start cards (Install Workflow…, Add Example, Open Workflows Folder); nothing selected = the start cards; a filter that finds nothing = the system search empty state; switched off = the row dimmed with "Off", and its keywords answer nothing
+- Words: "Install Workflow…", "Add Example", "Filter Workflows", "Turn Off Workflow", "Move “<name>” to the Trash?", "Its keywords stop working. You can put it back from the Trash."
+- Note: switching off writes `disabled` into info.plist, as Alfred does. Add Example installs "Hello World" (keyword `hello`, a bash script filter, ↩ copies and ⌘↩ searches the web)
+Status: done
 
 ### S-043 Fill in a workflow's settings
 As the user, I open "Configure Workflow…" and fill in the fields the workflow asks for, next to its README.
