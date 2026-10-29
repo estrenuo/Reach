@@ -83,10 +83,10 @@ public struct FileQuery: Equatable, Sendable {
 
 /// File kinds the keywords can leave out, under Don't Show in Settings > Search.
 public enum HiddenKind: String, CaseIterable, Codable, Sendable {
-    case emails, contacts, bookmarks, history, music, images, sourceFiles, calendar, plists, messages
+    case emails, contacts, bookmarks, history, music, images, sourceFiles, compiled, calendar, plists, messages
 
-    /// On until people change it, as in Alfred.
-    public static let standard: Set<HiddenKind> = [.contacts, .bookmarks, .history, .calendar, .plists, .messages]
+    /// On until people change it, as in Alfred, plus compiled code like .pyc caches.
+    public static let standard: Set<HiddenKind> = [.contacts, .bookmarks, .history, .compiled, .calendar, .plists, .messages]
 
     public var title: String {
         switch self {
@@ -97,6 +97,7 @@ public enum HiddenKind: String, CaseIterable, Codable, Sendable {
         case .music: "Music"
         case .images: "Images"
         case .sourceFiles: "Source code"
+        case .compiled: "Compiled code"
         case .calendar: "Calendar events"
         case .plists: "Property lists"
         case .messages: "Messages"
@@ -113,6 +114,7 @@ public enum HiddenKind: String, CaseIterable, Codable, Sendable {
         case .music: ["public.audio"]
         case .images: ["public.image"]
         case .sourceFiles: ["public.source-code"]
+        case .compiled: ["public.python-bytecode", "public.object-code", "com.sun.java-class"]
         case .calendar: ["com.apple.ical.bookmark", "com.apple.ical.ics"]
         case .plists: ["com.apple.property-list"]
         case .messages: ["com.apple.ichat.transcript"]
@@ -186,5 +188,16 @@ public enum SpotlightPredicate {
         text.replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "*", with: "")
+    }
+}
+
+/// Folders inside the scope that file search leaves out: ~/Library, as in
+/// Alfred, except iCloud Drive and the cloud storage folders (OneDrive, Dropbox).
+/// Spotlight cannot filter on the path, so results are checked one by one.
+public enum ScopeFilter {
+    public static func keeps(_ path: String, home: String) -> Bool {
+        let library = home + "/Library/"
+        guard path.hasPrefix(library) else { return true }
+        return path.hasPrefix(library + "Mobile Documents/") || path.hasPrefix(library + "CloudStorage/")
     }
 }

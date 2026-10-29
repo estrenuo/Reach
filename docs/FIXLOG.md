@@ -56,3 +56,19 @@ Rule: a window that makes itself key also moves the keyboard when it leaves; cov
 - Fix: none; the three retries over 0.6 s stay. Tried with the code from the commit before, which passed three runs in a row on the same Mac.
 
 Rule: when a change to timing code makes a flaky test fail every time, test the old code again on the same Mac before trying a third idea, and revert.
+
+## File search showed .pyc caches and ~/Library files (end of M2)
+
+- Symptom: `open brief` listed `session-start-briefing.cpython-310.pyc` from a `__pycache__` folder; 20 of 56 matches for "brief" in the home folder sat in ~/Library.
+- Cause: compiled code has its own type (`public.python-bytecode`) that no Don't Show kind covered, and the search scope included all of ~/Library.
+- Fix: a Don't Show kind "Compiled code", on at first, and `ScopeFilter` leaves ~/Library out of file search except iCloud Drive (`Mobile Documents`) and `CloudStorage`, as Alfred does. Spotlight cannot filter on the path, so `FileSearch` skips those results and keeps reading until it has nine.
+
+Rule: check a new search against your own home folder, not only the test files; the noise lives in caches.
+
+## Reentrant NSTableView warning in the snapshot run (end of M2)
+
+- Symptom: one full snapshot run logged "Application performed a reentrant operation in its NSTableView delegate" before the first capture. Three short runs did not.
+- Cause, likely: seed data went into the `@Query` from the window's `.task`, while the snippet list laid itself out for the first time.
+- Fix: seed data goes in from `applicationWillFinishLaunching`, before SwiftUI builds the window. Not reproducible on demand, so verified only by runs without the warning.
+
+Rule: put test data in before the first window exists, never from a view's `.task`.

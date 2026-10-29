@@ -74,3 +74,19 @@ func defaultResults() {
 func escaping() {
     #expect(SpotlightPredicate.escaped(#"a"b*\"#) == #"a\"b\\"#)
 }
+
+@Test("File search leaves out ~/Library, but keeps iCloud Drive and cloud storage")
+func scopeFilter() {
+    let home = "/Users/sam"
+    #expect(ScopeFilter.keeps("/Users/sam/Documents/brief.pdf", home: home))
+    #expect(!ScopeFilter.keeps("/Users/sam/Library/Caches/brief.txt", home: home))
+    #expect(ScopeFilter.keeps("/Users/sam/Library/Mobile Documents/com~apple~CloudDocs/brief.pdf", home: home))
+    #expect(ScopeFilter.keeps("/Users/sam/Library/CloudStorage/OneDrive-Personal/brief.pdf", home: home))
+    #expect(ScopeFilter.keeps("/Applications/Safari.app", home: home))
+}
+
+@Test("Compiled code is left out at first, like .pyc caches")
+func compiledHidden() {
+    #expect(HiddenKind.standard.contains(.compiled))
+    #expect(SpotlightPredicate.string(for: FileQuery(.open, "x"), hiding: [.compiled]).contains("public.python-bytecode"))
+}

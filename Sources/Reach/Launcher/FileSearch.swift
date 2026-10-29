@@ -78,9 +78,14 @@ final class FileSearch: ResultSource {
     private func finish(reveals: Bool) {
         guard let query, let done = pending else { return }
         query.disableUpdates()
-        let count = min(query.resultCount, Self.limit)
-        let results = (0..<count).compactMap { index in
-            (query.result(at: index) as? NSMetadataItem).flatMap { Self.result($0, reveals: reveals) }
+        // The first nine that are not in ~/Library, in Spotlight's order.
+        let home = NSHomeDirectory()
+        var results: [LaunchResult] = []
+        for index in 0..<query.resultCount where results.count < Self.limit {
+            guard let item = query.result(at: index) as? NSMetadataItem,
+                  let result = Self.result(item, reveals: reveals),
+                  ScopeFilter.keeps(result.id, home: home) else { continue }
+            results.append(result)
         }
         cancel()
         done(results)

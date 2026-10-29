@@ -35,7 +35,7 @@ struct SearchSettingsView: View {
                 .foregroundStyle(.secondary)
         }
         EditableList(title: "Search Scope", empty: "No folders",
-                     footer: "Reach looks for apps and files in these folders. Fewer folders give faster, more focused results. Drop folders here from Finder.",
+                     footer: "Reach looks for apps and files in these folders. File search leaves out ~/Library, except iCloud Drive and cloud storage. Drop folders here from Finder.",
                      addHelp: "Add a folder to search", removeHelp: "Stop searching the selected folder",
                      items: $settings.scope, label: Self.folderLabel, add: Self.chooseFolder, dropped: Self.folder(of:),
                      minimum: 1, resetHelp: "Put back the standard folders",
