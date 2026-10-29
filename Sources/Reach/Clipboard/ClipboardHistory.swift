@@ -128,7 +128,9 @@ final class ClipboardHistory {
             return ("", data)
         case .files:
             let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
-            guard !urls.isEmpty else { return nil }
+            // One path per line: a name with a line break would come back as two
+            // files on paste, so such a list is not kept.
+            guard !urls.isEmpty, !urls.contains(where: { $0.path.contains(where: \.isNewline) }) else { return nil }
             return (urls.map(\.path).joined(separator: "\n"), nil)
         }
     }

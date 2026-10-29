@@ -109,3 +109,10 @@ Symptom: the self-test crashed with "Index out of range" in `LauncherModel.refre
 Cause: the test-run contacts loader called back synchronously, so `ContactsSource` called `later` while `refresh` was still building its list of answers. `ResultSource` says `later` must wait until `results` has returned.
 Fix: an answer that arrives while the loader runs inside `read` is used by `results` directly, with no `later` call.
 Rule: a source that may be answered at once checks whether it is still inside `results` before it calls `later`.
+
+## A file list could paste as other files (S-026)
+
+Symptom: a security review of S-026 found that a file clip whose name holds a line break (`a⏎/etc/hosts`) would paste as two files, one of them never copied.
+Cause: `ClipboardItem.text` keeps a file list as one path per line, and macOS file names may contain line breaks.
+Fix: `ClipboardHistory` does not keep a file list with a line break in any path; the self-test copies such a name and checks it is skipped.
+Rule: text joined with a separator never holds values that may contain that separator; refuse them or store a real list.

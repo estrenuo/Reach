@@ -84,6 +84,11 @@ extension SelfTest {
         history.poll()
         check("a file list is kept as its paths", history.items.first?.clipKind == .files
               && history.items.first?.text == "/tmp/reach-a.txt\n/tmp/reach-b.txt", history.items.first?.text ?? "none")
+        now += 60
+        pasteboard.clearContents()
+        pasteboard.writeObjects([NSURL(fileURLWithPath: "/tmp/reach-c\n/etc/hosts")])
+        check("a file name with a line break is never kept, so it cannot paste as two files",
+              !history.poll() && !history.items.contains { $0.text.contains("hosts") })
 
         now += 2 * 24 * 60 * 60
         let purged = history.purge()
