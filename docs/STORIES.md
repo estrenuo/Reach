@@ -417,7 +417,14 @@ Acceptance:
 - [unit] Items older than the retention are purged on launch and hourly.
 - [unit] Items from ignored apps and concealed/auto-generated pasteboard types are never stored.
 - [snap] Clipboard settings page with the three type cards.
-Status: todo
+UX:
+- Flow: Settings > Clipboard -> tick Keep Plain Text, Keep Images or Keep File Lists -> pick how long (24 Hours, 7 Days, 1 Month, 3 Months) -> from then on each copy is kept; copying the same again moves it to the top; expired clips go at launch and every hour
+- Surface: its own Settings tab with one card per kind (changes values in place); Settings is 720 wide so eleven tabs fit
+- States: everything off at first, the menus disabled while their kind is off; Access says whether macOS allows, asks or denies reading the clipboard, with "Open System Settings…" unless it allows
+- Words: "Clipboard", "Keep Plain Text", "Keep Images", "Keep File Lists", "Clip", footer "Reach keeps what you copy for the time you choose, then forgets it."
+- Access: checkboxes and menus by keyboard; VoiceOver reads "Keep Images for, 24 Hours"
+- Privacy: only the pasteboard's types are looked at until a kind is on and the copy is kept; private and machine-made types (nspasteboard.org) and password managers are skipped; the log names kinds and counts, never content
+Status: done
 
 ### S-026 Browse and paste from the clipboard viewer
 As the user, I press ⌥⌘C, filter my history and ↩ pastes the item into the front app.

@@ -41,6 +41,33 @@ final class URLVisit {
     }
 }
 
+/// One copied item in the clipboard history (S-025). Every field has a
+/// default, so databases from before the history keep loading.
+@Model
+final class ClipboardItem {
+    /// `ClipboardPolicy.Kind`: text, image or files.
+    var kind: String = ClipboardPolicy.Kind.text.rawValue
+    /// The text, or one file path per line for a file list; empty for an image.
+    var text: String = ""
+    /// PNG or TIFF data for an image, kept beside the database.
+    @Attribute(.externalStorage) var imageData: Data?
+    /// The app that was in front when it was copied, by name and bundle id.
+    var sourceApp: String = ""
+    var sourceBundleID: String = ""
+    /// When it was copied; copying the same again moves it to the top.
+    var copiedAt: Date = Date.now
+
+    init(kind: ClipboardPolicy.Kind, text: String = "", imageData: Data? = nil, sourceApp: String = "", sourceBundleID: String = "") {
+        self.kind = kind.rawValue
+        self.text = text
+        self.imageData = imageData
+        self.sourceApp = sourceApp
+        self.sourceBundleID = sourceBundleID
+    }
+
+    var clipKind: ClipboardPolicy.Kind { ClipboardPolicy.Kind(rawValue: kind) ?? .text }
+}
+
 /// The sidebar pages. Snapshot mode walks through every case.
 enum SidebarItem: String, CaseIterable, Identifiable {
     case all, starred
@@ -73,6 +100,9 @@ final class AppModel {
     let container: ModelContainer
     let launcherModel = LauncherModel()
     private(set) var launcher: LauncherController?
+    /// Keeps what is copied, per Settings > Clipboard (S-025). Test runs never
+    /// watch the real clipboard; the self-test makes its own on a private pasteboard.
+    private(set) var clipboard: ClipboardHistory?
     var sidebar: SidebarItem? = .all
     var selection: PersistentIdentifier?
     /// Settings reopens on the last tab.
@@ -107,6 +137,11 @@ final class AppModel {
         // Starts following which app was used last, for `quit`.
         _ = AppRecency.shared
         launcherModel.apps.refreshIfStale()
+        if !Self.isTestRun {
+            let history = ClipboardHistory(context: container.mainContext)
+            history.start()
+            clipboard = history
+        }
     }
 
     func addSnippet(name: String = "") {

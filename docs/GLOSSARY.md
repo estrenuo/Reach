@@ -58,4 +58,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Card | A contact's details in the launcher: addresses, numbers, websites, birthday | contact viewer, details view |
 | Detail | One line of a card, like an email address or phone number | field, entry |
 | Email a Contact | The `email` keyword: `email <name>` lists each address, Return starts the email | mail, compose |
+| Clipboard history | What Reach keeps of what you copy, per kind, for the time you choose | clipboard manager, pasteboard |
+| Clip | One kept copy: text, an image, or a file list | item, entry, clipping |
+| Retention | How long clips of one kind are kept: 24 Hours, 7 Days, 1 Month or 3 Months | expiry, lifetime |
 | Spelling language | The language Spell suggests words in, Automatic at first | dictionary language, locale |
