@@ -382,7 +382,13 @@ Depends: S-002
 Acceptance:
 - [snap] Dark rounded card, white text scaled to fit, centred on the screen with the mouse.
 - [self] Esc or a click closes it.
-Status: todo
+UX:
+- Flow: ⌘L shows the selected result (an answer or spelling, a shell command, a URL, else its title); ⌘⌥L shows the typed text -> the launcher hides -> Esc, a click, or another app closes the card
+- Surface: a borderless card over the screen with the mouse, sized to the text (no window, no focus kept)
+- States: a hint, fallback, or web search shows the query; an empty query shows nothing; short text gets letters up to 200 pt on a small card, long text shrinks to 64 pt and then wraps, within 90% of the screen
+- Words: "Large Type", the action panel's "Show in Large Type"
+- Access: Esc closes; VoiceOver reads "Large Type, <text>"
+Status: done
 
 ### S-024 Find and email contacts
 As the user, I type a name and see the contact; `email <name>` starts a mail to them.

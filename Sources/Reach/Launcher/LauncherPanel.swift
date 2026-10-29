@@ -169,6 +169,11 @@ final class LauncherController {
             }
         }
         if flags == .command, [36, 76].contains(event.keyCode), model.pasteSelected() { return true }
+        // ⌘L shows the selected result in Large Type, ⌘⌥L the typed text (S-023).
+        if event.keyCode == 37, flags == .command || flags == [.command, .option] {
+            _ = model.showLargeType(typed: flags.contains(.option))
+            return true
+        }
         switch event.keyCode {
         case 126: model.move(-1)
         case 125: model.move(1)

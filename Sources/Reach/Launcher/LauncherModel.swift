@@ -62,6 +62,8 @@ final class LauncherModel {
     @ObservationIgnored var runSystem: @MainActor (SystemRun) -> Bool = { SystemRunner.run($0) }
     /// Runs a shell command in the terminal app. The self-test and snapshots swap in a recorder.
     @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
+    /// Shows text in Large Type. The self-test swaps in a recorder.
+    @ObservationIgnored var largeType: @MainActor (String) -> Void = { LargeType.shared.show($0) }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
     @ObservationIgnored var perform: @MainActor (ActionPanel.Item, [URL]) -> Bool = { ActionRunner.run($0, on: $1) }
     /// Seconds for the buffer's 5 minutes. The self-test moves it forward.
@@ -272,6 +274,30 @@ final class LauncherModel {
         copier(answer)
         onHide()
         paster()
+        return true
+    }
+
+    /// What ⌘L shows (S-023): what the selected result stands for, like a
+    /// calculation's answer, a spelling or a command; ⌘⌥L (`typed`) and a
+    /// hint or web search show the query. Nil when there is nothing to show.
+    func largeTypeText(typed: Bool = false) -> String? {
+        let query = query.trimmingCharacters(in: .whitespaces)
+        guard !typed, let result = selectedResult, result.isOpenable,
+              !result.id.hasPrefix("fallback:"), !result.id.hasPrefix("web:"), result.completes == nil else {
+            return query.isEmpty ? nil : query
+        }
+        // A calculation shows the answer as its row does, with grouping: 1,234.
+        if result.answer != nil { return result.title }
+        if let shell = result.shell { return shell.command }
+        if let url = result.url, !url.isFileURL { return TypedURL.display(url.absoluteString) }
+        return result.title
+    }
+
+    /// ⌘L: hides the launcher and shows the text in Large Type. False when there is none.
+    func showLargeType(typed: Bool = false) -> Bool {
+        guard let text = largeTypeText(typed: typed) else { return false }
+        onHide()
+        largeType(text)
         return true
     }
 

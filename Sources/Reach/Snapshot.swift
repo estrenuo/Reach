@@ -98,6 +98,11 @@ enum Snapshot {
                         _ = model.launcherModel.clearBuffer()
                         launcher.hide()
                     }
+                    // S-023: the Large Type card, from ⌘L on a calculation.
+                    LargeType.shared.show("Hallo Sander")
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/large-type-\(mode).png", window: LargeType.shared.window)
+                    LargeType.shared.hide()
                 }
             }
             if only == nil || only?.contains("settings") == true {
