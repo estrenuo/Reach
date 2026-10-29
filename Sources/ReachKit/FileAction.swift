@@ -2,11 +2,12 @@ import Foundation
 
 /// Something the action panel can do with a file, folder or app.
 public enum FileAction: String, CaseIterable, Sendable {
-    case open, openWith, reveal, browse, getInfo, copyPath, copyFile, terminal, trash
+    case open, quickLook, openWith, reveal, browse, getInfo, copyPath, copyFile, terminal, trash
 
     public var title: String {
         switch self {
         case .open: "Open"
+        case .quickLook: "Quick Look"
         case .openWith: "Open With…"
         case .reveal: "Reveal in Finder"
         case .browse: "Browse in Launcher"
@@ -22,6 +23,7 @@ public enum FileAction: String, CaseIterable, Sendable {
     public var summary: String {
         switch self {
         case .open: "Open it with its default app"
+        case .quickLook: "Preview it without opening it. Tap ⇧ or press ⌘Y."
         case .openWith: "Choose another app to open it with"
         case .reveal: "Show it selected in a Finder window"
         case .browse: "List the folder in the launcher"
@@ -33,9 +35,24 @@ public enum FileAction: String, CaseIterable, Sendable {
         }
     }
 
+    /// The footer for several items (S-013), for the actions that show for them.
+    public var summaryForMany: String {
+        switch self {
+        case .open: "Open each with its default app"
+        case .openWith: "Choose one app to open them all"
+        case .reveal: "Show them selected in Finder"
+        case .getInfo: "Show a Finder Info window for each"
+        case .copyPath: "Copy the full paths, one per line"
+        case .copyFile: "Copy the files, to paste them in Finder or another app"
+        case .trash: "Move them to the Trash. You can put them back from the Trash."
+        case .quickLook, .browse, .terminal: summary
+        }
+    }
+
     public var symbol: String {
         switch self {
         case .open: "arrow.up.forward.app"
+        case .quickLook: "eye"
         case .openWith: "square.grid.2x2"
         case .reveal: "folder"
         case .browse: "list.bullet.indent"
@@ -47,10 +64,21 @@ public enum FileAction: String, CaseIterable, Sendable {
         }
     }
 
-    /// The actions for a target, in panel order. Folders skip Open With…;
-    /// actions switched off in Settings never show.
-    public static func available(isFolder: Bool, off: Set<FileAction> = []) -> [FileAction] {
-        allCases.filter { !(isFolder && $0 == .openWith) && !off.contains($0) }
+    /// The actions for a target, in panel order. Folders skip Open With…
+    /// (`isFolder` is true when any item is one); Quick Look shows only when it
+    /// can preview the target (not off, not skipped); several items (`many`,
+    /// the buffer) skip the actions for one item; actions switched off in Settings never show.
+    public static func available(isFolder: Bool, quickLook: Bool = true, many: Bool = false,
+                                 off: Set<FileAction> = []) -> [FileAction] {
+        allCases.filter { action in
+            guard !off.contains(action) else { return false }
+            switch action {
+            case .openWith: return !isFolder
+            case .quickLook: return quickLook && !many
+            case .browse, .terminal: return !many
+            default: return true
+            }
+        }
     }
 
     /// Actions whose title matches `filter`, best match first; all of them for an empty filter.

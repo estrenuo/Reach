@@ -19,16 +19,20 @@ final class HotkeyCenter {
     /// False when another app owns the selection hotkey.
     private(set) var selectionRegistered = false
     private var selectionRef: EventHotKeyRef?
+    /// The clipboard hotkey (S-026): the clipboard viewer.
+    var onClipboard: () -> Void = {}
+    /// False when another app owns the clipboard hotkey.
+    private(set) var clipboardRegistered = false
+    private var clipboardRef: EventHotKeyRef?
     private static let launcherID: UInt32 = 1
     private static let selectionID: UInt32 = 3
+    private static let clipboardID: UInt32 = 4
 
     private var ref: EventHotKeyRef?
     private var handlerInstalled = false
-    /// Test and snapshot runs never write the real setting.
-    private let persists = !Store.isOverridden
 
     private init() {
-        let defaults = UserDefaults.standard
+        let defaults = Store.settings
         if let data = defaults.data(forKey: "hotkey.combo"),
            let saved = try? JSONDecoder().decode(KeyCombo.self, from: data) {
             combo = saved
@@ -48,6 +52,7 @@ final class HotkeyCenter {
         if register {
             isRegistered = self.register(combo)
             selectionRegistered = registerSelection()
+            clipboardRegistered = registerFixed(.clipboard, id: Self.clipboardID, ref: &clipboardRef)
         }
     }
 
@@ -63,10 +68,8 @@ final class HotkeyCenter {
         combo = new
         keyName = newName
         isRegistered = true
-        if persists {
-            UserDefaults.standard.set(try? JSONEncoder().encode(new), forKey: "hotkey.combo")
-            UserDefaults.standard.set(newName, forKey: "hotkey.key")
-        }
+        Store.settings.set(try? JSONEncoder().encode(new), forKey: "hotkey.combo")
+        Store.settings.set(newName, forKey: "hotkey.key")
         return true
     }
 
@@ -85,14 +88,22 @@ final class HotkeyCenter {
     }
 
     private func registerSelection() -> Bool {
-        let combo = KeyCombo.selection
-        let id = EventHotKeyID(signature: Self.signature, id: Self.selectionID)
-        return RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), 0, &selectionRef) == noErr
+        registerFixed(.selection, id: Self.selectionID, ref: &selectionRef)
     }
 
-    /// Which hotkey was pressed: the launcher's or the selection's.
+    /// A hotkey people cannot change yet, like the selection's and the clipboard's.
+    private func registerFixed(_ combo: KeyCombo, id: UInt32, ref: inout EventHotKeyRef?) -> Bool {
+        let hotkey = EventHotKeyID(signature: Self.signature, id: id)
+        return RegisterEventHotKey(combo.keyCode, combo.modifiers, hotkey, GetApplicationEventTarget(), 0, &ref) == noErr
+    }
+
+    /// Which hotkey was pressed: the launcher's, the selection's or the clipboard's.
     fileprivate func pressed(_ id: UInt32) {
-        id == Self.selectionID ? onSelection() : onPress()
+        switch id {
+        case Self.selectionID: onSelection()
+        case Self.clipboardID: onClipboard()
+        default: onPress()
+        }
     }
 
     private func register(_ combo: KeyCombo) -> Bool {

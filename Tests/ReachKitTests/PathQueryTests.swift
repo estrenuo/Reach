@@ -6,7 +6,7 @@ func pathKind() {
     #expect(QueryKind("~/") == .path(PathQuery("~/")!))
     #expect(QueryKind("/Applications/Saf") == .path(PathQuery("/Applications/Saf")!))
     #expect(QueryKind("~") == .normal("~"))
-    #expect(QueryKind("open ~/x") == .files("~/x"))
+    #expect(QueryKind("open ~/x") == .files(FileQuery(.open, "~/x")))
     #expect(QueryKind("~/").text == "")
 }
 

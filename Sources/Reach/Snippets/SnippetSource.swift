@@ -1,0 +1,89 @@
+import AppKit
+import ReachKit
+import SwiftData
+
+/// `snip <name>` (S-030): snippets by name or keyword. Return pastes one into
+/// the app in front; `snip` alone lists them all by name.
+final class SnippetSource: ResultSource {
+    static let keyword = "snip"
+    static let icon = LaunchResult.Icon.symbol("text.quote")
+    static let noSnippets = "No Snippets"
+    /// Set at launch; nil leaves `snip` without snippets.
+    var context: ModelContext?
+
+    /// Every snippet, by name.
+    func all() -> [Snippet] {
+        guard let context else { return [] }
+        let order = [SortDescriptor(\Snippet.name, comparator: .localizedStandard)]
+        return (try? context.fetch(FetchDescriptor<Snippet>(sortBy: order))) ?? []
+    }
+
+    /// The snippets `text` finds, best first, equal scores by name; all of them for an empty text.
+    func matches(_ text: String) -> [Snippet] {
+        let snippets = all()
+        guard !text.isEmpty else { return snippets }
+        return snippets.enumerated()
+            .compactMap { index, snippet in
+                SnippetSearch.score(text, name: snippet.name, keyword: snippet.keyword).map { (snippet, $0, index) }
+            }
+            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.2 < $1.2 }
+            .map(\.0)
+    }
+
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
+        guard case .normal(let text) = query else { return [] }
+        let words = text.lowercased() == Self.keyword ? "" : DictionaryLookup.word(in: text, keyword: Self.keyword)
+        guard let words else { return offer(text) }
+        let found = matches(words)
+        guard !found.isEmpty else {
+            return words.isEmpty || context == nil
+                ? [hint(Self.noSnippets, subtitle: "Add snippets in the Reach window")]
+                : [hint("No snippet matches “\(words)”")]
+        }
+        return found.prefix(LauncherModel.maxResults).map { Scored(result: Self.row(for: $0), score: 0) }
+    }
+
+    static func row(for snippet: Snippet) -> LaunchResult {
+        LaunchResult(id: "snippet:\(snippet.uuid)", title: snippet.name, subtitle: SnippetText.preview(snippet.text),
+                     icon: icon, url: nil, kindLabel: "Snippet", isPinned: true, badge: snippet.keyword, pastes: snippet.text)
+    }
+
+    /// Part of the keyword (`sni`): a row that completes to `snip `.
+    private func offer(_ text: String) -> [Scored] {
+        guard text.count >= 2, text.count < Self.keyword.count, Self.keyword.hasPrefix(text.lowercased()),
+              let score = Matcher.score(query: text, title: Self.keyword), score >= SystemCommands.minimumScore else { return [] }
+        return [Scored(result: LaunchResult(id: "snippets:offer", title: "Paste a Snippet…", subtitle: "Press ↩ to type a name",
+                                            icon: Self.icon, url: nil, kindLabel: "Snippet",
+                                            completes: Self.keyword + " "), score: score)]
+    }
+
+    private func hint(_ title: String, subtitle: String = "") -> Scored {
+        Scored(result: LaunchResult(id: "hint:snippets", title: title, subtitle: subtitle, icon: Self.icon, url: nil), score: 0)
+    }
+}
+
+extension LauncherModel {
+    /// Return on a snippet: fills in its placeholders, pastes it into the app in
+    /// front, and puts the clipboard from before back once the paste is done.
+    /// The snippet is marked transient, so no other clipboard manager keeps it.
+    /// A private copy, like a password, is not filled in (`ClipboardLoan`).
+    /// `hiding` false: the snippet expander, with no launcher on screen (S-031).
+    func pasteSnippet(_ text: String, hiding: Bool = true) {
+        let board = pasteboard
+        let loan = ClipboardLoan(board, history: clipboard)
+        let filled = SnippetText.expand(text, date: .now, clipboard: loan.isPrivate ? nil : board.string(forType: .string))
+        board.clearContents()
+        let item = NSPasteboardItem()
+        item.setString(filled, forType: .string)
+        item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+        board.writeObjects([item])
+        loan.took()
+        onUsed(hiding ? .snippets : .expansion)
+        if hiding { onHide() }
+        paster()
+        Task { [restoreDelay] in
+            try? await Task.sleep(for: restoreDelay)
+            loan.giveBack()
+        }
+    }
+}

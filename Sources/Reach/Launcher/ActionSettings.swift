@@ -1,23 +1,18 @@
 import Foundation
 import ReachKit
 
-/// Which actions people switched off in Settings > Actions. Saved in
-/// UserDefaults, except in test and snapshot runs, which must leave the
-/// real settings alone.
+/// Which actions people switched off in Settings > Actions, saved in `Store.settings`.
 @Observable
 final class ActionSettings {
     static let shared = ActionSettings()
     private static let key = "actions.off"
 
     var off: Set<FileAction> {
-        didSet {
-            guard !Store.isOverridden else { return }
-            UserDefaults.standard.set(off.map(\.rawValue).sorted(), forKey: Self.key)
-        }
+        didSet { Store.settings.set(off.map(\.rawValue).sorted(), forKey: Self.key) }
     }
 
     private init() {
-        let saved = Store.isOverridden ? [] : UserDefaults.standard.stringArray(forKey: Self.key) ?? []
+        let saved = Store.settings.stringArray(forKey: Self.key) ?? []
         off = Set(saved.compactMap(FileAction.init(rawValue:)))
     }
 

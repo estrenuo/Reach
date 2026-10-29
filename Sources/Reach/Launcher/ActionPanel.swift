@@ -17,6 +17,8 @@ final class ActionPanel {
         case text(TextAction, String)
         /// A web search for selected text.
         case web(URL)
+        /// A line of a contact card (S-024).
+        case field(ContactField)
 
         /// For the log: the action without the text or the search it carries.
         var logName: String {
@@ -25,19 +27,25 @@ final class ActionPanel {
             case .app(let app): "open with \(app.lastPathComponent)"
             case .text(let action, _): "text \(action.rawValue)"
             case .web(let search): "web search on \(search.host() ?? "?")"
+            case .field(let field): "contact \(field.kind.rawValue)"
             }
         }
     }
 
     let target: LaunchResult
-    /// The file, folder or app; nil for selected text.
+    /// The file, folder or app; the first item for several; nil for selected text.
     let url: URL?
+    /// Every item the actions run on: one, or the buffer's (S-013).
+    let urls: [URL]
     /// The selected text; nil for a file.
     let text: String?
+    /// The contact a card shows; nil for files and text (S-024).
+    let contact: Contact?
     /// Opened by the selection hotkey: there are no results to go back to.
     var fromSelection = false
-    /// More files were selected; for now the actions apply to the first (S-013 acts on all).
-    var others = 0
+    /// Opened with ⌥→ on the buffer: an action empties it.
+    var fromBuffer = false
+    var isMany: Bool { urls.count > 1 }
     var filter = "" {
         didSet { if filter != oldValue { refresh() } }
     }
@@ -52,9 +60,27 @@ final class ActionPanel {
     init(target: LaunchResult, url: URL) {
         self.target = target
         self.url = url
+        urls = [url]
         text = nil
+        contact = nil
         refresh()
     }
+
+    /// The panel for several items: "3 Items", with the first one's icon.
+    init(items: [URL]) {
+        let folders = items.filter { ActionRunner.folder(of: $0) == $0 }
+        target = LaunchResult(id: "items", title: "\(items.count) Items", subtitle: "",
+                              icon: .file(items.first?.path ?? "/"), url: items.first, kindLabel: "Items",
+                              isFolder: !folders.isEmpty)
+        url = items.first
+        urls = items
+        text = nil
+        contact = nil
+        refresh()
+    }
+
+    /// The names of the items, for the header and the Preview.
+    var names: [String] { urls.map { FileManager.default.displayName(atPath: $0.path) } }
 
     /// The panel for selected text, from the app called `source`.
     init(text: String, source: String) {
@@ -62,17 +88,28 @@ final class ActionPanel {
                               subtitle: "Selected text in \(source)", icon: .symbol("text.quote"), url: nil,
                               kindLabel: "Selected text")
         url = nil
+        urls = []
         self.text = text
+        contact = nil
         fromSelection = true
+        refresh()
+    }
+
+    /// A contact's card: its fields, then Open in Contacts. `result` is its row in the results.
+    init(contact: Contact, result: LaunchResult) {
+        target = result
+        url = result.url
+        urls = result.url.map { [$0] } ?? []
+        text = nil
+        self.contact = contact
         refresh()
     }
 
     /// The path, or where the text came from, for the header.
     var detail: String {
-        if let url {
-            let path = (url.path as NSString).abbreviatingWithTildeInPath
-            return others > 0 ? "\(path) and \(others) more" : path
-        }
+        if isMany { return names.joined(separator: ", ") }
+        if contact != nil { return target.subtitle.isEmpty ? "Contact" : target.subtitle }
+        if let url { return (url.path as NSString).abbreviatingWithTildeInPath }
         return target.subtitle
     }
 
@@ -82,7 +119,9 @@ final class ActionPanel {
     var footer: String {
         if let failure { return failure }
         switch selectedItem {
-        case .action(let action): return action.summary
+        case .action(.open) where contact != nil: return "Open the contact in Contacts (⌘O)"
+        case .action(let action): return isMany ? action.summaryForMany : action.summary
+        case .field(let field): return field.summary + " (⌘C copies it)"
         case .app(let app): return "Open “\(target.title)” with \(Self.appName(app))"
         case .text(let action, _): return action.summary
         case .web: return "Open the search in your browser"
@@ -117,7 +156,24 @@ final class ActionPanel {
 
     private func refresh() {
         failure = nil
-        if let text {
+        if let contact {
+            let text = filter.trimmingCharacters(in: .whitespaces)
+            let fields = contact.fields.filter { field in
+                text.isEmpty || Matcher.score(query: text, title: field.value) != nil
+                    || Matcher.score(query: text, title: field.label) != nil
+            }
+            let open = text.isEmpty || Matcher.score(query: text, title: Self.openInContacts) != nil
+            items = fields.map { .field($0) } + (open && url != nil ? [.action(.open)] : [])
+            rows = fields.map { field in
+                LaunchResult(id: "field:\(field.id)", title: field.value.split(whereSeparator: \.isNewline).joined(separator: ", "),
+                             subtitle: "", icon: .symbol(Self.symbol(field.kind)), url: URL(string: "reach-field://\(field.kind.rawValue)"),
+                             kindLabel: field.kind == .phone ? "Phone" : field.kind.rawValue.capitalized, badge: field.label)
+            } + (open && url != nil ? [LaunchResult(id: "contact:open", title: Self.openInContacts, subtitle: "",
+                                                    icon: ContactsSource.icon, url: url, kindLabel: "Action")] : [])
+            if rows.isEmpty {
+                rows = [hint(contact.fields.isEmpty ? "No details for this contact" : "No details match “\(text)”")]
+            }
+        } else if let text {
             let actions = TextAction.filtered(by: filter)
             // Short titles, the whole text in the search.
             let short = TextAction.headline(text, limit: 14)
@@ -136,7 +192,10 @@ final class ActionPanel {
             } + searches
             if rows.isEmpty { rows = [hint("No actions match “\(filter)”")] }
         } else if choosingApp, let url {
-            let apps = NSWorkspace.shared.urlsForApplications(toOpen: url).filter { $0 != url }
+            // Apps that open every item, in the first item's order.
+            let others = urls.dropFirst().map { Set(NSWorkspace.shared.urlsForApplications(toOpen: $0)) }
+            let apps = NSWorkspace.shared.urlsForApplications(toOpen: url)
+                .filter { app in !urls.contains(app) && others.allSatisfy { $0.contains(app) } }
             let text = filter.trimmingCharacters(in: .whitespaces)
             let matching = text.isEmpty ? apps
                 : apps.filter { Matcher.score(query: text, title: Self.appName($0)) != nil }
@@ -146,10 +205,13 @@ final class ActionPanel {
                              icon: .file(app.path), url: app, kindLabel: "App")
             }
             if rows.isEmpty {
-                rows = [hint(apps.isEmpty ? "No other apps open this file" : "No apps match “\(text)”")]
+                let none = isMany ? "No app opens all of these items" : "No other apps open this file"
+                rows = [hint(apps.isEmpty ? none : "No apps match “\(text)”")]
             }
         } else {
-            let shown = FileAction.available(isFolder: target.isFolder, off: ActionSettings.shared.off)
+            let shown = FileAction.available(isFolder: target.isFolder,
+                                             quickLook: !isMany && QuickLook.file(for: target) != nil,
+                                             many: isMany, off: ActionSettings.shared.off)
             let actions = FileAction.filtered(shown, by: filter)
             items = actions.map { .action($0) }
             rows = actions.map { action in
@@ -167,6 +229,24 @@ final class ActionPanel {
         LaunchResult(id: "hint:actions", title: title, subtitle: "", icon: .symbol("questionmark.circle"), url: nil)
     }
 
+    static let openInContacts = "Open in Contacts"
+
+    static func symbol(_ kind: ContactField.Kind) -> String {
+        switch kind {
+        case .email: "envelope"
+        case .phone: "phone"
+        case .url: "link"
+        case .address: "map"
+        case .birthday: "gift"
+        }
+    }
+
+    /// The selected field's value, for ⌘C; nil on Open in Contacts.
+    var selectedValue: String? {
+        if case .field(let field) = selectedItem { return field.value }
+        return nil
+    }
+
     static let allOff = "All actions are off. Turn them on in Settings > Actions."
 
     static func appName(_ app: URL) -> String {
@@ -179,7 +259,9 @@ enum ActionRunner {
     /// Why the last action failed, when there is a fix to tell people about.
     static var problem: String?
 
-    static func run(_ item: ActionPanel.Item, on url: URL?) -> Bool {
+    /// Runs `item` on every one of `urls` (none for selected text). False when
+    /// it failed for any of them; the others still ran.
+    static func run(_ item: ActionPanel.Item, on urls: [URL]) -> Bool {
         problem = nil
         let workspace = NSWorkspace.shared
         switch item {
@@ -191,52 +273,51 @@ enum ActionRunner {
             return NSPasteboard.general.setString(text, forType: .string)
         case .web(let search):
             return workspace.open(search)
-        case .app, .action:
-            guard let url else { return false }
-            return run(item, onFile: url)
-        }
-    }
-
-    private static func run(_ item: ActionPanel.Item, onFile url: URL) -> Bool {
-        let workspace = NSWorkspace.shared
-        switch item {
-        case .text, .web:
+        case .field:
+            // The model opens or copies fields itself.
             return false
         case .app(let app):
-            workspace.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            guard !urls.isEmpty else { return false }
+            workspace.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
             return true
         case .action(let action):
+            guard let first = urls.first else { return false }
             switch action {
             case .open:
-                return LauncherModel.openInWorkspace(url)
+                return urls.map(LauncherModel.openInWorkspace).allSatisfy { $0 }
             case .reveal:
-                workspace.activateFileViewerSelecting([url])
+                workspace.activateFileViewerSelecting(urls)
                 return true
             case .getInfo:
-                return showInfo(url)
+                return urls.map(showInfo).allSatisfy { $0 }
             case .copyPath:
+                // One path per line, ready to paste into Terminal or a note.
                 NSPasteboard.general.clearContents()
-                return NSPasteboard.general.setString(url.path, forType: .string)
+                return NSPasteboard.general.setString(urls.map(\.path).joined(separator: "\n"), forType: .string)
             case .copyFile:
                 NSPasteboard.general.clearContents()
-                return NSPasteboard.general.writeObjects([url as NSURL])
+                return NSPasteboard.general.writeObjects(urls.map { $0 as NSURL })
             case .terminal:
                 guard let terminal = workspace.urlForApplication(withBundleIdentifier: "com.apple.Terminal") else { return false }
-                workspace.open([folder(of: url)], withApplicationAt: terminal, configuration: NSWorkspace.OpenConfiguration())
+                workspace.open([folder(of: first)], withApplicationAt: terminal, configuration: NSWorkspace.OpenConfiguration())
                 return true
             case .trash:
-                do {
-                    let trashed = try Trash.move(url, fallback: trashWithFinder)
-                    actionLog.notice("trashed \(url.path, privacy: .public) -> \(trashed?.path ?? "?", privacy: .public)")
-                    return true
-                } catch {
-                    actionLog.error("trash failed for \(url.path, privacy: .public): \(String(describing: error), privacy: .public)")
-                    return false
-                }
-            case .openWith, .browse:
+                return urls.map(trash).allSatisfy { $0 }
+            case .openWith, .browse, .quickLook:
                 // The panel and the model handle these without the system.
                 return false
             }
+        }
+    }
+
+    private static func trash(_ url: URL) -> Bool {
+        do {
+            let trashed = try Trash.move(url, fallback: trashWithFinder)
+            actionLog.notice("trashed \(url.path, privacy: .public) -> \(trashed?.path ?? "?", privacy: .public)")
+            return true
+        } catch {
+            actionLog.error("trash failed for \(url.path, privacy: .public): \(String(describing: error), privacy: .public)")
+            return false
         }
     }
 

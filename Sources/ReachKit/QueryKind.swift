@@ -5,32 +5,40 @@ public enum QueryKind: Equatable, Sendable {
     case empty
     /// Apps and everything else ranked together.
     case normal(String)
-    /// File search: `open <name>`, `'<name>` or ` <name>`. The name may be empty.
-    case files(String)
+    /// File search: `open <name>`, `'<name>`, ` <name>`, or another file keyword (S-014). The text may be empty.
+    case files(FileQuery)
     /// Browsing: a query that starts with `~/` or `/`.
     case path(PathQuery)
+    /// A shell command after the Terminal prefix (S-021): `> ls -la`. May be empty.
+    case shell(String)
 
     /// The words after any keyword: what fallbacks search the web for.
-    /// Empty while browsing, so a path never offers web searches.
+    /// Empty while browsing or for a shell command, so neither offers web searches.
     public var text: String {
         switch self {
-        case .empty, .path: ""
-        case .normal(let text), .files(let text): text
+        case .empty, .path, .shell: ""
+        case .normal(let text): text
+        case .files(let query): query.text
         }
     }
 
-    public static let fileKeywords = ["open "]
+    /// Quick file search: these open files whatever the keywords are.
     public static let filePrefixes: [Character] = ["'", " "]
 
-    public init(_ query: String) {
+    /// A keyword that is off makes its query a normal search.
+    public init(_ query: String, keywords: FileKeywords = FileKeywords(), shellPrefix: String? = nil) {
         if query.isEmpty { self = .empty; return }
+        if let shellPrefix, let command = ShellCommand.command(in: query, prefix: shellPrefix) {
+            self = .shell(command)
+            return
+        }
         if let path = PathQuery(query) { self = .path(path); return }
-        for keyword in Self.fileKeywords where query.lowercased().hasPrefix(keyword) {
-            self = .files(Self.trimmed(query.dropFirst(keyword.count)))
+        if let (mode, rest) = keywords.match(query) {
+            self = .files(FileQuery(mode, Self.trimmed(rest)))
             return
         }
         if let first = query.first, Self.filePrefixes.contains(first) {
-            self = .files(Self.trimmed(query.dropFirst()))
+            self = .files(FileQuery(.open, Self.trimmed(query.dropFirst())))
             return
         }
         let text = Self.trimmed(Substring(query))

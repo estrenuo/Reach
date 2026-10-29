@@ -1,56 +1,11 @@
 import AppKit
+import Quartz
 import SwiftData
 import ReachKit
 
-/// Self-test for agents: runs the app's real functions on a test store,
-/// prints PASS or FAIL per check, and quits with exit code 0 or 1.
-///   APP_STORE=/tmp/Reach-self.store ~/Applications/Reach.app/Contents/MacOS/Reach --selftest
-/// (tools/selftest.sh does this.) Add a check for every story with logic.
-@MainActor
-enum SelfTest {
-    static var requested: Bool { CommandLine.arguments.contains("--selftest") }
-    /// Read by AppDelegate.applicationWillTerminate.
-    static var exitCode: Int32 = 0
-    private static var failures = 0
-    private static var count = 0
-
-    static func runIfRequested(model: AppModel) {
-        guard requested else { return }
-        // Print each line at once, so a crash keeps the lines before it.
-        setvbuf(stdout, nil, _IOLBF, 0)
-        guard Store.isOverridden else {
-            print("SELFTEST refused: set APP_STORE to a file in /tmp")
-            finish(code: 1)
-            return
-        }
-        Task {
-            try? await Task.sleep(for: .seconds(0.5))
-            let context = model.container.mainContext
-            func snippets() -> [Snippet] { (try? context.fetch(FetchDescriptor<Snippet>())) ?? [] }
-
-            let before = snippets().count
-            model.addSnippet()
-            check("New Snippet adds one snippet", snippets().count == before + 1)
-            check("the new snippet is selected", model.selection != nil)
-
-            if let snippet = snippets().first(where: { $0.id == model.selection }) {
-                snippet.isStarred.toggle()
-                check("starring a snippet marks it starred", snippet.isStarred)
-                context.delete(snippet)
-                try? context.save()
-                check("deleting the snippet removes it", snippets().count == before)
-            }
-            check("names are cleaned", SnippetName.clean("  Email   signature ") == "Email signature")
-
-            await checkLauncher(model: model)
-
-            print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
-            finish(code: failures == 0 ? 0 : 1)
-        }
-    }
-
+extension SelfTest {
     /// S-001 to S-011: the launcher, driven with real key events.
-    private static func checkLauncher(model: AppModel) async {
+    static func checkLauncher(model: AppModel) async {
         guard let launcher = model.launcher else {
             check("the launcher exists", false)
             return
@@ -142,9 +97,10 @@ enum SelfTest {
         lm.query = "co"
         check("after two picks the result comes first", lm.results.first?.title == "Visual Studio Code",
               lm.results.first?.title ?? "none")
-        let reopened = try? ModelContainer(for: Snippet.self, LearningEntry.self,
-                                           configurations: ModelConfiguration(url: Store.url))
-        let saved = (try? reopened?.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
+        // The app's own schema: a container with fewer models migrates the
+        // store down and drops the tables it does not list.
+        let reopened = Store.makeContainer()
+        let saved = (try? reopened.mainContext.fetch(FetchDescriptor<LearningEntry>())) ?? []
         check("Learning survives a restart", saved.contains { $0.query == "co" && $0.count == 2 })
 
         // Result sources: a slow one keeps the previous results up until it answers.
@@ -249,7 +205,9 @@ enum SelfTest {
         lm.query = root + "notes"
         await settle()
         _ = key(124, "")
-        check("⌘3 runs action 3", key(20, "3", command: true) && performed.last == .action(FileAction.allCases[2]))
+        // Row 4 runs through perform; Open With… and Quick Look stay in the launcher.
+        let fourth = lm.actions?.items.dropFirst(3).first
+        check("⌘4 runs action 4", key(21, "4", command: true) && fourth != nil && performed.last == fourth, "\(performed)")
         launcher.show()
         lm.query = root + "notes"
         await settle()
@@ -392,51 +350,5 @@ enum SelfTest {
         _ = hotkeys.change(to: second, keyName: "L")
         check("the old hotkey stops working", hotkeys.isFree(first) && !hotkeys.isFree(second))
         hotkeys.suspend()
-    }
-
-    private static func check(_ name: String, _ ok: Bool, _ detail: String = "") {
-        count += 1
-        if !ok { failures += 1 }
-        print(ok ? "PASS \(name)" : "FAIL \(name)\(detail.isEmpty ? "" : ": \(detail)")")
-    }
-
-    /// Quits through NSApp.terminate, never exit(), and closes sheets first:
-    /// an open sheet refuses terminate, and the run would wait forever.
-    static func finish(code: Int32) {
-        exitCode = code
-        for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
-        NSApp.terminate(nil)
-    }
-}
-
-/// A source with fixed titles and optional delay, so launcher checks do not
-/// depend on the apps on this Mac and slow sources can be tested.
-private final class FakeSource: ResultSource {
-    private let titles: [String]
-    private let delay: Duration?
-
-    init(_ titles: [String], delay: Duration? = nil) {
-        self.titles = titles
-        self.delay = delay
-    }
-
-    static func url(_ title: String) -> URL {
-        URL(string: "reach-test://app/\(title.replacingOccurrences(of: " ", with: "-"))")!
-    }
-
-    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
-        guard case .normal(let text) = query else { return [] }
-        let found = titles.compactMap { title in
-            Matcher.score(query: text, title: title).map {
-                Scored(result: LaunchResult(id: "fake:\(title)", title: title, subtitle: "Test app",
-                                            icon: .symbol("app"), url: Self.url(title)), score: $0)
-            }
-        }
-        guard let delay else { return found }
-        Task {
-            try? await Task.sleep(for: delay)
-            later(found)
-        }
-        return nil
     }
 }

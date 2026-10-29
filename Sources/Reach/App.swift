@@ -17,7 +17,7 @@ struct ReachApp: App {
     @State private var model = AppModel.shared
 
     var body: some Scene {
-        // Reach is an agent app: the launcher and the menu bar icon are the way in.
+        // Reach is an agent app: the launcher and the menu bar icon (MenuBarIcon) are the way in.
         // This window (snippets, M4) only opens for snapshots and the self-test.
         Window("Reach", id: "main") {
             ContentView()
@@ -39,37 +39,25 @@ struct ReachApp: App {
             }
         }
 
+        // S-042: the installed workflows. Window > Workflows (⇧⌘K), the menu bar icon, or Settings > Workflows.
+        Window("Workflows", id: WorkflowLibrary.windowID) {
+            WorkflowsView()
+                .environment(model)
+                .themed()
+                .overlay { if GridOverlay.enabled { GridOverlay() } }
+        }
+        .defaultSize(width: 1000, height: 640)
+        .defaultLaunchBehavior(.suppressed)
+        .windowToolbarStyle(.unified)
+        .commands { WorkflowCommands() }
+
         Settings {
             SettingsView()
                 .environment(model)
                 .themed()
         }
-        .windowResizability(.contentSize)
-
-        MenuBarExtra("Reach", systemImage: "magnifyingglass") {
-            StatusMenu()
-        }
-    }
-}
-
-/// The menu bar icon's menu.
-struct StatusMenu: View {
-    @Environment(\.openSettings) private var openSettings
-    private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-
-    var body: some View {
-        Button("Show Launcher") { AppModel.shared.launcher?.show() }
-        Button("Version \(version)") {}
-            .disabled(true)
-        Divider()
-        Button("Settings…") {
-            NSApp.activate()
-            openSettings()
-        }
-        .keyboardShortcut(",")
-        Divider()
-        Button("Quit") { NSApp.terminate(nil) }
-            .keyboardShortcut("q")
+        .windowResizability(.contentMinSize)
+        .commands { SettingsCommands() }
     }
 }
 
@@ -81,6 +69,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate()
         }
         AppModel.shared.startLauncher()
+    }
+
+    /// Opening Reach again from Finder or Spotlight opens Settings, so there is
+    /// a way in when the menu bar icon is hidden (S-035).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !AppModel.isTestRun { AppModel.shared.launcher?.openSettings() }
+        return false
     }
 
     /// Closing a window never quits: the launcher keeps running.
@@ -99,6 +94,20 @@ enum Store {
         !(ProcessInfo.processInfo.environment["APP_STORE"] ?? "").isEmpty
     }
 
+    /// Where settings are saved: the app's own UserDefaults, or for test,
+    /// snapshot and seed runs a separate suite that starts empty at every
+    /// launch. Those runs never read or write the real settings this way.
+    static let settings: UserDefaults = {
+        guard isOverridden else { return .standard }
+        UserDefaults.standard.removePersistentDomain(forName: settingsDomain)
+        return UserDefaults(suiteName: settingsDomain) ?? .standard
+    }()
+
+    /// The defaults domain `settings` saves in, for the sync folder (S-039).
+    static var settingsDomain: String {
+        isOverridden ? "com.sanderrobijns.reach.testrun" : Bundle.main.bundleIdentifier ?? "com.sanderrobijns.reach"
+    }
+
     static var url: URL {
         if let path = ProcessInfo.processInfo.environment["APP_STORE"], !path.isEmpty {
             return URL(fileURLWithPath: path)
@@ -110,7 +119,7 @@ enum Store {
 
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: Snippet.self, LearningEntry.self, configurations: ModelConfiguration(url: url))
+            return try ModelContainer(for: Snippet.self, SnippetCollection.self, LearningEntry.self, URLVisit.self, ClipboardItem.self, configurations: ModelConfiguration(url: url))
         } catch {
             fatalError("Could not open the database at \(url.path): \(error)")
         }

@@ -1,91 +1,65 @@
 import SwiftData
 import SwiftUI
 
+/// The snippets window (S-029): collections, the snippets of the selected
+/// one in a table, and the selected snippet's editor.
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.modelContext) private var context
+    @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         NavigationSplitView {
-            sidebar
+            CollectionSidebar()
+                .navigationSplitViewColumnWidth(min: 180, ideal: 212)
         } content: {
-            SnippetList(page: model.sidebar ?? .all)
-                .navigationSplitViewColumnWidth(min: 260, ideal: 320)
+            SnippetTable(page: model.page ?? .all)
+                // A table of its own per page: updating one table from 3 to 8 rows
+                // while the sidebar's selection changes is a reentrant table update.
+                .id(model.page)
+                .navigationSplitViewColumnWidth(min: 360, ideal: 480)
         } detail: {
-            SnippetDetail()
+            SnippetEditor()
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320)
         }
+        // Edits and deletes in this window can be undone with ⌘Z.
+        .onAppear { context.undoManager = undoManager }
+        .onChange(of: undoManager) { context.undoManager = undoManager }
         .task {
             SeedData.insertIfRequested(into: model)
             SelfTest.runIfRequested(model: model)
             Snapshot.runIfRequested(model: model, openSettings: openSettings)
         }
     }
-
-    private var sidebar: some View {
-        @Bindable var model = model
-        return List(SidebarItem.allCases, selection: $model.sidebar) { page in
-            Label(page.title, systemImage: page.symbol)
-                .tag(page)
-        }
-        .navigationSplitViewColumnWidth(min: 180, ideal: 212)
-    }
 }
 
-struct SnippetList: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.modelContext) private var context
-    @Query(sort: \Snippet.createdAt, order: .reverse) private var snippets: [Snippet]
-    let page: SidebarItem
-
-    private var visible: [Snippet] {
-        page == .starred ? snippets.filter(\.isStarred) : snippets
-    }
+/// + and − under a list, like the lists in System Settings.
+struct PlusMinusBar: View {
+    let addHelp: String
+    let removeHelp: String
+    let canRemove: Bool
+    let add: () -> Void
+    let remove: () -> Void
 
     var body: some View {
-        @Bindable var model = model
-        List(visible, selection: $model.selection) { snippet in
-            Label(snippet.name, systemImage: snippet.isStarred ? "star.fill" : "text.quote")
-                .tag(snippet.id)
-                .contextMenu {
-                    Button("Delete", role: .destructive) { context.delete(snippet) }
-                }
-        }
-        .overlay {
-            if visible.isEmpty {
-                ContentUnavailableView(
-                    "No Snippets",
-                    systemImage: page.symbol,
-                    description: Text("Press Command-N to add one.")
-                )
+        HStack(spacing: 0) {
+            Button(action: add) {
+                Image(systemName: "plus").frame(width: Space.xl, height: Space.xl)
             }
-        }
-        .navigationTitle(page.title)
-        .toolbar {
-            ToolbarItem {
-                Button("New Snippet", systemImage: "plus") { model.addSnippet() }
-                    .help("Add a snippet (Command-N)")
+            .help(addHelp)
+            .accessibilityLabel(addHelp)
+            Button(action: remove) {
+                Image(systemName: "minus").frame(width: Space.xl, height: Space.xl)
             }
+            .disabled(!canRemove)
+            .help(removeHelp)
+            .accessibilityLabel(removeHelp)
+            Spacer()
         }
-    }
-}
-
-struct SnippetDetail: View {
-    @Environment(AppModel.self) private var model
-    @Query private var snippets: [Snippet]
-
-    var body: some View {
-        if let snippet = snippets.first(where: { $0.id == model.selection }) {
-            @Bindable var snippet = snippet
-            Form {
-                TextField("Name", text: $snippet.name)
-                Toggle("Starred", isOn: $snippet.isStarred)
-                TextField("Text", text: $snippet.text, axis: .vertical)
-                    .lineLimit(4...)
-            }
-            .formStyle(.grouped)
-            } else {
-            ContentUnavailableView("No Selection", systemImage: "sidebar.right")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+        .buttonStyle(.borderless)
+        .padding(.horizontal, Space.sm)
+        .padding(.vertical, Space.xs)
+        .background(.bar)
     }
 }

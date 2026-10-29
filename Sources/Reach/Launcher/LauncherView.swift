@@ -31,6 +31,7 @@ enum LauncherLayout {
 
     @MainActor static func height(for model: LauncherModel) -> CGFloat {
         if model.actions != nil { return actionsHeight }
+        if model.viewer != nil { return browseHeight }
         return model.browsing != nil ? browseHeight : height(rows: model.results.count)
     }
 }
@@ -41,10 +42,14 @@ struct LauncherView: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
+    private var themes = LauncherThemeStore.shared
 
     var body: some View {
         Group {
-            if let actions = model.actions {
+            if let viewer = model.viewer {
+                ClipboardViewerView(model: model, viewer: viewer)
+            } else if let actions = model.actions {
                 ActionPanelView(model: model, panel: actions)
             } else {
                 search
@@ -52,7 +57,7 @@ struct LauncherView: View {
         }
         .padding(Space.md)
         .frame(width: LauncherLayout.width, height: LauncherLayout.height(for: model), alignment: .top)
-        .glassEffect(.regular, in: .rect(cornerRadius: Radius.panel, style: .continuous))
+        .launcherSurface(themes.theme)
         .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
         .opacity(appeared ? 1 : 0)
         .accessibilityElement(children: .contain)
@@ -61,6 +66,15 @@ struct LauncherView: View {
             model.openSettings = {
                 NSApp.activate()
                 openSettings()
+            }
+            model.canOpenSettings = true
+            model.openSnippets = {
+                NSApp.activate()
+                openWindow(id: "main")
+            }
+            model.openWorkflows = {
+                NSApp.activate()
+                openWindow(id: WorkflowLibrary.windowID)
             }
         }
         .onChange(of: model.showCount, initial: true) {
@@ -78,24 +92,30 @@ struct LauncherView: View {
     private var search: some View {
         VStack(spacing: Space.sm) {
             HStack(spacing: Space.md) {
-                TextField("Search", text: $model.query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 28))
-                    .focused($fieldFocused)
-                    // Back from the action panel: focus, then the cursor after the query,
-                    // since focusing a field selects all of its text.
-                    .onAppear {
-                        DispatchQueue.main.async {
-                            fieldFocused = true
-                            DispatchQueue.main.async(execute: Self.caretToEnd)
+                HStack(spacing: Space.sm) {
+                    TextField("Search", text: $model.query)
+                        .textFieldStyle(.plain)
+                        .font(LauncherStyle(theme: themes.theme).queryFont)
+                        .foregroundStyle(LauncherStyle(theme: themes.theme).text ?? .primary)
+                        .focused($fieldFocused)
+                        // Back from the action panel: focus, then the cursor after the query,
+                        // since focusing a field selects all of its text.
+                        .onAppear {
+                            DispatchQueue.main.async {
+                                fieldFocused = true
+                                DispatchQueue.main.async(execute: Self.caretToEnd)
+                            }
                         }
+                        // After SwiftUI has put the rewritten text in the field.
+                        .onChange(of: model.queryRewrites) { DispatchQueue.main.async(execute: Self.caretToEnd) }
+                        .accessibilityLabel("Launcher, search field")
+                    if !model.buffer.isEmpty {
+                        BufferView(items: model.buffer.items)
                     }
-                    // After SwiftUI has put the rewritten text in the field.
-                    .onChange(of: model.queryRewrites) { DispatchQueue.main.async(execute: Self.caretToEnd) }
-                    .accessibilityLabel("Launcher, search field")
-                    .padding(.horizontal, Space.lg)
-                    .frame(height: LauncherLayout.fieldHeight)
-                    .background(.quinary, in: RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
+                }
+                .padding(.horizontal, Space.lg)
+                .frame(height: LauncherLayout.fieldHeight)
+                .background(.quinary, in: RoundedRectangle(cornerRadius: LauncherStyle(theme: themes.theme).innerRadius, style: .continuous))
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: LauncherLayout.markSize, height: LauncherLayout.markSize)
@@ -128,12 +148,20 @@ struct ResultRow: View {
     let error: String?
     /// Short rows for the folder listing while browsing.
     var compact = false
+    @Environment(\.launcherStyle) private var style
+    private var options = LauncherOptionsStore.shared
 
     private var iconSize: CGFloat { compact ? LauncherLayout.compactIconSize : LauncherLayout.iconSize }
 
     private var subtitle: String? {
         if let error { return error }
-        return selected && !result.subtitle.isEmpty ? result.subtitle : nil
+        guard !result.subtitle.isEmpty else { return nil }
+        switch options.subtext {
+        // Short browse rows have no room for a second line on every row.
+        case .always: return selected || !compact ? result.subtitle : nil
+        case .selected: return selected ? result.subtitle : nil
+        case .never: return nil
+        }
     }
 
     var body: some View {
@@ -142,32 +170,37 @@ struct ResultRow: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: iconSize, height: iconSize)
-                .foregroundStyle(selected ? Palette.onAccent : Palette.accentText)
+                .foregroundStyle(selected ? style.onSelection : Palette.accentText)
             VStack(alignment: .leading, spacing: 0) {
                 Text(result.title)
-                    .font(compact ? .body : .title3)
+                    .font(compact ? style.compactFont : style.rowFont)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.callout)
+                        .font(style.subtitleFont)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .opacity(0.8)
                 }
             }
             Spacer(minLength: Space.sm)
-            if result.isOpenable, selected || index < LauncherModel.maxResults {
+            if !result.badge.isEmpty {
+                Text(result.badge)
+                    .font(.callout)
+                    .foregroundStyle(selected ? AnyShapeStyle(style.onSelection.opacity(0.8)) : AnyShapeStyle(.secondary))
+            }
+            if result.isOpenable, !options.hidesShortcuts, selected || index < LauncherModel.maxResults {
                 Text(selected ? "↩" : "⌘\(index + 1)")
-                    .font(compact ? .body : .title3)
-                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
+                    .font(compact ? style.compactFont : style.rowFont)
+                    .foregroundStyle(selected ? AnyShapeStyle(style.onSelection) : AnyShapeStyle(.secondary))
             }
         }
-        .foregroundStyle(selected ? Palette.onAccent : .primary)
+        .foregroundStyle(selected ? style.onSelection : style.text ?? .primary)
         .padding(.horizontal, Space.md)
         .frame(height: compact ? LauncherLayout.compactRowHeight : LauncherLayout.rowHeight)
-        .background(selected ? Palette.accent : .clear,
-                    in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+        .background(selected ? style.selection : .clear,
+                    in: RoundedRectangle(cornerRadius: style.innerRadius, style: .continuous))
         .contentShape(Rectangle())
         .help(tooltip)
         .accessibilityElement(children: .ignore)
@@ -181,7 +214,7 @@ struct ResultRow: View {
     }
 
     private var accessibilityText: String {
-        let parts = [result.kindLabel, result.title, error ?? result.subtitle].filter { !$0.isEmpty }
+        let parts = [result.kindLabel, result.badge, result.title, error ?? result.subtitle].filter { !$0.isEmpty }
         return parts.joined(separator: ", ") + ", result \(index + 1) of \(count)"
     }
 }

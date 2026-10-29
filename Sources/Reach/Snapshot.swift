@@ -1,5 +1,7 @@
 import AppKit
 import IOKit.pwr_mgt
+import ReachKit
+import SwiftData
 import SwiftUI
 
 /// Screenshot mode for agents.
@@ -7,12 +9,15 @@ import SwiftUI
 /// writes <page>-light.png and <page>-dark.png for every sidebar page, and
 /// settings-<tab>-light.png and settings-<tab>-dark.png for every Settings tab, then quits.
 /// Each PNG gets a <page>-<mode>-layout.json with the grid probes (tools/check-layout.swift).
-/// APP_SNAPSHOT_PAGES=all,starred limits the pages. Add "settings" or "launcher" to include those.
+/// APP_SNAPSHOT_PAGES=snippets,collection,snippets-empty limits the pages. Add "settings" or "launcher" to include those.
 /// Add APP_ACCENT=<id> to see the pages in another accent.
 enum Snapshot {
     static func runIfRequested(model: AppModel, openSettings: OpenSettingsAction) {
         let env = ProcessInfo.processInfo.environment
         guard let dir = env["APP_SNAPSHOT"], !dir.isEmpty else { return }
+        // Print each line at once, so AppKit's warnings on stderr land between
+        // the captures they belong to.
+        setvbuf(stdout, nil, _IOLBF, 0)
         // Snapshots never run against the real database.
         guard Store.isOverridden else {
             print("SNAPSHOT refused: set APP_STORE to a file in /tmp")
@@ -32,15 +37,69 @@ enum Snapshot {
             try? await Task.sleep(for: .seconds(1.5))
             for mode in ["light", "dark"] {
                 NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                for page in SidebarItem.allCases where only?.contains(page.rawValue) ?? true {
-                    model.sidebar = page
+                // S-029: All Snippets, a collection with a snippet selected, and an empty collection.
+                let collections = (try? model.container.mainContext.fetch(FetchDescriptor<SnippetCollection>())) ?? []
+                let work = collections.first { $0.name == "Work" }
+                let pages: [(String, SnippetPage, Snippet?)] = [
+                    ("snippets", .all, nil),
+                    ("collection", work.map { .collection($0.id) } ?? .all,
+                     work?.snippets?.first { $0.name == "Email signature" }),
+                    ("snippets-empty", collections.first { $0.name == "Templates" }.map { .collection($0.id) } ?? .all, nil),
+                ]
+                for (name, page, snippet) in pages where only?.contains(name) ?? true {
+                    model.page = page
+                    model.selection = snippet?.id
                     try? await Task.sleep(for: .seconds(0.8))
-                    capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
+                    capture(to: "\(dir)/\(name)-\(mode).png")
                 }
+                model.page = .all
+                model.selection = nil
+            }
+            // Sample URLs for the URL history; the snapshot store is in /tmp.
+            for url in ["https://developer.apple.com/documentation/swiftui", "https://en.wikipedia.org/wiki/Bowler_hat",
+                        "https://www.example.com/"] {
+                if let url = URL(string: url) { model.launcherModel.history.record(url) }
             }
             if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
                 await model.launcherModel.apps.refreshNow()
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("path", "~/"), ("actions", "safari"), ("selection", "")]
+                // Sample files instead of the person's own: snapshots get shared.
+                let samples = SampleFiles.make()
+                let sources = model.launcherModel.sources
+                // Only file search is swapped; every other source is the app's own, so snapshots show what the app shows.
+                model.launcherModel.sources = sources.map { $0 === model.launcherModel.files ? samples : $0 }
+                defer { model.launcherModel.sources = sources }
+                // Sample apps for `quit`, not the ones running on this Mac.
+                model.launcherModel.system.running = { ["Mail", "Safari", "Music", "Notes"].map {
+                    let path = ["/System/Applications/\($0).app", "/Applications/\($0).app"].first(where: FileManager.default.fileExists) ?? ""
+                    return RunningApp(name: $0, pid: 0, path: path)
+                } }
+                // Sample definitions and spellings, the same on every Mac.
+                let dictionary = model.launcherModel.dictionary
+                dictionary.define = { ["serendipity": "serendipity | ˌserənˈdɪpɪti | noun the occurrence and development of events by chance in a happy or beneficial way ▸ a fortunate stroke of serendipity",
+                                       "serendipitous": "serendipitous | ˌserənˈdɪpɪtəs | adjective occurring or discovered by chance in a happy or beneficial way"][$0] }
+                dictionary.completions = { word, _ in word.hasPrefix("serendip") ? ["serendipitous"] : [] }
+                dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
+                // Sample contacts, never the person's own address book.
+                model.launcherModel.contacts.use(SelfTest.sampleContacts)
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                // S-026: sample clips, never what this Mac copied.
+                let context = model.container.mainContext
+                let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
+                let sampleClips = [("Meeting notes\nShip the clipboard viewer on Friday.\nAsk Ada about the snippets.", "Notes", 3),
+                               ("https://example.com/docs/clipboard", "Safari", 25),
+                               ("/Applications/Safari.app\n/Applications/Mail.app", "Finder", 90),
+                               ("let viewer = ClipboardViewer(history: clips)", "Xcode", 300)]
+                    .map { text, app, minutes in
+                        let item = ClipboardItem(kind: text.hasPrefix("/") ? .files : .text, text: text, sourceApp: app)
+                        item.copiedAt = Date.now.addingTimeInterval(TimeInterval(-minutes * 60))
+                        context.insert(item)
+                        return item
+                    }
+                defer {
+                    sampleClips.forEach(context.delete)
+                    try? context.save()
+                    ClipboardSettings.shared.reset()
+                }
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -54,14 +113,41 @@ enum Snapshot {
                                 """, source: "TextEdit"))
                             try? await Task.sleep(for: .seconds(0.5))
                         }
-                        if name == "actions" {
+                        if name == "confirm" { model.launcherModel.openSelected() }
+                        if name == "actions" || name == "contact-card" {
                             _ = model.launcherModel.showActions()
                             try? await Task.sleep(for: .seconds(0.5))
                         }
+                        if name.hasPrefix("clipboard") {
+                            ClipboardSettings.shared.keep[.text] = true
+                            model.launcherModel.clipboard = name == "clipboard-empty" ? nil : clips
+                            model.launcherModel.showClipboard()
+                            if name == "clipboard-snippets" { model.launcherModel.viewer?.filter = "follow" }
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
+                        if name.hasPrefix("buffer") {
+                            let lm = model.launcherModel
+                            for index in 0..<min(3, lm.results.count) {
+                                lm.select(index)
+                                _ = lm.toggleBuffer()
+                            }
+                            lm.select(0)
+                            if name == "buffer-actions" { _ = lm.showBufferActions() }
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
                         capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                        _ = model.launcherModel.clearBuffer()
                         launcher.hide()
                     }
+                    // S-023: the Large Type card, from ⌘L on a calculation.
+                    LargeType.shared.show("Hallo Sander")
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/large-type-\(mode).png", window: LargeType.shared.window)
+                    LargeType.shared.hide()
                 }
+            }
+            if only == nil || only?.contains("workflows") == true {
+                await captureWorkflows(model: model, dir: dir)
             }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
@@ -75,7 +161,80 @@ enum Snapshot {
                         // Only titled windows: the menu bar icon and the launcher have windows too.
                         let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
+                        if tab == .search {
+                            // The Fallbacks section sits below the fold. The page's scroll view is wider than the sidebar's.
+                            if let scroll = settings?.contentView?.descendants(of: NSScrollView.self).max(by: { $0.frame.width < $1.frame.width }),
+                               let document = scroll.documentView {
+                                document.scroll(NSPoint(x: 0, y: document.isFlipped ? document.bounds.maxY : 0))
+                                try? await Task.sleep(for: .seconds(0.5))
+                                capture(to: "\(dir)/settings-search-end-\(mode).png", window: settings)
+                                document.scroll(NSPoint(x: 0, y: document.isFlipped ? 0 : document.bounds.maxY))
+                            }
+                            WebSearchSettings.shared.editingFallbacks = true
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-fallbacks-\(mode).png", window: settings?.attachedSheet)
+                            WebSearchSettings.shared.editingFallbacks = false
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
+                        if tab == .clipboard {
+                            ClipboardSettings.shared.page = .merging
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-clipboard-merging-off-\(mode).png", window: settings)
+                            ClipboardSettings.shared.keep[.text] = true
+                            ClipboardSettings.shared.appendsOnDoubleCopy = true
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-clipboard-merging-\(mode).png", window: settings)
+                            ClipboardSettings.shared.reset()
+                            ClipboardSettings.shared.page = .advanced
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-clipboard-advanced-\(mode).png", window: settings)
+                            ClipboardSettings.shared.page = .history
+                        }
+                        if tab == .appearance {
+                            let themes = LauncherThemeStore.shared
+                            var own = themes.duplicate(LauncherTheme.named("reach-dark"))
+                            own.name = "Sunset"
+                            own.selectionColor = ThemeColor(red: 0.98, green: 0.55, blue: 0.2)
+                            own.fontName = "Avenir Next"
+                            own.cornerRadius = 12
+                            themes.update(own)
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-appearance-own-\(mode).png", window: settings)
+                            themes.editing = .results
+                            try? await Task.sleep(for: .seconds(0.8))
+                            let popover = NSApp.windows.first { $0.isVisible && String(describing: type(of: $0)).contains("Popover") }
+                            capture(to: "\(dir)/settings-theme-editor-\(mode).png", window: popover)
+                            themes.editing = nil
+                            themes.themeID = "reach-light"
+                            themes.editing = .background
+                            try? await Task.sleep(for: .seconds(0.8))
+                            let builtIn = NSApp.windows.first { $0.isVisible && String(describing: type(of: $0)).contains("Popover") }
+                            capture(to: "\(dir)/settings-theme-built-in-\(mode).png", window: builtIn)
+                            themes.editing = nil
+                            themes.reset()
+                            LauncherOptionsStore.shared.visibleResults = 6
+                            LauncherOptionsStore.shared.screen = .activeWindow
+                            LauncherOptionsStore.shared.isEditing = true
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-launcher-options-\(mode).png", window: settings?.attachedSheet)
+                            LauncherOptionsStore.shared.reset()
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
+                        if tab == .web {
+                            WebSearchSettings.shared.page = .urls
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-web-urls-\(mode).png", window: settings)
+                            WebSearchSettings.shared.page = .searches
+                        }
                     }
+                    // S-036: Search Settings with a query, and with one that finds nothing.
+                    let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
+                    for (name, query) in [("search", "clip"), ("search-empty", "qxzv")] {
+                        model.settingsQuery = query
+                        try? await Task.sleep(for: .seconds(0.8))
+                        capture(to: "\(dir)/settings-\(name)-\(mode).png", window: settings)
+                    }
+                    model.settingsQuery = ""
                 }
             }
             print("SNAPSHOT done \(dir)")
@@ -83,6 +242,104 @@ enum Snapshot {
             for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
             NSApp.terminate(nil)
         }
+    }
+
+    /// S-042: the Workflows window with nothing selected and with sample workflows.
+    private static func captureWorkflows(model: AppModel, dir: String) async {
+        let library = WorkflowLibrary.shared
+        // The launcher view hands over openWindow when it first shows.
+        model.launcher?.show()
+        try? await Task.sleep(for: .seconds(0.5))
+        model.launcher?.hide()
+        let saved = library.workflows.map(\.folder)
+        // Only sample workflows in the shots, in the /tmp library.
+        let parked = FileManager.default.temporaryDirectory.appending(path: "Reach-parked-workflows-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: parked, withIntermediateDirectories: true)
+        for folder in saved { try? FileManager.default.moveItem(at: folder, to: parked.appending(path: folder.lastPathComponent)) }
+        library.reload()
+        defer {
+            for folder in library.workflows.map(\.folder) { try? FileManager.default.removeItem(at: folder) }
+            for folder in saved { try? FileManager.default.moveItem(at: parked.appending(path: folder.lastPathComponent), to: folder) }
+            try? FileManager.default.removeItem(at: parked)
+            library.selection = nil
+            library.reload()
+        }
+        model.launcherModel.openWorkflows()
+        try? await Task.sleep(for: .seconds(1))
+        let window = { NSApp.windows.first { $0.isVisible && $0.identifier?.rawValue.hasPrefix(WorkflowLibrary.windowID) == true } }
+        for mode in ["light", "dark"] {
+            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+            library.selection = nil
+            try? await Task.sleep(for: .seconds(0.8))
+            capture(to: "\(dir)/workflows-empty-\(mode).png", window: window())
+        }
+        library.addExample()
+        if let folder = try? WorkflowFolder.addExample(into: library.folder) {
+            try? WorkflowFolder.update(folder) {
+                $0["name"] = "GitHub Repos"
+                $0["createdby"] = "Ada Lovelace"
+                $0["version"] = "2.1"
+                $0["description"] = "Search your repositories."
+                $0["disabled"] = true
+            }
+        }
+        library.reload()
+        library.selection = library.workflows.first { $0.name == "Hello World" }?.id
+        for mode in ["light", "dark"] {
+            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+            try? await Task.sleep(for: .seconds(0.8))
+            capture(to: "\(dir)/workflows-\(mode).png", window: window())
+        }
+        // Configure Workflow… (S-043): as installed, then with the required field emptied.
+        for (name, greeting) in [("workflow-configure", nil), ("workflow-configure-missing", "")] as [(String, String?)] {
+            guard let example = library.selected else { break }
+            if let greeting { library.saveConfiguration(["greeting": greeting], for: example) }
+            for mode in ["light", "dark"] {
+                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                library.configuring = library.selected
+                try? await Task.sleep(for: .seconds(0.8))
+                capture(to: "\(dir)/\(name)-\(mode).png", window: window()?.attachedSheet)
+                library.configuring = nil
+                try? await Task.sleep(for: .seconds(0.5))
+            }
+        }
+        // Workflow Info… (S-046): each tab, and Variables before and after one is added.
+        let tabs: [(String, WorkflowInfoSheet.Tab)] = [("about", .about), ("readme", .readme), ("variables-empty", .variables)]
+        for (name, tab) in tabs + [("variables", .variables)] {
+            if name == "variables", let example = library.selected {
+                var info = WorkflowInfo(example)
+                info.variables = [WorkflowVariable(name: "api_key", value: "sk-12345", dontExport: true),
+                                  WorkflowVariable(name: "user", value: "ada")]
+                library.saveInfo(info, for: example)
+            }
+            library.infoTab = tab
+            for mode in ["light", "dark"] {
+                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                library.editingInfo = library.selected
+                try? await Task.sleep(for: .seconds(0.8))
+                capture(to: "\(dir)/workflow-info-\(name)-\(mode).png", window: window()?.attachedSheet)
+                library.editingInfo = nil
+                try? await Task.sleep(for: .seconds(0.5))
+            }
+        }
+        library.infoTab = .about
+        // The debugger (S-045) with a run that printed and one that failed.
+        if let example = library.selected {
+            library.log.clear()
+            library.record(example, object: "Script Filter", input: "hello Ada",
+                           result: ScriptResult(output: Data(#"{"items":[{"title":"Hello, Ada","arg":"Hello, Ada"}]}"#.utf8)))
+            library.record(example, object: "Run Script", input: nil,
+                           result: ScriptResult(errors: "say: command not found", status: 127))
+            library.debugging = true
+            for mode in ["light", "dark"] {
+                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                try? await Task.sleep(for: .seconds(0.8))
+                capture(to: "\(dir)/workflows-debugger-\(mode).png", window: window())
+            }
+            library.debugging = false
+            library.log.clear()
+        }
+        window()?.close()
     }
 
     /// Captures the real window with screencapture, so glass, sidebars, and
@@ -126,5 +383,49 @@ enum Snapshot {
             try? data.write(to: URL(fileURLWithPath: path))
             print("SNAPSHOT \(path) (fallback: no Screen Recording permission or a locked screen, sidebars and glass are blank)")
         }
+    }
+}
+
+/// Made-up files in /tmp for the launcher snapshots, so no real file name from
+/// the home folder ends up in a screenshot. Answers file search by name, as
+/// Spotlight would; the same folder is browsed for the path snapshot.
+final class SampleFiles: ResultSource {
+    static let folder = "/tmp/Reach-sample/"
+    static let names = ["Project brief.md", "Brief to the board.docx", "Briefing notes.txt", "Q3 report.pdf",
+                        "Holiday photo.jpg", "Budget 2027.numbers", "Invoices", "Briefs"]
+
+    /// Creates the folder with empty files (and two folders), and the source that finds them.
+    static func make() -> SampleFiles {
+        let files = FileManager.default
+        try? files.removeItem(atPath: folder)
+        for name in names {
+            let path = folder + name
+            if name.contains(".") {
+                try? files.createDirectory(atPath: folder, withIntermediateDirectories: true)
+                files.createFile(atPath: path, contents: Data())
+            } else {
+                try? files.createDirectory(atPath: path, withIntermediateDirectories: true)
+            }
+        }
+        return SampleFiles()
+    }
+
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
+        guard case .files(let search) = query, !search.text.isEmpty else { return [] }
+        return Self.names.compactMap { name in
+            guard Matcher.score(query: search.text, title: name) != nil else { return nil }
+            let path = Self.folder + name
+            return Scored(result: LaunchResult(id: path, title: name, subtitle: "~/Documents/" + name,
+                                               icon: .file(path), url: URL(fileURLWithPath: path),
+                                               isFolder: !name.contains(".")), score: 0)
+        }
+    }
+}
+
+
+private extension NSView {
+    /// Every view of `type` below this one.
+    func descendants<T: NSView>(of type: T.Type) -> [T] {
+        subviews.flatMap { view in [view as? T].compactMap { $0 } + view.descendants(of: type) }
     }
 }

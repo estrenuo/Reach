@@ -1,4 +1,5 @@
 import AppKit
+import ReachKit
 import SwiftUI
 
 /// One result in the launcher. Built on the fly for every query, never stored.
@@ -6,6 +7,8 @@ struct LaunchResult: Identifiable, Equatable {
     enum Icon: Equatable {
         case file(String)
         case symbol(String)
+        /// An image file, such as a workflow's icon.png (S-041).
+        case image(String)
     }
 
     /// A stable id across queries: the path for apps and files, the engine for fallbacks.
@@ -19,8 +22,38 @@ struct LaunchResult: Identifiable, Equatable {
     var kindLabel: String = ""
     /// A folder you can browse into with → (not a package like an app).
     var isFolder = false
+    /// Return reveals it in Finder instead of opening it (the `find` keyword, S-014).
+    var reveals = false
+    /// The text Return copies, for a calculation (S-015). It has no URL.
+    var answer: String?
+    /// The query Return puts in the search field: "wik" becomes "wiki " (S-016).
+    var completes: String?
+    /// Shown above the ranked results: a calculation's answer, a typed URL.
+    var isPinned = false
+    /// Opening it adds its URL to the URL history (S-017).
+    var remembers = false
+    /// A system command Return runs (S-019). It has no URL.
+    var system: SystemRun?
+    /// A shell command Return runs in the terminal app (S-021). It has no URL.
+    var shell: ShellRun?
+    /// A contact: Return opens its card in the launcher (S-024).
+    var contact: Contact?
+    /// A short word at the end of the row, like "work" on a card's email address.
+    var badge = ""
+    /// A row Return acts on without a URL, like a clip in the clipboard viewer (S-026).
+    var acts = false
+    /// The Clipboard History row: Return opens the clipboard viewer (S-026).
+    var opensClipboard = false
+    /// A snippet's text: Return fills in its placeholders and pastes it (S-030).
+    var pastes: String?
+    /// The Reach Settings row: Return opens Settings (S-035).
+    var opensSettings = false
+    /// A row from a workflow's script filter: Return runs what is connected to it (S-041).
+    var workflow: WorkflowRun?
 
-    var isOpenable: Bool { url != nil }
+    var isOpenable: Bool {
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || workflow != nil
+    }
 }
 
 /// File icons from the workspace, cached per path.
@@ -35,6 +68,12 @@ enum IconCache {
             if let cached = cache[path] { return Image(nsImage: cached) }
             let image = NSWorkspace.shared.icon(forFile: path)
             cache[path] = image
+            return Image(nsImage: image)
+        case .image(let path):
+            let key = "image:" + path
+            if let cached = cache[key] { return Image(nsImage: cached) }
+            let image = NSImage(contentsOfFile: path) ?? NSWorkspace.shared.icon(forFile: path)
+            cache[key] = image
             return Image(nsImage: image)
         }
     }

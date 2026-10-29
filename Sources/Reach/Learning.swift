@@ -37,3 +37,15 @@ final class Learning {
         try? context.save()
     }
 }
+
+extension Learning {
+    /// How many query and result pairs Learning remembers.
+    var count: Int { (try? container.mainContext.fetchCount(FetchDescriptor<LearningEntry>())) ?? 0 }
+
+    /// Settings > Advanced > Clear Learning (S-038): results go back to plain text-match order.
+    func clear() {
+        let context = container.mainContext
+        try? context.delete(model: LearningEntry.self)
+        try? context.save()
+    }
+}

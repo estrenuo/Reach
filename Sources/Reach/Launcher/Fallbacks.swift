@@ -1,27 +1,17 @@
 import ReachKit
 
-/// Web searches offered when the query has no results. M3 makes these editable.
+/// The fallback web searches (S-018): the ones chosen in Settings > Search,
+/// in their order. The launcher shows them for a query with no results, or
+/// below every result list; the action panel offers them for selected text.
 enum Fallbacks {
-    struct Engine {
-        var name: String
-        var template: String
-        var symbol: String
-    }
-
-    static let engines = [
-        Engine(name: "Google", template: "https://www.google.com/search?q={query}", symbol: "magnifyingglass"),
-        Engine(name: "Amazon", template: "https://www.amazon.com/s?k={query}", symbol: "cart"),
-        Engine(name: "Wikipedia", template: "https://en.wikipedia.org/wiki/Special:Search?search={query}", symbol: "book"),
-    ]
-
-    static func results(for query: String) -> [LaunchResult] {
+    static func results(for query: String, settings: WebSearchSettings = .shared) -> [LaunchResult] {
         guard !query.isEmpty else { return [] }
-        return engines.compactMap { engine in
-            guard let url = WebSearchURL.make(template: engine.template, query: query) else { return nil }
+        return settings.fallbacks.compactMap { search in
+            guard let url = WebSearchURL.make(template: search.url, query: query) else { return nil }
             return LaunchResult(
-                id: "fallback:\(engine.name)", title: "Search \(engine.name) for “\(query)”",
-                subtitle: url.host() ?? "", icon: .symbol(engine.symbol), url: url,
-                kindLabel: "Web search, \(engine.name)")
+                id: "fallback:\(search.id)", title: search.title(for: query),
+                subtitle: url.host() ?? "", icon: .symbol(search.symbol), url: url,
+                kindLabel: "Web search")
         }
     }
 }

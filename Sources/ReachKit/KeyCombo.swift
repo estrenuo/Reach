@@ -15,6 +15,9 @@ public struct KeyCombo: Codable, Equatable, Sendable {
     /// ⌃⌥Space while Alfred still owns ⌥Space.
     public static let `default` = KeyCombo(keyCode: spaceKey, modifiers: control | option)
 
+    /// The clipboard viewer (S-026): ⌃⌥⌘C while Alfred still owns ⌥⌘C.
+    public static let clipboard = KeyCombo(keyCode: 8, modifiers: control | option | command)
+
     public init(keyCode: UInt32, modifiers: UInt32) {
         self.keyCode = keyCode
         self.modifiers = modifiers
