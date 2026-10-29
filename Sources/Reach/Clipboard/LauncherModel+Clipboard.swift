@@ -23,6 +23,7 @@ extension LauncherModel {
             openSettings()
         case .clip(let item):
             clipboard?.use(item)
+            onUsed(.clipboard)
             onHide()
             if viewer.settings.pastesOnReturn { paster() }
         case .snippet(let snippet):
@@ -36,6 +37,7 @@ extension LauncherModel {
     func copySelectedClip() -> Bool {
         guard let item = viewer?.selected?.clip else { return false }
         clipboard?.use(item)
+        onUsed(.clipboard)
         onHide()
         return true
     }

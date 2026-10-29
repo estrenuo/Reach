@@ -654,7 +654,14 @@ Depends: S-003
 Acceptance:
 - [snap] Summary line and stacked area chart with a legend.
 - [unit] Counts are stored per day and category.
-Status: todo
+UX:
+- Flow: Settings > Usage → the summary and the chart; Copy Stats puts the summary and 28 tab-separated day lines on the clipboard
+- Surface: a Settings page under Advanced (one grouped Form)
+- States: nothing counted = "Nothing counted yet. Each result, action, clip and snippet you use counts." with Copy Stats disabled; quiet days show as zero
+- Words: "Usage", "Copy Stats", "Last 28 Days"; kinds Launcher, Actions, Clipboard, Snippets, Expansion
+- Access: the chart reads "Uses per day for the last 28 days, by kind"; the legend names each color
+- Note: counts stay on this Mac (`usage.` keys are not synced), and days older than 400 are dropped
+Status: done
 
 ---
 

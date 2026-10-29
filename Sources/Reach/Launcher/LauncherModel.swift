@@ -96,6 +96,8 @@ final class LauncherModel {
     @ObservationIgnored var onSelectionChange: @MainActor () -> Void = {}
     /// Called after a result opened, with the query that found it (Learning, S-004).
     @ObservationIgnored var onOpened: @MainActor (String, LaunchResult) -> Void = { _, _ in }
+    /// Called for each use, by kind, for the Usage page (S-040).
+    @ObservationIgnored var onUsed: @MainActor (UsageKind) -> Void = { _ in }
     /// Called after a typed or remembered URL opened (the URL history, S-017).
     @ObservationIgnored var onURLOpened: @MainActor (URL) -> Void = { _ in }
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
@@ -563,6 +565,7 @@ final class LauncherModel {
         // Learning ranks one result per query; several items teach it nothing.
         if !panel.isMany, case .action(.open) = item { onOpened(query, target) }
         if !panel.isMany, case .app = item { onOpened(query, target) }
+        onUsed(.actions)
         onHide()
     }
 

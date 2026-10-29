@@ -52,7 +52,7 @@ public struct SyncFolder: Equatable, Sendable {
     /// Settings that belong to this Mac stay out: the sync folder itself,
     /// window places, and what the system keeps in the app's defaults.
     public static func syncs(key: String) -> Bool {
-        let local = ["sync.", "NS", "Apple", "com.apple.", "AK", "WebKit", "MSApp"]
+        let local = ["sync.", "usage.", "NS", "Apple", "com.apple.", "AK", "WebKit", "MSApp"]
         return !local.contains { key.hasPrefix($0) }
     }
 

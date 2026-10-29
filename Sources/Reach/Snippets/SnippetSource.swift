@@ -78,6 +78,7 @@ extension LauncherModel {
         item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
         board.writeObjects([item])
         loan.took()
+        onUsed(hiding ? .snippets : .expansion)
         if hiding { onHide() }
         paster()
         Task { [restoreDelay] in

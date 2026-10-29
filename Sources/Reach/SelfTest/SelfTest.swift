@@ -100,6 +100,7 @@ enum SelfTest {
             await checkSettingsWindow(model: model)
             await checkAdvanced(model: model)
             checkSync(model: model)
+            checkUsage(model: model)
             NSWorkspace.shared.notificationCenter.removeObserver(watch)
             sleeps.forEach(center.removeObserver)
             if screenIsLocked { blockers.insert("the screen was locked") }

@@ -1,4 +1,5 @@
 import Foundation
+import ReachKit
 import SwiftData
 
 /// Sample data for snapshots: APP_SEED=1 with APP_STORE in /tmp fills an empty
@@ -42,5 +43,22 @@ enum SeedData {
             snippet.collection = collections[sample.3]
         }
         try? context.save()
+        UsageStore.shared.replace(with: sampleUsage())
+    }
+
+    /// 40 days of uses: busy weekdays, quiet weekends, the same every run.
+    static func sampleUsage(until date: Date = .now) -> UsageLog {
+        var log = UsageLog()
+        let calendar = Calendar.current
+        let perDay: [UsageKind: Int] = [.launcher: 14, .clipboard: 6, .snippets: 3, .expansion: 4, .actions: 2]
+        for back in (0..<40).reversed() {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: date) else { continue }
+            let weekend = calendar.isDateInWeekend(day)
+            for (kind, base) in perDay {
+                let count = weekend ? base / 3 : base + (back * 7 + kind.rawValue.count) % 5
+                for _ in 0..<count { log.record(kind, at: day, calendar: calendar) }
+            }
+        }
+        return log
     }
 }

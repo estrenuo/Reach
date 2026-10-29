@@ -144,7 +144,12 @@ final class AppModel {
         menuBarIcon = MenuBarIcon()
         let learning = Learning(container: container)
         launcherModel.learning = learning
-        launcherModel.onOpened = { query, result in learning.record(query: query, resultID: result.id) }
+        launcherModel.onOpened = { [launcherModel] query, result in
+            learning.record(query: query, resultID: result.id)
+            // The action panel and snippets count as their own kind.
+            if launcherModel.actions == nil, result.pastes == nil { UsageStore.shared.record(.launcher) }
+        }
+        launcherModel.onUsed = { UsageStore.shared.record($0) }
         launcherModel.onURLOpened = { [launcherModel] url in launcherModel.history.record(url) }
         HotkeyCenter.shared.onPress = { controller.toggle() }
         HotkeyCenter.shared.onSelection = { controller.showSelection() }

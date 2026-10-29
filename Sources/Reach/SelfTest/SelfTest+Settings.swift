@@ -5,7 +5,7 @@ extension SelfTest {
     /// S-037: Settings is a sidebar of pages with the features grouped, and
     /// the menu bar has the standard Edit, View and Window menus with Close ⌘W.
     static func checkSettingsWindow(model: AppModel) async {
-        check("Settings starts with General, Appearance and Advanced", SettingsTab.pages == [.general, .appearance, .advanced])
+        check("Settings starts with General, Appearance, Advanced and Usage", SettingsTab.pages == [.general, .appearance, .advanced, .usage])
         check("every other page is a feature with a summary",
               SettingsTab.features.count == SettingsTab.allCases.count - SettingsTab.pages.count
                   && SettingsTab.features.allSatisfy { !$0.summary.isEmpty })
