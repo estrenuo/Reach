@@ -14,6 +14,6 @@
 <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>LSUIElement</key><true/>
-<key>NSAppleEventsUsageDescription</key><string>Reach asks Finder to show the Info window for a file when you choose Get Info.</string>
+<key>NSAppleEventsUsageDescription</key><string>Reach asks Finder to show Get Info and empty the Trash, asks macOS to log out, restart or shut down, and asks your terminal app to run the shell commands you type.</string>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>

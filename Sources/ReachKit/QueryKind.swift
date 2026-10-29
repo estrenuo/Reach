@@ -9,12 +9,14 @@ public enum QueryKind: Equatable, Sendable {
     case files(FileQuery)
     /// Browsing: a query that starts with `~/` or `/`.
     case path(PathQuery)
+    /// A shell command after the Terminal prefix (S-021): `> ls -la`. May be empty.
+    case shell(String)
 
     /// The words after any keyword: what fallbacks search the web for.
-    /// Empty while browsing, so a path never offers web searches.
+    /// Empty while browsing or for a shell command, so neither offers web searches.
     public var text: String {
         switch self {
-        case .empty, .path: ""
+        case .empty, .path, .shell: ""
         case .normal(let text): text
         case .files(let query): query.text
         }
@@ -24,8 +26,12 @@ public enum QueryKind: Equatable, Sendable {
     public static let filePrefixes: [Character] = ["'", " "]
 
     /// A keyword that is off makes its query a normal search.
-    public init(_ query: String, keywords: FileKeywords = FileKeywords()) {
+    public init(_ query: String, keywords: FileKeywords = FileKeywords(), shellPrefix: String? = nil) {
         if query.isEmpty { self = .empty; return }
+        if let shellPrefix, let command = ShellCommand.command(in: query, prefix: shellPrefix) {
+            self = .shell(command)
+            return
+        }
         if let path = PathQuery(query) { self = .path(path); return }
         if let (mode, rest) = keywords.match(query) {
             self = .files(FileQuery(mode, Self.trimmed(rest)))

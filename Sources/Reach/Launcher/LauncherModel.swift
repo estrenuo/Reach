@@ -42,6 +42,7 @@ final class LauncherModel {
     let typedURLs = TypedURLSource()
     let history = URLHistory()
     let system: SystemSource
+    let shell: ShellSource
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -58,6 +59,8 @@ final class LauncherModel {
     @ObservationIgnored var paster: @MainActor () -> Void = { Paster.pressPaste() }
     /// Runs a system command. The self-test and snapshots swap in a recorder.
     @ObservationIgnored var runSystem: @MainActor (SystemRun) -> Bool = { SystemRunner.run($0) }
+    /// Runs a shell command in the terminal app. The self-test and snapshots swap in a recorder.
+    @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
     @ObservationIgnored var perform: @MainActor (ActionPanel.Item, [URL]) -> Bool = { ActionRunner.run($0, on: $1) }
     /// Seconds for the buffer's 5 minutes. The self-test moves it forward.
@@ -77,14 +80,15 @@ final class LauncherModel {
 
     init(apps: AppIndex = AppIndex(), files: FileSearch = FileSearch(), paths: PathBrowser = PathBrowser(),
          calculator: CalculatorSource = CalculatorSource(), webSearches: WebSearchSource = WebSearchSource(),
-         system: SystemSource = SystemSource()) {
+         system: SystemSource = SystemSource(), shell: ShellSource = ShellSource()) {
         self.apps = apps
         self.files = files
         self.paths = paths
         self.calculator = calculator
         self.webSearches = webSearches
         self.system = system
-        sources = [calculator, typedURLs, apps, system, history, webSearches, files, paths]
+        self.shell = shell
+        sources = [calculator, shell, typedURLs, apps, system, history, webSearches, files, paths]
     }
 
     func didShow() {
@@ -108,7 +112,7 @@ final class LauncherModel {
         confirming = nil
         generation += 1
         let asked = generation
-        let kind = files.settings.queryKind(query)
+        let kind = files.settings.queryKind(query, shellPrefix: shell.settings.prefix)
         if case .path(let path) = kind { browsing = path } else { browsing = nil }
         sources.forEach { $0.cancel() }
         webSearches.typed = query
@@ -213,6 +217,15 @@ final class LauncherModel {
         }
         if let run = result.system {
             runCommand(run, result: result)
+            return
+        }
+        if let run = result.shell {
+            // Not passed to Learning: the command can hold paths and passwords.
+            guard runShell(run) else {
+                errors[result.id] = "Unable to open \(run.app.title)."
+                return
+            }
+            onHide()
             return
         }
         guard let url = result.url else { return }

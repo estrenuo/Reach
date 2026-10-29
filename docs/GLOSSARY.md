@@ -49,3 +49,6 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Eject | Unmount a disk and make it safe to unplug | unmount, remove |
 | Running app | An app with a Dock icon that is open now; Hide, Quit and Force Quit list them, last used first | open app, process |
 | Force Quit | End an app at once; its unsaved changes are lost | kill, terminate |
+| Shell command | A command typed after the prefix (`> ls -la`) that runs in a new terminal window | terminal command, script |
+| Prefix | The character that turns a query into a shell command, `>` at first, in Settings > Terminal | trigger, keyword (a keyword is a word) |
+| Terminal app | The app shell commands run in: Terminal, Ghostty or iTerm | shell, console |

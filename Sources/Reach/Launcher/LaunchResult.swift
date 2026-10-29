@@ -31,8 +31,10 @@ struct LaunchResult: Identifiable, Equatable {
     var remembers = false
     /// A system command Return runs (S-019). It has no URL.
     var system: SystemRun?
+    /// A shell command Return runs in the terminal app (S-021). It has no URL.
+    var shell: ShellRun?
 
-    var isOpenable: Bool { url != nil || answer != nil || completes != nil || system != nil }
+    var isOpenable: Bool { url != nil || answer != nil || completes != nil || system != nil || shell != nil }
 }
 
 /// File icons from the workspace, cached per path.

@@ -350,7 +350,14 @@ Depends: S-002
 Acceptance:
 - [snap] One row "Run command in Terminal".
 - [self] The prefix and target terminal (Terminal or Ghostty) are configurable.
-Status: todo
+UX:
+- Flow: `> ls -la` -> one row "Run command in Terminal" -> ↩ opens a new window in the terminal app and runs it -> the launcher hides; Esc or deleting the prefix goes back to a normal search
+- Surface: one row in the launcher (no fallbacks, no other results); Settings > Terminal with Prefix and Application menus, as on Alfred's Terminal page
+- States: the prefix alone shows "Type a shell command"; a terminal that does not open shows "Unable to open Terminal." under the row; apps that are not installed are left out of the menu, and the footer says they show up once installed
+- Words: "Run command in Terminal", "Opens a new window and runs it", "Prefix", "Application", "Shell Commands"
+- Defaults: prefix `>` (menu of > $ ! ; #, none can start a word); Terminal; Ghostty and iTerm when installed. The shell stays open after the command. Commands are not learned and not logged: they can hold paths and passwords
+- Snapshots: launcher-shell-<mode>.png, settings-terminal-<mode>.png
+Status: done
 
 ### S-022 Look up a word
 As the user, I type `define <word>` and see the definition; `spell <word>` suggests spellings.

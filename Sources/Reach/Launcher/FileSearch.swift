@@ -53,7 +53,7 @@ final class FileSearch: ResultSource {
                 later(found.map { Scored(result: $0, score: (Matcher.score(query: text, title: $0.title) ?? 200) - 100) })
             }
             return nil
-        case .empty, .path:
+        case .empty, .path, .shell:
             return []
         }
     }

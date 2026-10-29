@@ -45,8 +45,8 @@ final class SearchSettings {
         scope = defaults.stringArray(forKey: Self.scopeKey) ?? Self.standardScope
     }
 
-    func queryKind(_ query: String) -> QueryKind {
-        QueryKind(query, keywords: keywords)
+    func queryKind(_ query: String, shellPrefix: String? = nil) -> QueryKind {
+        QueryKind(query, keywords: keywords, shellPrefix: shellPrefix)
     }
 
     /// Puts every setting back as it was at first; the self-test leaves no trace this way.
