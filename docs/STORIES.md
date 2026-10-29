@@ -750,7 +750,13 @@ Depends: S-042
 Acceptance:
 - [snap] Three-tab sheet; variables table empty state with +.
 - [unit] "Don't export" variables are stripped on export.
-Status: todo
+UX:
+- Flow: select a workflow → Info… in its header (⌘I, Workflow > Workflow Info…) → a sheet with About, README and Variables → Save; Workflow > Export Workflow… (⇧⌘E) saves an .alfredworkflow file to share
+- Surface: a sheet over the Workflows window, tabs as a segmented control so their names fit
+- States: no variables = "No Variables" with Add Variable; a bad or doubled name shows in red and disables Save
+- Words: "About", "README", "Variables", "Name", "Value", "Don't Export", "Export Workflow…"
+- Note: Export blanks the value of every Don't Export variable and leaves out what Configure Workflow… saved (prefs.plist)
+Status: done
 
 ---
 

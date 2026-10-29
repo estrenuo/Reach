@@ -80,6 +80,7 @@ protocol ResultSource: AnyObject {
 - Workflow configuration (S-043): ReachKit's `WorkflowSetting` and `WorkflowConfiguration` read the fields from info.plist and the values from prefs.plist; `Workflow.environment` merges variables, then configuration, then run-time variables. `WorkflowConfigureSheet` is the form.
 - Workflow canvas (S-044): ReachKit's `WorkflowLayout` turns uidata into card positions and lays out objects without one; `WorkflowObject.category`, `kindName` and `summary` give each card its color and words. `WorkflowCanvasView` draws it read only.
 - Workflow debugger (S-045): ReachKit's `WorkflowLog` keeps the last 500 lines of script runs, output and errors. `WorkflowSource` feeds it through `onRun` and `onAction` into `WorkflowLibrary.log`; `WorkflowDebugger` shows it under the canvas.
+- Workflow info and export (S-046): ReachKit's `WorkflowInfo` reads and writes About, README and variables in info.plist; `WorkflowExport` stages a copy without prefs.plist and with Don't Export values blanked, which `WorkflowLibrary.export` zips with ditto. `WorkflowInfoSheet` is the sheet.
 - Settings (hotkey, open at login, accent) live in `UserDefaults` or with the system (`SMAppService`), not in the store.
 - Results are built per query and never stored.
 

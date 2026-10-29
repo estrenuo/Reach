@@ -45,6 +45,8 @@ struct WorkflowDetail: View {
             }
             .gridProbe("workflow-title", area: "workflow-header", edge: nil)
             Spacer()
+            Button("Info…") { library.editingInfo = workflow }
+                .help("Edit the About text, version, README and variables")
             if !workflow.settings.isEmpty {
                 Button("Configure Workflow…") { library.configuring = workflow }
                     .help("Fill in the settings this workflow asks for")

@@ -182,6 +182,33 @@ extension SelfTest {
                   lm.results.map(\.title).joined(separator: ", "))
         }
 
+        // S-046: Workflow Info… saves, and Export leaves secret values out.
+        if let current = library.workflow(example.id) {
+            var info = WorkflowInfo(current)
+            info.version = "2.0"
+            info.variables = [WorkflowVariable(name: "api_key", value: "secret", dontExport: true),
+                              WorkflowVariable(name: "user", value: "ada")]
+            library.saveInfo(info, for: current)
+            let saved = library.workflow(example.id)
+            check("Workflow Info… saves the version and variables", saved?.version == "2.0"
+                  && saved?.variables["api_key"] == "secret" && saved?.variables["user"] == "ada")
+            let out = FileManager.default.temporaryDirectory.appending(path: "Reach-selftest-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: out) }
+            try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+            let file = out.appending(path: "Hello World.alfredworkflow")
+            if let saved { library.export(saved, to: file) }
+            let unzip = Process()
+            unzip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+            unzip.arguments = ["-x", "-k", file.path, out.appending(path: "x").path]
+            try? unzip.run()
+            unzip.waitUntilExit()
+            let exported = Workflow(folder: out.appending(path: "x"))
+            check("Export Workflow… blanks Don't Export values and keeps the rest",
+                  exported?.variables["api_key"] == "" && exported?.variables["user"] == "ada"
+                  && !FileManager.default.fileExists(atPath: out.appending(path: "x/prefs.plist").path),
+                  "\(exported?.variables ?? [:]) \(library.failure ?? "")")
+        }
+
         library.remove(library.workflow(example.id) ?? example)
         check("Remove moves the folder to the Trash", trash.value.map(\.lastPathComponent) == [example.id]
               && library.workflow(example.id) == nil && library.selection == nil)

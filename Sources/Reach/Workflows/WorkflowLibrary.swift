@@ -22,6 +22,10 @@ final class WorkflowLibrary {
     var removing: Workflow?
     /// The workflow in the Configure Workflow… sheet (S-043).
     var configuring: Workflow?
+    /// The workflow in the Workflow Info… sheet (S-046).
+    var editingInfo: Workflow?
+    /// The tab Workflow Info… opens on.
+    var infoTab = WorkflowInfoSheet.Tab.about
     /// The debugger's log of script runs (S-045), and whether its panel shows.
     var log = WorkflowLog()
     var logLevel = WorkflowLogLevel.all
@@ -119,6 +123,36 @@ final class WorkflowLibrary {
             failure = "Unable to save the configuration of “\(workflow.name)”: \(error.localizedDescription)"
         }
         reload()
+    }
+
+    /// Saves Workflow Info…: About, README and variables go into info.plist.
+    func saveInfo(_ info: WorkflowInfo, for workflow: Workflow) {
+        do {
+            try WorkflowFolder.update(workflow.folder) { info.apply(to: &$0) }
+        } catch {
+            failure = "Unable to save “\(workflow.name)”: \(error.localizedDescription)"
+        }
+        reload()
+    }
+
+    /// Writes an .alfredworkflow file to share: Don't Export values blanked,
+    /// Configure Workflow… values left out.
+    func export(_ workflow: Workflow, to file: URL) {
+        let staging = FileManager.default.temporaryDirectory.appending(path: "Reach-export-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: staging) }
+        do {
+            try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+            let staged = try WorkflowExport.stage(workflow.folder, in: staging)
+            try? FileManager.default.removeItem(at: file)
+            let zip = Process()
+            zip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+            zip.arguments = ["-c", "-k", "--norsrc", staged.path, file.path]
+            try zip.run()
+            zip.waitUntilExit()
+            if zip.terminationStatus != 0 { failure = "Unable to export “\(workflow.name)”." }
+        } catch {
+            failure = "Unable to export “\(workflow.name)”: \(error.localizedDescription)"
+        }
     }
 
     /// Moves the workflow's folder to the Trash. The self-test swaps `trash`.

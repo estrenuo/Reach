@@ -32,6 +32,9 @@ struct WorkflowsView: View {
         .sheet(item: $library.configuring) { workflow in
             WorkflowConfigureSheet(workflow: workflow)
         }
+        .sheet(item: $library.editingInfo) { workflow in
+            WorkflowInfoSheet(workflow: workflow)
+        }
         .confirmationDialog(removeTitle, isPresented: Binding(get: { library.removing != nil }, set: { if !$0 { library.removing = nil } })) {
             Button("Move to Trash", role: .destructive) {
                 if let workflow = library.removing { library.remove(workflow) }
@@ -59,6 +62,19 @@ struct WorkflowsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         WorkflowLibrary.shared.install(from: url)
     }
+
+    /// The save panel for Export Workflow…: an .alfredworkflow file to share.
+    static func chooseAndExport() {
+        guard let workflow = WorkflowLibrary.shared.selected else { return }
+        let panel = NSSavePanel()
+        panel.title = "Export Workflow"
+        panel.prompt = "Export"
+        panel.message = "Variables marked Don't Export go without their value."
+        panel.nameFieldStringValue = workflow.name + ".alfredworkflow"
+        panel.allowedContentTypes = [UTType(filenameExtension: "alfredworkflow") ?? .zip]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        WorkflowLibrary.shared.export(workflow, to: url)
+    }
 }
 
 /// The workflows by name: icon, name and author. A switched-off one is dimmed.
@@ -75,6 +91,7 @@ private struct WorkflowList: View {
                         if !workflow.settings.isEmpty {
                             Button("Configure…") { library.configuring = workflow }
                         }
+                        Button("Info…") { library.editingInfo = workflow }
                         Button(workflow.disabled ? "Turn On" : "Turn Off") { library.setEnabled(workflow.disabled, workflow) }
                         Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([workflow.folder]) }
                         Divider()
@@ -233,6 +250,9 @@ struct WorkflowCommands: Commands {
                 .disabled(!inFront)
             Button("Add Example Workflow", action: library.addExample)
                 .disabled(!inFront)
+            Button("Export Workflow…", action: WorkflowsView.chooseAndExport)
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                .disabled(!inFront || library.selected == nil)
             Divider()
             Button("Filter Workflows") { library.filterRequests += 1 }
                 .keyboardShortcut("f", modifiers: [.command, .shift])
@@ -240,6 +260,9 @@ struct WorkflowCommands: Commands {
             Button("Configure Workflow…") { library.configuring = library.selected }
                 .keyboardShortcut("e")
                 .disabled(!inFront || library.selected?.settings.isEmpty != false)
+            Button("Workflow Info…") { library.editingInfo = library.selected }
+                .keyboardShortcut("i")
+                .disabled(!inFront || library.selected == nil)
             Button(library.selected?.disabled == true ? "Turn On Workflow" : "Turn Off Workflow") {
                 if let workflow = library.selected { library.setEnabled(workflow.disabled, workflow) }
             }

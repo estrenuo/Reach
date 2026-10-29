@@ -303,6 +303,26 @@ enum Snapshot {
                 try? await Task.sleep(for: .seconds(0.5))
             }
         }
+        // Workflow Info… (S-046): each tab, and Variables before and after one is added.
+        let tabs: [(String, WorkflowInfoSheet.Tab)] = [("about", .about), ("readme", .readme), ("variables-empty", .variables)]
+        for (name, tab) in tabs + [("variables", .variables)] {
+            if name == "variables", let example = library.selected {
+                var info = WorkflowInfo(example)
+                info.variables = [WorkflowVariable(name: "api_key", value: "sk-12345", dontExport: true),
+                                  WorkflowVariable(name: "user", value: "ada")]
+                library.saveInfo(info, for: example)
+            }
+            library.infoTab = tab
+            for mode in ["light", "dark"] {
+                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                library.editingInfo = library.selected
+                try? await Task.sleep(for: .seconds(0.8))
+                capture(to: "\(dir)/workflow-info-\(name)-\(mode).png", window: window()?.attachedSheet)
+                library.editingInfo = nil
+                try? await Task.sleep(for: .seconds(0.5))
+            }
+        }
+        library.infoTab = .about
         // The debugger (S-045) with a run that printed and one that failed.
         if let example = library.selected {
             library.log.clear()
