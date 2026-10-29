@@ -65,13 +65,14 @@ Rule: when a change to timing code makes a flaky test fail every time, test the 
 
 Rule: check a new search against your own home folder, not only the test files; the noise lives in caches.
 
-## Reentrant NSTableView warning in the snapshot run (end of M2, open)
+## Reentrant NSTableView warning in the snapshot run (end of M2)
 
-- Symptom: full snapshot runs log "Application performed a reentrant operation in its NSTableView delegate". Short runs of the main window and Settings do not.
-- Cause: not found. The warning showed up first in the log, but `NSLog` goes straight to stderr while snapshot mode's `print` is buffered, so its place in the log says nothing about when it happened.
-- Tried: putting seed data in from `applicationWillFinishLaunching` instead of the window's `.task`. The warning came back in the next full run, so the change was reverted.
+- Symptom: full snapshot runs logged "Application performed a reentrant operation in its NSTableView delegate". Short runs of one page did not.
+- Cause: switching the sidebar from Starred (3 snippets) to All (8): the one snippet `List` grew its table while the sidebar's selection and the title changed in the same update. Clicking the sidebar does the same.
+- Found by: line-buffering snapshot mode's stdout (the warning goes to stderr unbuffered, so it had landed at the top of the log), then PROBE lines around each step: the warning sat between "sidebar all" and "sidebar done", 4 runs of 4. A first guess, seed data from the window's `.task`, was tried, did not help, and was reverted.
+- Fix: `.id(model.sidebar)` on the snippet list, so each page gets a list of its own instead of a table that reshapes. 0 warnings in 4 runs.
 
-Rule: a log line's position means nothing when stdout is buffered and stderr is not; set `setvbuf(stdout, nil, _IOLBF, 0)` before reading order into a log.
+Rule: before reading order into a log, make stdout line-buffered; and give a list that shows a different set per sidebar page an `.id` for the page.
 
 ## Settings and window snapshots fell back after the settings store (end of M2)
 

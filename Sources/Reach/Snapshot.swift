@@ -14,6 +14,9 @@ enum Snapshot {
     static func runIfRequested(model: AppModel, openSettings: OpenSettingsAction) {
         let env = ProcessInfo.processInfo.environment
         guard let dir = env["APP_SNAPSHOT"], !dir.isEmpty else { return }
+        // Print each line at once, so AppKit's warnings on stderr land between
+        // the captures they belong to.
+        setvbuf(stdout, nil, _IOLBF, 0)
         // Snapshots never run against the real database.
         guard Store.isOverridden else {
             print("SNAPSHOT refused: set APP_STORE to a file in /tmp")

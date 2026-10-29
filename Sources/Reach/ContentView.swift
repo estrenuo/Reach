@@ -10,6 +10,9 @@ struct ContentView: View {
             sidebar
         } content: {
             SnippetList(page: model.sidebar ?? .all)
+                // A list of its own per page: updating one table from 3 to 8 rows
+                // while the sidebar's selection changes is a reentrant table update.
+                .id(model.sidebar)
                 .navigationSplitViewColumnWidth(min: 260, ideal: 320)
         } detail: {
             SnippetDetail()
