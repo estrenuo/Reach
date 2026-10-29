@@ -625,7 +625,14 @@ Acceptance:
 - [unit] Clear Learning empties the ranking store.
 - [self] ⌃↑/⌃↓ walk the typed-query history; the last query returns within 5 minutes when enabled.
 - [unit] Modifier+↩ runs the mapped fallback action.
-Status: todo
+UX:
+- Flow: Settings > Advanced → Clear Learning… → confirmation "Clear what Reach learned?" → Clear Learning. In the launcher: ⌃↑ / ⌃↓ put earlier queries in the field; ⌃↩ / ⌥↩ / ⌘↩ run the web search chosen per key with the typed text
+- Surface: a Settings tab (one grouped Form); a confirmation dialog for the clear, since it cannot be undone
+- States: Clear Learning… is disabled with "Nothing learned yet."; an unmapped key keeps what Return did before; Restore is off unless the history is on
+- Words: "Learning", "Query History", "Remember typed queries", "Restore the last query", "Alternative Actions", "Nothing"
+- Access: each key picker is labeled with its key symbol; the toggles have a description line
+- Note: the Learning store lives in the app, so its clear is checked in the self-test, not a unit test
+Status: done
 
 ### S-039 Sync settings through a folder
 As the user, I point Settings to an iCloud Drive folder so another Mac uses the same setup.

@@ -41,6 +41,7 @@ struct SettingsView: View {
             case .actions: ActionsSettings()
             case .previews: PreviewsSettings()
             case .appearance: AppearanceSettings()
+            case .advanced: AdvancedSettings()
             }
         }
         .formStyle(.grouped)
@@ -154,7 +155,7 @@ private struct SettingsResults: View {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, appearance
+    case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, appearance, advanced
 
     var id: String { rawValue }
 
@@ -167,7 +168,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 
     /// Pages at the top of the sidebar.
-    static let pages: [SettingsTab] = [.general, .appearance]
+    static let pages: [SettingsTab] = [.general, .appearance, .advanced]
     /// Pages under Features, in the order the launcher meets them.
     static let features: [SettingsTab] = allCases.filter { !pages.contains($0) }
 
@@ -185,6 +186,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "Actions"
         case .previews: "Previews"
         case .appearance: "Appearance"
+        case .advanced: "Advanced"
         }
     }
 
@@ -203,6 +205,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "The action panel"
         case .previews: "Quick Look in the launcher"
         case .appearance: "Themes and launcher options"
+        case .advanced: "Learning, query history, ⌥↩"
         }
     }
 
@@ -220,6 +223,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "arrow.right.square"
         case .previews: "eye"
         case .appearance: "paintpalette"
+        case .advanced: "gearshape.2"
         }
     }
 }

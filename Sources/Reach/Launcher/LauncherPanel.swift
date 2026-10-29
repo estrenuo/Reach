@@ -206,6 +206,12 @@ final class LauncherController {
             }
         }
         if flags == .command, [36, 76].contains(event.keyCode), model.pasteSelected() { return true }
+        // ⌃↩, ⌥↩, ⌘↩: the search chosen in Settings > Advanced (S-038).
+        if [36, 76].contains(event.keyCode),
+           let modifier = ReturnModifier.held(control: flags == .control, option: flags == .option, command: flags == .command),
+           model.runAlternative(modifier) { return true }
+        // ⌃↑ and ⌃↓ walk the queries typed before.
+        if flags == .control, [125, 126].contains(event.keyCode), model.walkHistory(older: event.keyCode == 126) { return true }
         // ⌘L shows the selected result in Large Type, ⌘⌥L the typed text (S-023).
         if event.keyCode == 37, flags == .command || flags == [.command, .option] {
             _ = model.showLargeType(typed: flags.contains(.option))

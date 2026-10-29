@@ -9,8 +9,17 @@ final class LauncherModel {
     static let openError = "Unable to open “%@”. It may have been moved or deleted."
 
     var query = "" {
-        didSet { if query != oldValue { refresh() } }
+        didSet {
+            guard query != oldValue else { return }
+            if !walkingHistory { queryHistory.resetWalk() }
+            refresh()
+        }
     }
+    /// The queries typed before, for ⌃↑/⌃↓ and restoring the last one (S-038).
+    /// Kept in memory only: a query can hold anything.
+    @ObservationIgnored var queryHistory = QueryHistory()
+    @ObservationIgnored private var walkingHistory = false
+    @ObservationIgnored var advanced: AdvancedOptions = .shared
     private(set) var results: [LaunchResult] = []
     private(set) var selection = 0 {
         didSet { if selection != oldValue { onSelectionChange() } }
@@ -118,11 +127,13 @@ final class LauncherModel {
         if buffer.isStale(at: now()) { buffer.clear() }
         query = ""
         setResults([])
+        if advanced.restoresLastQuery, let last = queryHistory.restorable(at: now()) { query = last }
         showCount += 1
         apps.refreshIfStale()
     }
 
     func didHide() {
+        rememberQuery()
         actions = nil
         viewer = nil
         confirming = nil
@@ -182,6 +193,41 @@ final class LauncherModel {
         let first = new.firstIndex(where: \.isOpenable) ?? 0
         if selection == first { onSelectionChange() } else { selection = first }
         onResultsChange()
+    }
+
+    // MARK: Query history and alternative actions (S-038)
+
+    /// Saves the query in the history. Shell commands stay out: they can hold passwords.
+    private func rememberQuery() {
+        guard advanced.remembersQueries, !query.hasPrefix(shell.settings.prefix) else { return }
+        queryHistory.add(query, at: now())
+    }
+
+    /// ⌃↑ (`older`) or ⌃↓: puts a query from the history in the field. False when there is none.
+    func walkHistory(older: Bool) -> Bool {
+        guard advanced.remembersQueries else { return false }
+        if older, queryHistory.position == nil { rememberQuery() }
+        guard let text = older ? queryHistory.older() : queryHistory.newer() else { return false }
+        walkingHistory = true
+        rewriteQuery(text)
+        walkingHistory = false
+        return true
+    }
+
+    /// ⌃↩, ⌥↩ or ⌘↩: runs the web search chosen for that modifier with the
+    /// typed text. False when none is chosen, so the key does what it did before.
+    func runAlternative(_ modifier: ReturnModifier) -> Bool {
+        let text = query.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty,
+              let search = modifier.search(in: advanced.alternatives, from: webSearches.settings.searches),
+              let url = WebSearchURL.make(template: search.url, query: text) else { return false }
+        guard opener(url) else {
+            if let selected = selectedResult { errors[selected.id] = "Unable to open the search." }
+            return true
+        }
+        rememberQuery()
+        onHide()
+        return true
     }
 
     /// Moves the selection without wrapping around.

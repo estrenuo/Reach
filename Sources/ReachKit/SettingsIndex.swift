@@ -109,4 +109,9 @@ public enum SettingsIndex {
                                                   "Hide result shortcuts", "Show on", "Show menu bar icon",
                                                   "Results", "Position", "Menu Bar"],
                words: "screen rows icon")
+        + page("advanced", "Learning", ["Learning", "Clear Learning…", "Clear Learning"], words: "knowledge ranking forget reset")
+        + page("advanced", "Query History", ["Query History", "Remember typed queries", "Restore the last query"],
+               words: "previous last typed ctrl up down")
+        + page("advanced", "Alternative Actions", ["Alternative Actions", "Nothing"],
+               words: "modifier return control option command fallback web search")
 }
