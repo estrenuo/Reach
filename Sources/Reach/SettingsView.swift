@@ -32,6 +32,7 @@ struct SettingsView: View {
             case .dictionary: DictionarySettingsView()
             case .contacts: ContactsSettingsView()
             case .clipboard: ClipboardSettingsView()
+            case .snippets: SnippetSettingsView()
             case .actions: ActionsSettings()
             case .previews: PreviewsSettings()
             case .appearance: AppearanceSettings()
@@ -39,14 +40,14 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .fitsContent()
-        // Eleven tabs: wide enough that the tab bar does not overflow.
-        .frame(width: 720)
+        // Twelve tabs: wide enough that the tab bar does not overflow.
+        .frame(width: 820)
     }
 }
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, search, web, system, terminal, dictionary, contacts, clipboard, actions, previews, appearance
+    case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, appearance
 
     var id: String { rawValue }
 
@@ -60,6 +61,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .dictionary: "Dictionary"
         case .contacts: "Contacts"
         case .clipboard: "Clipboard"
+        case .snippets: "Snippets"
         case .actions: "Actions"
         case .previews: "Previews"
         case .appearance: "Appearance"
@@ -76,6 +78,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .dictionary: "character.book.closed"
         case .contacts: "person.crop.circle"
         case .clipboard: "doc.on.clipboard"
+        case .snippets: "text.quote"
         case .actions: "arrow.right.square"
         case .previews: "eye"
         case .appearance: "paintpalette"

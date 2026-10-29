@@ -513,7 +513,14 @@ Depends: S-029
 Acceptance:
 - [self] Expansion works in TextEdit and Safari; it is off by default and needs Accessibility permission.
 - [manual] No expansion in password fields.
-Status: todo
+UX:
+- Flow: Settings > Snippets > Expand keywords while typing (off at first) -> allow Accessibility if asked -> type a keyword at the start of a word in any app -> as its last letter lands, the keyword is deleted and the snippet pasted -> the clipboard from before comes back
+- Surface: a Settings tab of its own, "Snippets" (rare setting, with room for more snippet options)
+- States: without Accessibility the Access row says where to allow it, with "Open System Settings…"; in the editor, a keyword another keyword starts with warns "“zad” expands first while typing, so this keyword never does."
+- Words: "Expansion", "Expand keywords while typing", footer "Never in password fields or in Reach. Pick keywords you do not type by accident, like “;sig”."
+- Access: the toggle reads its title and description; the warnings carry an icon, not only orange
+- Scope: case counts; a click, an arrow key, a shortcut or another app starts over; secure input (Terminal, password prompts) and AXSecureTextField fields never expand; no Ignore Apps list yet
+Status: done
 
 ---
 

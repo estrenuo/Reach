@@ -13,6 +13,12 @@ public enum SnippetName {
     public static func keyword(_ text: String) -> String {
         text.filter { !$0.isWhitespace }
     }
+
+    /// Another keyword that `keyword` starts with (S-031): while typing, that
+    /// one expands first, so `keyword` never does. Nil when none.
+    public static func shadow(of keyword: String, in others: some Sequence<String>) -> String? {
+        others.filter { !$0.isEmpty && $0.count < keyword.count && keyword.hasPrefix($0) }.max { $0.count < $1.count }
+    }
 }
 
 /// Finding a snippet by what is typed (S-029, used by `snip` in S-030).

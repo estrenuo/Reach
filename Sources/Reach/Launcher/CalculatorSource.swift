@@ -29,6 +29,26 @@ final class CalculatorSource: ResultSource {
 /// Posting keys needs the Accessibility permission the selection hotkey uses;
 /// without it the answer is still on the clipboard.
 enum Paster {
+    /// Marks the keys Reach presses itself, so the snippet expander skips them (S-031).
+    static let marker: Int64 = 0x5245_4143
+
+    /// Presses Delete `count` times in the front app, for a snippet keyword.
+    static func pressDelete(_ count: Int) {
+        press(key: 51, flags: [], times: count)
+    }
+
+    private static func press(key: CGKeyCode, flags: CGEventFlags, times: Int = 1) {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        for _ in 0..<times {
+            for down in [true, false] {
+                let event = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: down)
+                event?.flags = flags
+                event?.setIntegerValueField(.eventSourceUserData, value: marker)
+                event?.post(tap: .cghidEventTap)
+            }
+        }
+    }
+
     static func copy(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
@@ -38,12 +58,7 @@ enum Paster {
     static func pressPaste() {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
-            let source = CGEventSource(stateID: .combinedSessionState)
-            for down in [true, false] {
-                let event = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: down)  // V
-                event?.flags = .maskCommand
-                event?.post(tap: .cghidEventTap)
-            }
+            press(key: 9, flags: .maskCommand)  // V
         }
     }
 }

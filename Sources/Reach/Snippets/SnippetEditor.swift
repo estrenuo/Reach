@@ -16,9 +16,10 @@ struct SnippetEditor: View {
                 TextField("Keyword", text: Binding(get: { snippet.keyword }, set: { snippet.keyword = SnippetName.keyword($0) }),
                           prompt: Text("sig"))
                 if let other = clash(snippet) {
-                    Text("“\(other.name)” has this keyword too.")
-                        .font(.callout)
-                        .foregroundStyle(.orange)
+                    warning("“\(other.name)” has this keyword too.")
+                } else if SnippetSettings.shared.expandsWhileTyping,
+                          let shorter = SnippetName.shadow(of: snippet.keyword, in: snippets.map(\.keyword)) {
+                    warning("“\(shorter)” expands first while typing, so this keyword never does.")
                 }
                 Picker("Collection", selection: $snippet.collection) {
                     ForEach(collections) { Text($0.name).tag(Optional($0)) }
@@ -36,6 +37,12 @@ struct SnippetEditor: View {
                                    description: Text("Select a snippet to edit it."))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func warning(_ text: String) -> some View {
+        Label(text, systemImage: "exclamationmark.triangle")
+            .font(.callout)
+            .foregroundStyle(.orange)
     }
 
     /// Another snippet with the same keyword; typing it would find both.

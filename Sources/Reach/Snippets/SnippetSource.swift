@@ -68,7 +68,8 @@ extension LauncherModel {
     /// The snippet is marked transient, so no clipboard history keeps it.
     /// A private copy, like a password, is neither filled in nor put back: the
     /// clipboard is left empty, so the password manager's own clearing still holds.
-    func pasteSnippet(_ text: String) {
+    /// `hiding` false: the snippet expander, with no launcher on screen (S-031).
+    func pasteSnippet(_ text: String, hiding: Bool = true) {
         let board = pasteboard
         let isPrivate = SnippetClipboard.isPrivate(board)
         let filled = SnippetText.expand(text, date: .now, clipboard: isPrivate ? nil : board.string(forType: .string))
@@ -79,7 +80,7 @@ extension LauncherModel {
         item.setData(Data(), forType: SnippetClipboard.transient)
         board.writeObjects([item])
         let ours = board.changeCount
-        onHide()
+        if hiding { onHide() }
         paster()
         Task { [weak self, restoreDelay] in
             try? await Task.sleep(for: restoreDelay)

@@ -74,3 +74,4 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Snippet keyword | A short word, without spaces, that finds or expands a snippet | abbreviation, shortcut, trigger (Keyword alone is a launcher keyword) |
 | Placeholder | `{date}`, `{time}` or `{clipboard}` in a snippet, filled in when it is pasted | variable, token, macro |
 | Paste a Snippet | The `snip` keyword: `snip <name>` lists snippets, Return pastes one | insert, expand (Expand is for S-031) |
+| Expand | Replace a snippet keyword typed in any app with its snippet, as its last letter is typed | auto-expand, autocomplete, text replacement |

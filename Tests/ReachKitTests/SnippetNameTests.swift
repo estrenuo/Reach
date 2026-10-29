@@ -50,3 +50,31 @@ func cleans(_ input: String, expected: String) {
     #expect(SnippetText.preview("") == "")
     #expect(SnippetText.preview(String(repeating: "a", count: 200)).count == 121)
 }
+
+@Test func keywordsExpandAtTheStartOfAWord() {
+    var buffer = TypedBuffer()
+    buffer.type("Groet,\n;sig")
+    #expect(buffer.match([";sig", "sig"]) == ";sig")
+    buffer.reset()
+    buffer.type("design")
+    #expect(buffer.match(["sig", "ign"]) == nil)
+    buffer.reset()
+    buffer.type("sig")
+    #expect(buffer.match(["sig"]) == "sig")
+    #expect(buffer.match(["Sig"]) == nil)
+    buffer.type("x")
+    buffer.backspace()
+    #expect(buffer.match(["sig", ""]) == "sig")
+}
+
+@Test func theBufferKeepsOnlyTheEnd() {
+    var buffer = TypedBuffer()
+    buffer.type(String(repeating: "a", count: 100) + " addr")
+    #expect(buffer.text.count == TypedBuffer.limit)
+    #expect(buffer.match(["addr"]) == "addr")
+}
+
+@Test func aShorterKeywordShadowsALongerOne() {
+    #expect(SnippetName.shadow(of: "addr2", in: ["addr", "ad", "addr2", ""]) == "addr")
+    #expect(SnippetName.shadow(of: "sig", in: ["sig", "signature"]) == nil)
+}

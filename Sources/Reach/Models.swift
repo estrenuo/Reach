@@ -108,6 +108,8 @@ final class AppModel {
     private(set) var clipboard: ClipboardHistory?
     /// ⌘C twice appends to the last clip (S-028); nil in test runs, like the history.
     private(set) var doubleCopy: DoubleCopyWatcher?
+    /// Expands snippet keywords while typing (S-031); nil in test runs, which never watch real keys.
+    private(set) var snippetExpander: SnippetExpander?
     var page: SnippetPage? = .all
     /// The selected snippet in the window.
     var selection: PersistentIdentifier?
@@ -154,6 +156,9 @@ final class AppModel {
             let watcher = DoubleCopyWatcher(history: history)
             watcher.follow()
             doubleCopy = watcher
+            let expander = SnippetExpander(launcher: launcherModel)
+            expander.follow()
+            snippetExpander = expander
         }
     }
 
