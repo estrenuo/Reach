@@ -580,7 +580,11 @@ Screens: 39-appearance-options.png, 48-menubar-status-menu.png
 Depends: S-007
 Acceptance:
 - [unit] The hidden state persists; the keyword always works.
-Status: todo
+UX:
+- Flow: Settings > Appearance -> Launcher Options… -> "Show menu bar icon" off -> the icon goes at once; Settings stays reachable by typing `settings` (or `pref`, `reach`) in the bar, ⌘, in the bar, or opening Reach again from Finder or Spotlight
+- Surface: a toggle in its own "Menu Bar" section of the Launcher Options sheet; a pinned "Reach Settings" row in the launcher
+- Words: "Show menu bar icon" ("Without it, type “settings” in the launcher, press ⌘, there, or open Reach again to reach Settings."); row "Reach Settings", "Open Settings (⌘,)"
+Status: done
 
 ### S-036 Search Settings
 As the user, I press ⌘F in Settings, type a word and jump to the page with that setting.

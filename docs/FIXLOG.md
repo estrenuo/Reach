@@ -130,3 +130,11 @@ Symptom: the M4 architecture review found that the selection hotkey's ⌘C fallb
 Cause: `SelectionReader.copiedText` (S-018) had its own copy of "save the clipboard, use it, put it back", written before the clipboard history; the S-030 fixes went only into the snippet copy.
 Fix: both use `ClipboardLoan`, which skips private copies, pauses the history for the loan and tells it the restore is not a new copy. `Paster.pressCopy` marks its ⌘C, and `DoubleCopyWatcher` skips marked keys. New self-test checks run the ⌘C fallback on a private pasteboard.
 Rule: one module borrows the clipboard; a second copy of save and restore code is a bug waiting for the next fix.
+
+## Hiding the menu bar icon hung the app at launch (S-035)
+
+Symptom: the self-test ran for over 20 minutes at 99% CPU without printing a line; a sample showed the main thread looping through `AppGraph.graphDidChange` and `makeMainMenu`.
+Cause: `MenuBarExtra(isInserted:)` was bound to `@AppStorage`. MenuBarExtra writes the binding back while the scene updates, and each write started another scene update. A guarded binding stopped the loop, but then the icon never hid: the App's Scene body did not run again when the option changed, neither through @Observable nor through @AppStorage.
+Fix: the icon is an `NSStatusItem` in `MenuBarIcon.swift` whose `isVisible` follows `LauncherOptionsStore.showsMenuBarIcon` with `withObservationTracking`. The store is the one owner of the key. The self-test checks `isVisible`, not status bar windows: one icon has several, and only one is on a screen.
+Rule: anything that must change while the app runs lives outside the App's Scene body. `tools/selftest.sh` now kills a run after 300 s, so a hang ends as a failure instead of a stuck session.
+

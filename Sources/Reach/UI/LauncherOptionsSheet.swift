@@ -45,6 +45,12 @@ struct LauncherOptionsSheet: View {
                 Text("⌘1 to ⌘9 and ↩ on the right of each row. The keys still work.")
             }
         }
+        Section("Menu Bar") {
+            Toggle(isOn: $options.showsMenuBarIcon) {
+                Text("Show menu bar icon")
+                Text("Without it, type “settings” in the launcher, press ⌘, there, or open Reach again to reach Settings.")
+            }
+        }
     }
 
     @ViewBuilder

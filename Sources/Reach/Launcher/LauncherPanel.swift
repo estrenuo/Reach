@@ -83,6 +83,20 @@ final class LauncherController {
         }
     }
 
+    /// Opens Settings from outside the bar, like opening Reach again from Finder (S-035).
+    /// Only the launcher's view can open Settings, so it shows the bar once if it never appeared.
+    func openSettings() {
+        guard model.canOpenSettings else {
+            show()
+            DispatchQueue.main.async { [weak self] in
+                self?.hide()
+                self?.model.openSettings()
+            }
+            return
+        }
+        model.openSettings()
+    }
+
     func toggle() {
         isVisible ? hide() : show()
     }

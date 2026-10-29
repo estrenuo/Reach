@@ -103,6 +103,8 @@ final class AppModel {
     let container: ModelContainer
     let launcherModel = LauncherModel()
     private(set) var launcher: LauncherController?
+    /// The menu bar icon; Launcher Options can hide it (S-035).
+    private(set) var menuBarIcon: MenuBarIcon?
     /// Keeps what is copied, per Settings > Clipboard (S-025). Test runs never
     /// watch the real clipboard; the self-test makes its own on a private pasteboard.
     private(set) var clipboard: ClipboardHistory?
@@ -130,6 +132,7 @@ final class AppModel {
     func startLauncher() {
         let controller = LauncherController(model: launcherModel)
         launcher = controller
+        menuBarIcon = MenuBarIcon()
         let learning = Learning(container: container)
         launcherModel.learning = learning
         launcherModel.onOpened = { query, result in learning.record(query: query, resultID: result.id) }

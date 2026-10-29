@@ -67,6 +67,7 @@ struct LauncherView: View {
                 NSApp.activate()
                 openSettings()
             }
+            model.canOpenSettings = true
             model.openSnippets = {
                 NSApp.activate()
                 openWindow(id: "main")

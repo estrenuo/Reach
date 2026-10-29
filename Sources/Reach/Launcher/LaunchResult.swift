@@ -44,9 +44,11 @@ struct LaunchResult: Identifiable, Equatable {
     var opensClipboard = false
     /// A snippet's text: Return fills in its placeholders and pastes it (S-030).
     var pastes: String?
+    /// The Reach Settings row: Return opens Settings (S-035).
+    var opensSettings = false
 
     var isOpenable: Bool {
-        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings
     }
 }
 

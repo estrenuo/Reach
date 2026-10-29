@@ -17,7 +17,7 @@ struct ReachApp: App {
     @State private var model = AppModel.shared
 
     var body: some Scene {
-        // Reach is an agent app: the launcher and the menu bar icon are the way in.
+        // Reach is an agent app: the launcher and the menu bar icon (MenuBarIcon) are the way in.
         // This window (snippets, M4) only opens for snapshots and the self-test.
         Window("Reach", id: "main") {
             ContentView()
@@ -45,31 +45,6 @@ struct ReachApp: App {
                 .themed()
         }
         .windowResizability(.contentSize)
-
-        MenuBarExtra("Reach", systemImage: "magnifyingglass") {
-            StatusMenu()
-        }
-    }
-}
-
-/// The menu bar icon's menu.
-struct StatusMenu: View {
-    @Environment(\.openSettings) private var openSettings
-    private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-
-    var body: some View {
-        Button("Show Launcher") { AppModel.shared.launcher?.show() }
-        Button("Version \(version)") {}
-            .disabled(true)
-        Divider()
-        Button("Settings…") {
-            NSApp.activate()
-            openSettings()
-        }
-        .keyboardShortcut(",")
-        Divider()
-        Button("Quit") { NSApp.terminate(nil) }
-            .keyboardShortcut("q")
     }
 }
 
@@ -81,6 +56,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate()
         }
         AppModel.shared.startLauncher()
+    }
+
+    /// Opening Reach again from Finder or Spotlight opens Settings, so there is
+    /// a way in when the menu bar icon is hidden (S-035).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !AppModel.isTestRun { AppModel.shared.launcher?.openSettings() }
+        return false
     }
 
     /// Closing a window never quits: the launcher keeps running.

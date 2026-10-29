@@ -12,6 +12,7 @@ final class LauncherOptionsStore {
     var subtext: LauncherOptions.Subtext { didSet { Store.settings.set(subtext.rawValue, forKey: "launcher.subtext") } }
     var hidesShortcuts: Bool { didSet { Store.settings.set(hidesShortcuts, forKey: "launcher.hidesShortcuts") } }
     var screen: LauncherOptions.Screen { didSet { Store.settings.set(screen.rawValue, forKey: "launcher.screen") } }
+    var showsMenuBarIcon: Bool { didSet { Store.settings.set(showsMenuBarIcon, forKey: "launcher.showsMenuBarIcon") } }
     /// The Launcher Options sheet is open. Not saved.
     var isEditing = false
 
@@ -22,6 +23,7 @@ final class LauncherOptionsStore {
         subtext = settings.string(forKey: "launcher.subtext").flatMap(LauncherOptions.Subtext.init) ?? .selected
         hidesShortcuts = settings.bool(forKey: "launcher.hidesShortcuts")
         screen = settings.string(forKey: "launcher.screen").flatMap(LauncherOptions.Screen.init) ?? .mouse
+        showsMenuBarIcon = settings.object(forKey: "launcher.showsMenuBarIcon") as? Bool ?? true
     }
 
     func reset() {
@@ -29,6 +31,7 @@ final class LauncherOptionsStore {
         subtext = .selected
         hidesShortcuts = false
         screen = .mouse
+        showsMenuBarIcon = true
         isEditing = false
     }
 

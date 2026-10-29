@@ -49,6 +49,7 @@ final class LauncherModel {
     let dictionary = DictionarySource()
     let contacts = ContactsSource()
     let clipboardRow = ClipboardSource()
+    let settingsRow = SettingsSource()
     let snippets = SnippetSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
@@ -90,6 +91,8 @@ final class LauncherModel {
     @ObservationIgnored var onURLOpened: @MainActor (URL) -> Void = { _ in }
     /// Set by the launcher view, which can reach SwiftUI's Settings action.
     @ObservationIgnored var openSettings: @MainActor () -> Void = {}
+    /// The launcher's view has appeared and set `openSettings`.
+    @ObservationIgnored var canOpenSettings = false
     /// Opens the snippets window; set by the launcher view, which can reach openWindow.
     @ObservationIgnored var openSnippets: @MainActor () -> Void = {}
     /// The history the clipboard viewer lists. Nil in test runs, which bring their own.
@@ -105,7 +108,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, history, webSearches, files, paths]
+        sources = [calculator, shell, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, webSearches, files, paths]
     }
 
     func didShow() {
@@ -238,6 +241,12 @@ final class LauncherModel {
         if let text = result.pastes {
             onOpened(query, result)
             pasteSnippet(text)
+            return
+        }
+        if result.opensSettings {
+            onOpened(query, result)
+            onHide()
+            openSettings()
             return
         }
         if result.opensClipboard {
