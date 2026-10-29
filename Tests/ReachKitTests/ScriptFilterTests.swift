@@ -113,3 +113,7 @@ import Testing
     #expect(output.filtered(by: "let").map(\.title) == ["Mail"])
     #expect(output.filtered(by: "").count == 3)
 }
+
+@Test func valuesAreFilledInOnce() {
+    #expect(WorkflowText.fill("{query} {var:a} {var:none}", query: "{var:a}", variables: ["a": "{query}"]) == "{var:a} {query} {var:none}")
+}

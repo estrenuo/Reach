@@ -138,3 +138,10 @@ Cause: `MenuBarExtra(isInserted:)` was bound to `@AppStorage`. MenuBarExtra writ
 Fix: the icon is an `NSStatusItem` in `MenuBarIcon.swift` whose `isVisible` follows `LauncherOptionsStore.showsMenuBarIcon` with `withObservationTracking`. The store is the one owner of the key. The self-test checks `isVisible`, not status bar windows: one icon has several, and only one is on a screen.
 Rule: anything that must change while the app runs lives outside the App's Scene body. `tools/selftest.sh` now kills a run after 300 s, so a hang ends as a failure instead of a stuck session.
 
+
+## Workflow text filled in twice (S-041)
+
+Symptom: a `{query}` holding `{var:token}` came out with the token's value in it, so text from a script row could pull in a workflow's secret variables.
+Cause: `WorkflowText.fill` replaced `{query}` first and then each `{var:…}` over the whole result.
+Fix: one pass over the template; values are put in as they are and never scanned again.
+Rule: fill templates in a single pass; never run a replacement over text that already holds values.

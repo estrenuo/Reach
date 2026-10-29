@@ -74,12 +74,27 @@ extension Workflow {
 
 /// Fills `{query}` and `{var:name}` in an object's text.
 public enum WorkflowText {
+    /// Fills `{query}` and `{var:name}` in one pass over `text`, so a value
+    /// that holds `{var:…}` itself is never expanded again.
     public static func fill(_ text: String, query: String, variables: [String: String] = [:], encodeQuery: Bool = false) -> String {
         let value = encodeQuery ? (query.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? query) : query
-        var result = text.replacingOccurrences(of: "{query}", with: value)
-        for (name, variable) in variables {
-            result = result.replacingOccurrences(of: "{var:\(name)}", with: variable)
+        var result = ""
+        var rest = text[...]
+        while let open = rest.firstIndex(of: "{") {
+            result += rest[..<open]
+            let token = rest[open...]
+            if token.hasPrefix("{query}") {
+                result += value
+                rest = token.dropFirst("{query}".count)
+            } else if token.hasPrefix("{var:"), let close = token.firstIndex(of: "}"),
+                      let variable = variables[String(token[token.index(open, offsetBy: 5)..<close])] {
+                result += variable
+                rest = token[token.index(after: close)...]
+            } else {
+                result += "{"
+                rest = token.dropFirst()
+            }
         }
-        return result
+        return result + rest
     }
 }
