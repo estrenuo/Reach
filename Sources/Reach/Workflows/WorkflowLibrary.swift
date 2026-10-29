@@ -20,6 +20,8 @@ final class WorkflowLibrary {
     var filterRequests = 0
     /// The workflow waiting for Remove's confirmation.
     var removing: Workflow?
+    /// The workflow in the Configure Workflow… sheet (S-043).
+    var configuring: Workflow?
     /// When the folder was last read; it is read again when the launcher shows.
     @ObservationIgnored private var readAt = Date.distantPast
 
@@ -101,6 +103,16 @@ final class WorkflowLibrary {
             try WorkflowFolder.setDisabled(!enabled, folder: workflow.folder)
         } catch {
             failure = "Unable to change “\(workflow.name)”: \(error.localizedDescription)"
+        }
+        reload()
+    }
+
+    /// Keeps the Configure Workflow… values in the folder's prefs.plist.
+    func saveConfiguration(_ values: [String: String], for workflow: Workflow) {
+        do {
+            try WorkflowConfiguration.save(values, settings: workflow.settings, in: workflow.folder)
+        } catch {
+            failure = "Unable to save the configuration of “\(workflow.name)”: \(error.localizedDescription)"
         }
         reload()
     }

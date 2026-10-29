@@ -706,7 +706,13 @@ Depends: S-042
 Acceptance:
 - [snap] Generated form left, rendered README right; required fields show an inline error.
 - [unit] Values are passed to scripts as environment variables.
-Status: todo
+UX:
+- Flow: select a workflow → "Configure Workflow…" in its header, its context menu, or Workflow > Configure Workflow… (⌘E) → a sheet: the fields on the left, the README on the right → fill in → Save; Reset to Defaults puts every field back
+- Surface: a sheet on the Workflows window; the button and menu item show only for a workflow with fields
+- States: a required field that is empty = a red "<Label> is required." under it and Save disabled; no README = "No README"; field kinds: text field, text area, checkbox, pop-up button, file picker (Choose…)
+- Words: "Configure “<name>”", "Scripts get each value as an environment variable.", "Reset to Defaults", "Cancel", "Save"
+- Note: fields come from Alfred's `userconfigurationconfig`; values live in the folder's prefs.plist, as Alfred keeps them, and only values that differ from the default are written. A value wins over a workflow variable of the same name
+Status: done
 
 ### S-044 See a workflow's objects and connections read-only
 As the user, I select a workflow and see its objects and connections on a canvas.

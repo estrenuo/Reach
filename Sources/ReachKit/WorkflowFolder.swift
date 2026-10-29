@@ -48,9 +48,11 @@ public enum WorkflowFolder {
         try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
         let script = """
         name="${1:-world}"
+        word="${greeting:-Hello}"
+        [ "$shout" = "1" ] && name="$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')"
         cat <<JSON
         {"items": [
-          {"title": "Hello, $name", "subtitle": "Return copies the greeting", "arg": "Hello, $name"},
+          {"title": "$word, $name", "subtitle": "Return copies the greeting", "arg": "$word, $name"},
           {"title": "Search the web for $name", "subtitle": "⌘↩ opens the search", "arg": "$name",
            "mods": {"cmd": {"subtitle": "Open a web search for $name"}}}
         ]}
@@ -59,7 +61,13 @@ public enum WorkflowFolder {
         let plist: [String: Any] = [
             "bundleid": "", "name": "Hello World", "createdby": "Reach", "version": "1.0",
             "description": "Says hello: an example to copy.",
-            "readme": "Type **hello** and a name. Return copies the greeting; ⌘↩ searches the web for the name.\n\nThe script is bash. It prints Script Filter JSON: one item per row.",
+            "readme": "Type **hello** and a name. Return copies the greeting; ⌘↩ searches the web for the name.\n\nThe script is bash. It prints Script Filter JSON: one item per row. Configure Workflow… sets the greeting, which the script reads as `$greeting`.",
+            "userconfigurationconfig": [
+                ["type": "textfield", "variable": "greeting", "label": "Greeting",
+                 "description": "The word before the name.", "config": ["default": "Hello", "required": true, "placeholder": "Hello"]],
+                ["type": "checkbox", "variable": "shout", "label": "Name",
+                 "description": "", "config": ["default": false, "text": "Write the name in capitals"]],
+            ] as [[String: Any]],
             "objects": [
                 ["uid": "HELLO", "type": ScriptFilter.type, "config": [
                     "keyword": "hello", "withspace": true, "argumenttype": 1, "title": "Say hello",

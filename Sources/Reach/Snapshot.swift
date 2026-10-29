@@ -290,6 +290,19 @@ enum Snapshot {
             try? await Task.sleep(for: .seconds(0.8))
             capture(to: "\(dir)/workflows-\(mode).png", window: window())
         }
+        // Configure Workflow… (S-043): as installed, then with the required field emptied.
+        for (name, greeting) in [("workflow-configure", nil), ("workflow-configure-missing", "")] as [(String, String?)] {
+            guard let example = library.selected else { break }
+            if let greeting { library.saveConfiguration(["greeting": greeting], for: example) }
+            for mode in ["light", "dark"] {
+                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                library.configuring = library.selected
+                try? await Task.sleep(for: .seconds(0.8))
+                capture(to: "\(dir)/\(name)-\(mode).png", window: window()?.attachedSheet)
+                library.configuring = nil
+                try? await Task.sleep(for: .seconds(0.5))
+            }
+        }
         window()?.close()
     }
 

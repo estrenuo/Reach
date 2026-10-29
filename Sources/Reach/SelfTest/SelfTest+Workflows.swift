@@ -155,6 +155,18 @@ extension SelfTest {
         check("a workflow that is off adds nothing to the launcher", !lm.results.contains { $0.workflow != nil || $0.kindLabel == "Hello World" })
         library.setEnabled(true, example)
 
+        // S-043: a saved configuration value reaches the script as an environment variable.
+        if let current = library.workflow(example.id) {
+            check("Configure Workflow… lists its fields", current.settings.map(\.label) == ["Greeting", "Name"])
+            check("an empty required field blocks Save",
+                  WorkflowConfiguration.missing(current.settings, values: ["greeting": ""]).map(\.variable) == ["greeting"])
+            library.saveConfiguration(["greeting": "Hoi", "shout": "1"], for: current)
+            lm.query = "hello Ada"
+            try? await Task.sleep(for: .milliseconds(1500))
+            check("the script reads the saved values", lm.results.contains { $0.title == "Hoi, ADA" },
+                  lm.results.map(\.title).joined(separator: ", "))
+        }
+
         library.remove(library.workflow(example.id) ?? example)
         check("Remove moves the folder to the Trash", trash.value.map(\.lastPathComponent) == [example.id]
               && library.workflow(example.id) == nil && library.selection == nil)

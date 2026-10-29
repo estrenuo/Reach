@@ -29,6 +29,9 @@ struct WorkflowsView: View {
         } message: {
             Text(library.failure ?? "")
         }
+        .sheet(item: $library.configuring) { workflow in
+            WorkflowConfigureSheet(workflow: workflow)
+        }
         .confirmationDialog(removeTitle, isPresented: Binding(get: { library.removing != nil }, set: { if !$0 { library.removing = nil } })) {
             Button("Move to Trash", role: .destructive) {
                 if let workflow = library.removing { library.remove(workflow) }
@@ -69,6 +72,9 @@ private struct WorkflowList: View {
                 WorkflowRow(workflow: workflow)
                     .tag(workflow.id)
                     .contextMenu {
+                        if !workflow.settings.isEmpty {
+                            Button("Configure…") { library.configuring = workflow }
+                        }
                         Button(workflow.disabled ? "Turn On" : "Turn Off") { library.setEnabled(workflow.disabled, workflow) }
                         Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([workflow.folder]) }
                         Divider()
@@ -231,6 +237,9 @@ struct WorkflowCommands: Commands {
             Button("Filter Workflows") { library.filterRequests += 1 }
                 .keyboardShortcut("f", modifiers: [.command, .shift])
                 .disabled(!inFront)
+            Button("Configure Workflow…") { library.configuring = library.selected }
+                .keyboardShortcut("e")
+                .disabled(!inFront || library.selected?.settings.isEmpty != false)
             Button(library.selected?.disabled == true ? "Turn On Workflow" : "Turn Off Workflow") {
                 if let workflow = library.selected { library.setEnabled(workflow.disabled, workflow) }
             }

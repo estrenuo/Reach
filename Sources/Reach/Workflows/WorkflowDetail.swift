@@ -55,6 +55,10 @@ struct WorkflowDetail: View {
             }
             .gridProbe("workflow-title", area: "workflow-header", edge: nil)
             Spacer()
+            if !workflow.settings.isEmpty {
+                Button("Configure Workflow…") { library.configuring = workflow }
+                    .help("Fill in the settings this workflow asks for")
+            }
             Toggle("On", isOn: Binding(get: { !workflow.disabled }, set: { library.setEnabled($0, workflow) }))
                 .toggleStyle(.switch)
                 .help(workflow.disabled ? "Turn the workflow on: its keywords work again" : "Turn the workflow off: its keywords stop working")

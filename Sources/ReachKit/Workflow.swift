@@ -123,6 +123,9 @@ public struct Workflow: Equatable, Sendable, Identifiable {
     /// The workflow's environment variables, and the ones that stay out of an export.
     public var variables: [String: String]
     public var dontExport: [String]
+    /// The fields of Configure Workflow… (S-043) and the values saved in prefs.plist.
+    public var settings: [WorkflowSetting] = []
+    public var configuration: [String: String] = [:]
 
     public init(id: String, folder: URL, bundleID: String = "", name: String, author: String = "", version: String = "",
                 description: String = "", readme: String = "", category: String = "", webAddress: String = "",
@@ -150,6 +153,7 @@ public struct Workflow: Equatable, Sendable, Identifiable {
         guard let data = try? Data(contentsOf: folder.appending(path: Self.infoFile)),
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return nil }
         self.init(plist: plist, folder: folder)
+        configuration = WorkflowConfiguration.values(in: folder)
     }
 
     public init(plist: [String: Any], folder: URL) {
@@ -174,6 +178,7 @@ public struct Workflow: Equatable, Sendable, Identifiable {
         }
         variables = (values["variables"]?.dict ?? [:]).compactMapValues(\.string)
         dontExport = (values["variablesdontexport"]?.array ?? []).compactMap(\.string)
+        settings = (values["userconfigurationconfig"]?.array ?? []).compactMap(WorkflowSetting.init)
     }
 
     public func object(_ uid: String) -> WorkflowObject? { objects.first { $0.uid == uid } }
@@ -189,11 +194,13 @@ public struct Workflow: Equatable, Sendable, Identifiable {
 
     /// What a script of this workflow gets in its environment, on top of the
     /// process's own: Alfred's names, so existing workflows run unchanged,
-    /// and the workflow's variables. `data` and `cache` are the parent folders
+    /// the workflow's variables, and its configuration, which wins over a
+    /// variable of the same name. `data` and `cache` are the parent folders
     /// of each workflow's own data and cache folders.
     public func environment(data: URL, cache: URL, extra: [String: String] = [:]) -> [String: String] {
         let key = bundleID.isEmpty ? id : bundleID
-        return variables.merging(extra) { _, new in new }.merging([
+        let configured = WorkflowConfiguration.resolved(settings, saved: configuration)
+        return variables.merging(configured) { _, new in new }.merging(extra) { _, new in new }.merging([
             "alfred_workflow_bundleid": bundleID,
             "alfred_workflow_name": name,
             "alfred_workflow_version": version,
