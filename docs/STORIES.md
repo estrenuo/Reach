@@ -735,7 +735,13 @@ Depends: S-041
 Acceptance:
 - [snap] Bottom panel with log level, Copy and Clear.
 - [unit] Script stderr ends up in the log.
-Status: todo
+UX:
+- Flow: select a workflow → Debugger in its header (⌥⌘D, Workflow > Show Debugger) → a panel opens under the canvas → type the keyword in the launcher → each run shows, newest at the bottom
+- Surface: a panel at the bottom of the detail pane, not a window, so the canvas stays in view
+- States: nothing run yet = "No Runs Yet"; a run line in the primary color, what the script printed in gray, errors and exit codes in red; Errors Only hides the rest
+- Words: "All Information", "Errors Only", "Copy", "Clear", "Script Filter ran with “hello Ada”", "Run Script ended with exit code 127."
+- Note: the log keeps the last 500 lines while Reach runs; it is not saved
+Status: done
 
 ### S-046 Edit a workflow's README, version and variables
 As the user, I edit the About text and version and add environment variables to a workflow.

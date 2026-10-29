@@ -53,6 +53,12 @@ final class WorkflowSource: ResultSource {
 
     init(library: WorkflowLibrary = .shared) {
         self.library = library
+        onRun = { [library] workflow, _, text, result in
+            library.record(workflow, object: "Script Filter", input: text, result: result)
+        }
+        onAction = { [library] workflow, _, result in
+            library.record(workflow, object: "Run Script", input: nil, result: result)
+        }
     }
 
     static let symbol = "flowchart"

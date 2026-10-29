@@ -3,7 +3,7 @@ import ReachKit
 import SwiftUI
 
 /// The selected workflow: its name, author and version, an on/off switch,
-/// and its objects on a canvas (S-044).
+/// its objects on a canvas (S-044), and the debugger under it (S-045).
 struct WorkflowDetail: View {
     let workflow: Workflow
     private var library = WorkflowLibrary.shared
@@ -20,6 +20,11 @@ struct WorkflowDetail: View {
             Divider()
             WorkflowCanvasView(workflow: workflow)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if library.debugging {
+                Divider()
+                WorkflowDebugger(workflow: workflow)
+                    .frame(height: 220)
+            }
         }
     }
 
@@ -44,6 +49,12 @@ struct WorkflowDetail: View {
                 Button("Configure Workflow…") { library.configuring = workflow }
                     .help("Fill in the settings this workflow asks for")
             }
+            Button {
+                library.debugging.toggle()
+            } label: {
+                Label(library.debugging ? "Hide Debugger" : "Debugger", systemImage: "ladybug")
+            }
+            .help("Show each run of this workflow's scripts, with their output and errors")
             Toggle("On", isOn: Binding(get: { !workflow.disabled }, set: { library.setEnabled($0, workflow) }))
                 .toggleStyle(.switch)
                 .help(workflow.disabled ? "Turn the workflow on: its keywords work again" : "Turn the workflow off: its keywords stop working")

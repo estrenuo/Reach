@@ -22,6 +22,10 @@ final class WorkflowLibrary {
     var removing: Workflow?
     /// The workflow in the Configure Workflow… sheet (S-043).
     var configuring: Workflow?
+    /// The debugger's log of script runs (S-045), and whether its panel shows.
+    var log = WorkflowLog()
+    var logLevel = WorkflowLogLevel.all
+    var debugging = false
     /// When the folder was last read; it is read again when the launcher shows.
     @ObservationIgnored private var readAt = Date.distantPast
 
@@ -143,6 +147,18 @@ final class WorkflowLibrary {
             throw WorkflowFolder.Failure.notAWorkflow
         }
         return target
+    }
+
+    /// Logs a script run for the debugger.
+    func record(_ workflow: Workflow, object: String, input: String?, result: ScriptResult) {
+        log.record(workflow: workflow.name, object: object, input: input, output: result.text, errors: result.errors,
+                   status: result.status, failure: result.failure)
+    }
+
+    /// The selected workflow's log lines at the chosen level, as text for Copy.
+    var selectedLogText: String {
+        guard let name = selected?.name else { return "" }
+        return WorkflowLog.text(log.shown(logLevel).filter { $0.workflow == name })
     }
 
     /// The environment for a script of `workflow`.

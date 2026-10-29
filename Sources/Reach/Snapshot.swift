@@ -303,6 +303,22 @@ enum Snapshot {
                 try? await Task.sleep(for: .seconds(0.5))
             }
         }
+        // The debugger (S-045) with a run that printed and one that failed.
+        if let example = library.selected {
+            library.log.clear()
+            library.record(example, object: "Script Filter", input: "hello Ada",
+                           result: ScriptResult(output: Data(#"{"items":[{"title":"Hello, Ada","arg":"Hello, Ada"}]}"#.utf8)))
+            library.record(example, object: "Run Script", input: nil,
+                           result: ScriptResult(errors: "say: command not found", status: 127))
+            library.debugging = true
+            for mode in ["light", "dark"] {
+                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                try? await Task.sleep(for: .seconds(0.8))
+                capture(to: "\(dir)/workflows-debugger-\(mode).png", window: window())
+            }
+            library.debugging = false
+            library.log.clear()
+        }
         window()?.close()
     }
 

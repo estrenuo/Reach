@@ -81,6 +81,9 @@ extension SelfTest {
         check("the script's rows replace the placeholder",
               lm.results.prefix(2).map(\.title) == ["Hello one", "Hello two"], lm.results.map(\.title).joined(separator: ", "))
         check("a workflow row names its workflow", lm.results.first?.kindLabel == "Self Test")
+        check("the debugger logs the run with the text it got",
+              library.log.entries.contains { $0.workflow == "Self Test" && $0.text == "Script Filter ran with “hello”" },
+              library.log.entries.map(\.text).joined(separator: " | "))
 
         lm.openSelected()
         check("↩ runs what is connected: it opens the URL with the row's argument",
@@ -110,6 +113,15 @@ extension SelfTest {
             let result = await ScriptRunner.run(command)
             let title = (try? ScriptFilterOutput.parse(result.output))?.items.first?.title
             check("a bash script filter runs and its JSON is read", result.succeeded && title == "real run", result.text + result.errors)
+        }
+        // S-045: what a real script writes to stderr reaches the debugger.
+        let noisy = ScriptSource(language: .bash, text: "echo 'no name given' >&2; echo '{\"items\":[]}'")
+        if let command = noisy.command(query: "", folder: URL(fileURLWithPath: NSTemporaryDirectory())),
+           let workflow = library.workflow("selftest.workflow") {
+            let result = await ScriptRunner.run(command)
+            library.record(workflow, object: "Script Filter", input: "", result: result)
+            check("a script's stderr shows in the debugger as an error",
+                  library.log.shown(.errors).last?.text == "no name given", library.log.shown(.errors).last?.text ?? "none")
         }
     }
 

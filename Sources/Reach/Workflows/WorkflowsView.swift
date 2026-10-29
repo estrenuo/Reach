@@ -245,6 +245,9 @@ struct WorkflowCommands: Commands {
             }
             .keyboardShortcut("d", modifiers: [.command, .shift])
             .disabled(!inFront || library.selected == nil)
+            Button(library.debugging ? "Hide Debugger" : "Show Debugger") { library.debugging.toggle() }
+                .keyboardShortcut("d", modifiers: [.command, .option])
+                .disabled(!inFront || library.selected == nil)
             Button("Show in Finder") {
                 if let workflow = library.selected { NSWorkspace.shared.activateFileViewerSelecting([workflow.folder]) }
             }
