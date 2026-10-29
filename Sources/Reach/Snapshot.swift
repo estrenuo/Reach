@@ -1,5 +1,6 @@
 import AppKit
 import IOKit.pwr_mgt
+import ReachKit
 import SwiftUI
 
 /// Screenshot mode for agents.
@@ -40,7 +41,12 @@ enum Snapshot {
             }
             if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
                 await model.launcherModel.apps.refreshNow()
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("path", "~/"), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
+                // Sample files instead of the person's own: snapshots get shared.
+                let samples = SampleFiles.make()
+                let sources = model.launcherModel.sources
+                model.launcherModel.sources = [model.launcherModel.apps, samples, model.launcherModel.paths]
+                defer { model.launcherModel.sources = sources }
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co")]
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     for (name, query) in states {
@@ -139,3 +145,40 @@ enum Snapshot {
         }
     }
 }
+
+/// Made-up files in /tmp for the launcher snapshots, so no real file name from
+/// the home folder ends up in a screenshot. Answers file search by name, as
+/// Spotlight would; the same folder is browsed for the path snapshot.
+final class SampleFiles: ResultSource {
+    static let folder = "/tmp/Reach-sample/"
+    static let names = ["Project brief.md", "Brief to the board.docx", "Briefing notes.txt", "Q3 report.pdf",
+                        "Holiday photo.jpg", "Budget 2027.numbers", "Invoices", "Briefs"]
+
+    /// Creates the folder with empty files (and two folders), and the source that finds them.
+    static func make() -> SampleFiles {
+        let files = FileManager.default
+        try? files.removeItem(atPath: folder)
+        for name in names {
+            let path = folder + name
+            if name.contains(".") {
+                try? files.createDirectory(atPath: folder, withIntermediateDirectories: true)
+                files.createFile(atPath: path, contents: Data())
+            } else {
+                try? files.createDirectory(atPath: path, withIntermediateDirectories: true)
+            }
+        }
+        return SampleFiles()
+    }
+
+    func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
+        guard case .files(let search) = query, !search.text.isEmpty else { return [] }
+        return Self.names.compactMap { name in
+            guard Matcher.score(query: search.text, title: name) != nil else { return nil }
+            let path = Self.folder + name
+            return Scored(result: LaunchResult(id: path, title: name, subtitle: "~/Documents/" + name,
+                                               icon: .file(path), url: URL(fileURLWithPath: path),
+                                               isFolder: !name.contains(".")), score: 0)
+        }
+    }
+}
+
