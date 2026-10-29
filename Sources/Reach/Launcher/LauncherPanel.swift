@@ -62,9 +62,7 @@ final class LauncherController {
             // Quick Look makes itself key when it opens. Take the keyboard back,
             // so ↑, ↓ and a second ⇧ still reach the launcher.
             quickLookLog.notice("launcher lost the keyboard to \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "another app", privacy: .public)")
-            let quickLook = QuickLook.shared
-            let tookIt = NSApp.keyWindow is QLPreviewPanel ? quickLook.url != nil : quickLook.isMovingKeyboard
-            if tookIt, self?.isVisible == true {
+            if QuickLook.shared.keepsLauncherKey(keyWindow: NSApp.keyWindow), self?.isVisible == true {
                 DispatchQueue.main.async { self?.panel.makeKey() }
                 return
             }

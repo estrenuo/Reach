@@ -1,6 +1,7 @@
 import AppKit
 import OSLog
 import Quartz
+import ReachKit
 
 /// `log show --last 10m --predicate 'subsystem == "com.sanderrobijns.reach" AND category == "quicklook"'`
 let quickLookLog = Logger(subsystem: "com.sanderrobijns.reach", category: "quicklook")
@@ -13,19 +14,18 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
     /// The file on show, or nil when Quick Look is closed.
     private(set) var url: URL?
 
-    /// When Quick Look last opened or closed, from the system uptime.
-    private var movedAt: TimeInterval = 0
+    /// When the launcher takes the keyboard back from Quick Look.
+    private var handover = KeyboardHandover()
 
     var isOpen: Bool {
         QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible
     }
 
-    /// True for a moment after Quick Look opens or closes: it makes itself key
-    /// on opening, and AppKit hands the key window on again when it goes.
-    /// When Reach is not the active app, the key window reads nil by then, so
-    /// the launcher cannot see that Quick Look, not a click elsewhere, moved the keyboard.
-    var isMovingKeyboard: Bool {
-        ProcessInfo.processInfo.systemUptime - movedAt < 1
+    /// The launcher lost the keyboard to `keyWindow` (nil when another app is in
+    /// front). True when Quick Look took it and the launcher should take it back.
+    func keepsLauncherKey(keyWindow: NSWindow?) -> Bool {
+        handover.launcherKeepsKey(quickLookIsKey: keyWindow is QLPreviewPanel, showing: url != nil,
+                                  at: ProcessInfo.processInfo.systemUptime)
     }
 
     /// The file Quick Look shows for a result: nil for web searches and hints,
@@ -52,7 +52,7 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
             return false
         }
         url = file
-        movedAt = ProcessInfo.processInfo.systemUptime
+        handover.moved(at: ProcessInfo.processInfo.systemUptime)
         quickLookLog.notice("open a .\(file.pathExtension, privacy: .public) file; app \(NSApp.isActive ? "active" : "inactive", privacy: .public), key \(NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none", privacy: .public)")
         // Above the launcher, which floats at the status bar level.
         panel.level = NSWindow.Level(NSWindow.Level.statusBar.rawValue + 1)
@@ -74,7 +74,7 @@ final class QuickLook: NSObject, @preconcurrency QLPreviewPanelDataSource {
     func close() {
         if url != nil {
             quickLookLog.notice("close")
-            movedAt = ProcessInfo.processInfo.systemUptime
+            handover.moved(at: ProcessInfo.processInfo.systemUptime)
         }
         url = nil
         // Also while it is still opening, when isVisible is not yet true.
