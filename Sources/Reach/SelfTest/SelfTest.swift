@@ -93,6 +93,7 @@ enum SelfTest {
             await checkSnippetPaste(model: model)
             await checkClipboardLoan(model: model)
             await checkExpansion(model: model)
+            await checkThemes(model: model)
             NSWorkspace.shared.notificationCenter.removeObserver(watch)
             sleeps.forEach(center.removeObserver)
             if screenIsLocked { blockers.insert("the screen was locked") }

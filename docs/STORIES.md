@@ -534,7 +534,14 @@ Acceptance:
 - [snap] Theme list with thumbnails; preview mock with a query and result rows.
 - [self] The background toggle shows the preview over the desktop picture.
 - [unit] The chosen theme applies to the real bar immediately.
-Status: todo
+UX:
+- Flow: Settings > Appearance -> click a theme -> the preview and the real bar change at once -> Show on Desktop Picture puts the preview on the desktop picture or the plain background
+- Surface: inline on the Appearance tab (changes one value on screen): preview on top, the six themes below, the accent color last
+- States: no desktop picture readable -> the plain background; a saved theme that is gone -> Reach
+- Words: themes "Reach", "Reach Light", "Reach Dark", "Clear", "Solid Light", "Solid Dark", each with a line like "Glass, follows the Mac"; section "Theme"; toggle "Show on Desktop Picture"; tooltip "Use the Reach Dark theme for the launcher"
+- Access: each thumbnail is a button with its name and summary and the selected trait; the preview reads "Preview of the Reach theme"; the selection shows as a ring and the trait, not only color
+- Scope: a theme is a mode (follows the Mac, light, dark) and a surface (glass, clear glass, solid); the accent color stays apart and goes with every theme; snapshots and the self-test draw a sample picture, never the real desktop picture
+Status: done
 
 ### S-033 Make my own theme
 As the user, I duplicate a theme and change its colours, font and corner radius.

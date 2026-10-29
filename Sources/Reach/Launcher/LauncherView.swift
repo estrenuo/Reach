@@ -43,6 +43,7 @@ struct LauncherView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
+    private var themes = LauncherThemeStore.shared
 
     var body: some View {
         Group {
@@ -56,7 +57,7 @@ struct LauncherView: View {
         }
         .padding(Space.md)
         .frame(width: LauncherLayout.width, height: LauncherLayout.height(for: model), alignment: .top)
-        .glassEffect(.regular, in: .rect(cornerRadius: Radius.panel, style: .continuous))
+        .launcherSurface(themes.theme.surface, cornerRadius: Radius.panel)
         .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
         .opacity(appeared ? 1 : 0)
         .accessibilityElement(children: .contain)

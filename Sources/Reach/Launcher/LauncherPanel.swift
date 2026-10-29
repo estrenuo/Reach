@@ -71,6 +71,16 @@ final class LauncherController {
         model.onHide = { [weak self] in self?.hide() }
         model.onResultsChange = { [weak self] in self?.resize() }
         model.onSelectionChange = { [weak self] in QuickLook.shared.follow(self?.model.selectedResult) }
+        followTheme()
+    }
+
+    /// Light, dark or the Mac's mode, from the chosen theme, now and on every pick (S-032).
+    private func followTheme() {
+        withObservationTracking {
+            panel.appearance = LauncherThemeStore.shared.theme.mode.appearance
+        } onChange: { [weak self] in
+            DispatchQueue.main.async { self?.followTheme() }
+        }
     }
 
     func toggle() {
