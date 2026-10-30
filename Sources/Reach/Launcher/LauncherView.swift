@@ -64,17 +64,14 @@ struct LauncherView: View {
         .accessibilityLabel("Launcher")
         .onAppear {
             model.openSettings = {
-                NSApp.activate()
-                openSettings()
+                FrontWindow.open(FrontWindow.settings) { openSettings() }
             }
             model.canOpenSettings = true
             model.openSnippets = {
-                NSApp.activate()
-                openWindow(id: "main")
+                FrontWindow.open("main") { openWindow(id: "main") }
             }
             model.openWorkflows = {
-                NSApp.activate()
-                openWindow(id: WorkflowLibrary.windowID)
+                FrontWindow.open(WorkflowLibrary.windowID) { openWindow(id: WorkflowLibrary.windowID) }
             }
         }
         .onChange(of: model.showCount, initial: true) {
