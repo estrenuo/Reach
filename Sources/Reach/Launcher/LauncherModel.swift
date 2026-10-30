@@ -315,6 +315,12 @@ final class LauncherModel {
             openSettings()
             return
         }
+        if result.opensSnippets {
+            onOpened(query, result)
+            onHide()
+            openSnippets()
+            return
+        }
         if result.opensClipboard {
             selection = index
             showClipboard(fromLauncher: true)

@@ -37,6 +37,7 @@ struct ReachApp: App {
                 Button("New Snippet") { model.addSnippet() }
                     .keyboardShortcut("n")
             }
+            SnippetCommands()
         }
 
         // S-042: the installed workflows. Window > Workflows (⇧⌘K), the menu bar icon, or Settings > Workflows.

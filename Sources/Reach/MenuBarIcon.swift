@@ -34,6 +34,7 @@ final class MenuBarIcon: NSObject {
         // No action, so the menu shows it dimmed.
         menu.addItem(NSMenuItem(title: "Version \(version)", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
+        menu.addItem(entry("Snippets…", #selector(openSnippets)))
         menu.addItem(entry("Workflows…", #selector(openWorkflows)))
         menu.addItem(entry("Settings…", #selector(openSettings), key: ","))
         menu.addItem(.separator())
@@ -49,5 +50,6 @@ final class MenuBarIcon: NSObject {
 
     @objc private func showLauncher() { AppModel.shared.launcher?.show() }
     @objc private func openSettings() { AppModel.shared.launcher?.openSettings() }
-    @objc private func openWorkflows() { AppModel.shared.launcherModel.openWorkflows() }
+    @objc private func openSnippets() { AppModel.shared.launcher?.openFromOutside { $0.openSnippets() } }
+    @objc private func openWorkflows() { AppModel.shared.launcher?.openFromOutside { $0.openWorkflows() } }
 }

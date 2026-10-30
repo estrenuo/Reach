@@ -53,6 +53,20 @@ extension SelfTest {
               names.firstIndex(of: "Zebra address").map { names.firstIndex(of: "Zebra greeting") == $0 + 1 } == true
                 && lm.selection == 0 && lm.results.first?.pastes != nil,
               names.joined(separator: ", "))
+        // Snippets: typing "snippets" offers the Reach window; ↩ opens it.
+        let openSnippets = lm.openSnippets
+        var opened = 0
+        lm.openSnippets = { opened += 1 }
+        lm.query = "snippets"
+        let edit = lm.results.firstIndex { $0.opensSnippets }
+        check("typing “snippets” offers the Snippets window", edit != nil, lm.results.map(\.title).joined(separator: ", "))
+        if let edit {
+            lm.open(at: edit)
+            check("↩ on Snippets opens the Reach window", opened == 1 && !launcher.isVisible)
+        }
+        lm.openSnippets = openSnippets
+        await showAgain(launcher)
+
         lm.query = "snip zgr"
         let row = lm.results.first
         check("the keyword finds the snippet, first, with its first line and keyword",

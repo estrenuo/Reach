@@ -48,11 +48,13 @@ struct LaunchResult: Identifiable, Equatable {
     var pastes: String?
     /// The Reach Settings row: Return opens Settings (S-035).
     var opensSettings = false
+    /// The Snippets row: Return opens the Reach window with the snippets.
+    var opensSnippets = false
     /// A row from a workflow's script filter: Return runs what is connected to it (S-041).
     var workflow: WorkflowRun?
 
     var isOpenable: Bool {
-        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || workflow != nil
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || opensSnippets || workflow != nil
     }
 }
 
