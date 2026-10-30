@@ -33,14 +33,29 @@ final class SnippetSource: ResultSource {
     func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {
         guard case .normal(let text) = query else { return [] }
         let words = text.lowercased() == Self.keyword ? "" : DictionaryLookup.word(in: text, keyword: Self.keyword)
-        guard let words else { return offer(text) }
+        guard let words else { return offer(text) + editRow(text) }
         let found = matches(words)
         guard !found.isEmpty else {
             return words.isEmpty || context == nil
-                ? [hint(Self.noSnippets, subtitle: "Add snippets in the Reach window")]
+                ? [Scored(result: Self.edit(title: Self.noSnippets), score: 0)]
                 : [hint("No snippet matches “\(words)”")]
         }
         return found.prefix(LauncherModel.maxResults).map { Scored(result: Self.row(for: $0), score: 0) }
+    }
+
+    static let editTitle = "Snippets"
+
+    /// The row that opens the Reach window to add and edit snippets.
+    static func edit(title: String) -> LaunchResult {
+        LaunchResult(id: "snippets:edit", title: title, subtitle: "Add and edit snippets in the Reach window (⌥⌘S)",
+                     icon: .symbol("square.and.pencil"), url: nil, kindLabel: "Reach", opensSnippets: true)
+    }
+
+    /// Typing "snippets", or most of it, offers the window.
+    private func editRow(_ text: String) -> [Scored] {
+        guard text.count > Self.keyword.count, let score = Matcher.score(query: text, title: Self.editTitle),
+              score >= SystemCommands.minimumScore else { return [] }
+        return [Scored(result: Self.edit(title: Self.editTitle), score: score)]
     }
 
     static func row(for snippet: Snippet) -> LaunchResult {
