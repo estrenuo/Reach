@@ -75,3 +75,32 @@ private struct WindowHook: NSViewRepresentable {
         }
     }
 }
+
+/// Reach is an agent app (LSUIElement): it has no Dock icon and is not the
+/// active app while the launcher or the menu bar icon is in use. A window it
+/// opens then lands behind the app in front. This brings it forward.
+@MainActor
+enum FrontWindow {
+    /// The Settings window's identifier, which SwiftUI sets.
+    static let settings = "com_apple_SwiftUI_Settings_window"
+
+    /// Runs `open`, then puts the window whose identifier starts with `id` in front and makes it key.
+    static func open(_ id: String, with open: () -> Void) {
+        NSApp.activate()
+        open()
+        // SwiftUI creates or orders the window on the next pass of the run loop.
+        DispatchQueue.main.async { raise(id) }
+    }
+
+    private static func raise(_ id: String, tries: Int = 10) {
+        guard let window = NSApp.windows.first(where: { $0.identifier?.rawValue.hasPrefix(id) == true && $0.isVisible }) else {
+            if tries > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { raise(id, tries: tries - 1) }
+            }
+            return
+        }
+        NSApp.activate()
+        window.orderFrontRegardless()
+        window.makeKey()
+    }
+}
