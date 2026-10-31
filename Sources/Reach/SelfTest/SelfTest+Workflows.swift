@@ -69,6 +69,11 @@ extension SelfTest {
                 // S-053: Browse in Terminal with the argument as the path.
                 ["uid": "TERMKW", "type": KeywordInput.type, "config": ["keyword": "rterm", "argumenttype": 0, "text": "Terminal"]],
                 ["uid": "TERM", "type": Workflow.browseInTerminal, "config": ["path": ""]],
+                // S-053: Dispatch Key Combo presses ⌘V, then Copy to Clipboard.
+                ["uid": "KEYSKW", "type": KeywordInput.type, "config": ["keyword": "rkeys", "argumenttype": 0, "text": "Keys"]],
+                ["uid": "KEYS", "type": Workflow.dispatchKeys, "config": [
+                    "keychar": "v", "keycode": -1, "keymod": 1_048_576, "count": 1, "overridewithargument": false,
+                ]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -125,6 +130,8 @@ extension SelfTest {
                 "FALLBACK": [["destinationuid": "COPY", "modifiers": 0]],
                 "UATEXT": [["destinationuid": "COPY", "modifiers": 0]],
                 "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
+                "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
+                "KEYS": [["destinationuid": "COPY", "modifiers": 0]],
                 "UAFILES": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
@@ -573,6 +580,15 @@ extension SelfTest {
         await enter("rterm /tmp")
         lm.openTerminal = realTerminal
         check("Browse in Terminal opens the terminal at the path", terminals == ["/tmp"], terminals.joined(separator: ", "))
+
+        // Keys are recorded, never pressed.
+        let realKeys = lm.pressKeys
+        var pressed: [WorkflowKeys] = []
+        lm.pressKeys = { pressed.append($0); return true }
+        await enter("rkeys hello")
+        lm.pressKeys = realKeys
+        check("Dispatch Key Combo presses ⌘V once and the workflow goes on",
+              pressed == [WorkflowKeys(keyCode: 9, modifiers: 1 << 20)] && copied.last == "copied hello", "\(pressed) \(copied.last ?? "")")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

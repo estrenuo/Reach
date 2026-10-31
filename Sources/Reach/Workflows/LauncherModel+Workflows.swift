@@ -112,6 +112,11 @@ extension LauncherModel {
             switch step {
             case .open(let text):
                 worked = openWorkflowTarget(text) && worked
+            case .keys(let keys):
+                if !pressKeys(keys) {
+                    workflows.library.log.failed(workflow: workflow.name, text: "Reach could not press the keys: "
+                        + "allow it in System Settings > Privacy & Security > Accessibility.")
+                }
             case .terminal(let path):
                 worked = openTerminal(URL(fileURLWithPath: (path as NSString).expandingTildeInPath)) && worked
             case .reveal(let path):

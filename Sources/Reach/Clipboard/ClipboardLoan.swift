@@ -25,6 +25,17 @@ enum Paster {
         }
     }
 
+    /// Presses a workflow's keys in the front app once the launcher has hidden (S-053).
+    /// False without the Accessibility permission, which posting keys needs.
+    static func press(_ keys: WorkflowKeys) -> Bool {
+        guard AXIsProcessTrusted() else { return false }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(150))
+            press(key: CGKeyCode(keys.keyCode), flags: CGEventFlags(rawValue: UInt64(keys.modifiers)), times: keys.count)
+        }
+        return true
+    }
+
     /// Presses ⌘C in the front app, for the selection hotkey.
     static func pressCopy() {
         press(key: 8, flags: .maskCommand)  // C

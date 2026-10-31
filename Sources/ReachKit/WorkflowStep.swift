@@ -25,6 +25,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Press keys in the app in front, after the launcher hides (S-053).
+    case keys(WorkflowKeys)
     /// An object Reach does not run, by its kind, like `automation.task`.
     case unsupported(String)
 }
@@ -51,6 +53,7 @@ extension Workflow {
     public static let json = "alfred.workflow.utility.json"
     public static let joinArgs = "alfred.workflow.utility.joinargs"
     public static let browseInTerminal = "alfred.workflow.action.browseinterminal"
+    public static let dispatchKeys = "alfred.workflow.output.dispatchkeycombo"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -93,6 +96,14 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.dispatchKeys:
+                switch WorkflowKeys.read(object) {
+                case .success(let keys):
+                    return [.keys(keys)] + next(after: object.uid, argument: argument, variables: variables,
+                                                environment: environment, depth: depth)
+                case .failure(let problem):
+                    return [.unsupported(problem.kind)]
+                }
             case Self.browseInTerminal:
                 // An empty path is the argument; the objects after it get the same argument.
                 let path = object.string("path")

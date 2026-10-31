@@ -848,7 +848,8 @@ As the user, imported Alfred workflows that open a folder in the terminal, press
 Depends: S-052
 Acceptance:
 - [unit] Browse in Terminal (`alfred.workflow.action.browseinterminal`) opens the terminal app from Settings > Terminal in its `path` (the argument when empty, `{query}` and `{var:…}` filled), or in the folder of a file, and passes the argument on.
-- [self] ↩ through Browse in Terminal opens the terminal at the path (recorded, never opened).
+- [unit] Dispatch Key Combo (`alfred.workflow.output.dispatchkeycombo`) presses `keycode`, or the key for `keychar` when it is -1, with `keymod` (⌘ ⌥ ⌃ ⇧), `count` times in the app in front once the launcher has hidden, and passes the argument on. `overridewithargument`, or a character Reach has no key for, is named in the debugger; without Accessibility the debugger says how to allow it.
+- [self] ↩ through Browse in Terminal opens the terminal at the path; through Dispatch Key Combo it presses ⌘V and goes on (both recorded, never done).
 Status: in progress
 
 ---
