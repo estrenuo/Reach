@@ -32,3 +32,12 @@ private func line(_ to: String, _ modifiers: Int = 0) -> [[String: Any]] { [["de
     #expect(followed.steps(after: "KW", argument: "x") == [.dialog(title: "T", text: "", buttons: ["OK"]),
                                                           .unsupported("utility.dialog with lines after it")])
 }
+
+@Test func aTerminalCommandIsFilledAndEscapedAsConfigured() {
+    let brew = workflow([["uid": "BREW", "type": Workflow.terminalCommand, "config": ["escaping": 0, "script": "brew install {query}"]]],
+                        ["KW": line("BREW")])
+    #expect(brew.steps(after: "KW", argument: "wget") == [.terminalCommand("brew install wget")])
+    let escaped = workflow([["uid": "CMD", "type": Workflow.terminalCommand, "config": ["escaping": 1, "script": "echo {query}"]]],
+                           ["KW": line("CMD")])
+    #expect(escaped.steps(after: "KW", argument: "a b") == [.terminalCommand(#"echo a\ b"#)])
+}

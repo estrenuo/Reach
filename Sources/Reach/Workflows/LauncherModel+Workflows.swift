@@ -152,6 +152,8 @@ extension LauncherModel {
                                               environment: command.environment)
                     _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
+            case .terminalCommand(let command):
+                worked = runShell(ShellRun(command: command, app: TerminalSettings.shared.app)) && worked
             case .dialog(let title, let text, let buttons):
                 showDialog(title, text, buttons)
             case .wait(let seconds, let then, let argument, let variables, let environment):

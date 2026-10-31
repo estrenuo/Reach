@@ -25,6 +25,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Run this command in a new window of the terminal app from Settings > Terminal (S-055).
+    case terminalCommand(String)
     /// Show an alert with this title, text and buttons (S-055).
     case dialog(title: String, text: String, buttons: [String])
     /// Wait `seconds`, then go on after `then` with the argument (S-055).
@@ -69,6 +71,7 @@ extension Workflow {
     public static let actionInAlfred = "alfred.workflow.action.actioninalfred"
     public static let delay = "alfred.workflow.utility.delay"
     public static let dialog = "alfred.workflow.utility.dialog"
+    public static let terminalCommand = "alfred.workflow.action.terminalcommand"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -111,6 +114,11 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.terminalCommand:
+                // `{query}` escaped as `escaping` says, like an inline script.
+                let script = object.string("script").replacingOccurrences(
+                    of: "{query}", with: ScriptSource.escape(argument, object.int("escaping")))
+                return [.terminalCommand(WorkflowText.fill(script, query: argument, variables: variables))]
             case Self.dialog:
                 let buttons = ["button1", "button2", "button3"].map { fill(object.string($0)) }.filter { !$0.isEmpty }
                 let step = WorkflowStep.dialog(title: fill(object.string("title")), text: fill(object.string("description")),
