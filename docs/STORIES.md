@@ -835,7 +835,8 @@ As the user, imported Alfred workflows that set their configuration with JSON, j
 Depends: S-051
 Acceptance:
 - [unit] JSON Config (`alfred.workflow.utility.json`) fills `{query}` and `{var:…}` in its `json` (escaped, so a quote keeps it whole), then sets the argument from `arg` (an array joined with tabs), adds its `variables`, and overrides the configuration of the objects right after it with `config`. JSON that does not parse is named in the debugger.
-- [self] ↩ through JSON Config sets the next object's configuration.
+- [unit] Join Arguments (`alfred.workflow.utility.joinargs`) right after a Split Arguments that outputs arguments gets the parts back as one argument, joined with its `delimiter`; anywhere else one argument joins to itself.
+- [self] ↩ through JSON Config sets the next object's configuration; Split then Join Arguments puts the parts back together.
 Status: in progress
 
 ---

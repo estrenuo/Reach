@@ -62,6 +62,10 @@ extension SelfTest {
                 ["uid": "JSON", "type": Workflow.json, "config": [
                     "json": #"{"alfredworkflow": {"arg": "{query}!", "config": {"clipboardtext": "json {query}"}}}"#,
                 ]],
+                // S-052: Split on a comma, then Join Arguments with a plus.
+                ["uid": "JOINKW", "type": KeywordInput.type, "config": ["keyword": "rjoin", "argumenttype": 0, "text": "Join"]],
+                ["uid": "JOINSPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
+                ["uid": "JOIN", "type": Workflow.joinArgs, "config": ["delimiter": "+"]],
                 // S-051: a File Filter for text files.
                 ["uid": "FF", "type": FileFilter.type, "config": [
                     "keyword": "rfiles", "withspace": true, "argumenttype": 0, "title": "Find Self Test Files",
@@ -103,6 +107,9 @@ extension SelfTest {
                 "FF": [["destinationuid": "COPY", "modifiers": 0]],
                 "JSONKW": [["destinationuid": "JSON", "modifiers": 0]],
                 "JSON": [["destinationuid": "COPY", "modifiers": 0]],
+                "JOINKW": [["destinationuid": "JOINSPLIT", "modifiers": 0]],
+                "JOINSPLIT": [["destinationuid": "JOIN", "modifiers": 0]],
+                "JOIN": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -511,6 +518,10 @@ extension SelfTest {
         await enter("rjson hello")
         check("JSON Config sets the next object's configuration, filled with the text it got",
               copied.last == "json hello", copied.last ?? "none")
+
+        await enter("rjoin one, two")
+        check("Join Arguments puts the parts of a Split back together with its delimiter",
+              copied.last == "copied one+two", copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

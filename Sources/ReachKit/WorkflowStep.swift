@@ -47,6 +47,7 @@ extension Workflow {
     public static let split = "alfred.workflow.utility.split"
     public static let replace = "alfred.workflow.utility.replace"
     public static let json = "alfred.workflow.utility.json"
+    public static let joinArgs = "alfred.workflow.utility.joinargs"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -120,7 +121,15 @@ extension Workflow {
                     return next(after: object.uid, argument: argument, variables: variables.merging(set) { _, new in new },
                                 environment: environment.merging(set) { _, new in new }, depth: depth)
                 }
-                return parts.flatMap { next(after: object.uid, argument: $0, variables: variables, environment: environment, depth: depth) }
+                // A Join Arguments right after it gets the parts back as one argument (S-052).
+                let lines = (connections[object.uid] ?? []).filter { $0.modifiers == 0 && $0.sourceOutput == nil }
+                return lines.flatMap { line -> [WorkflowStep] in
+                    if let join = self.object(line.to), join.type == Self.joinArgs {
+                        return next(after: join.uid, argument: parts.joined(separator: join.string("delimiter")),
+                                    variables: variables, environment: environment, depth: depth + 1)
+                    }
+                    return parts.flatMap { follow([line], argument: $0, variables: variables, environment: environment, depth: depth + 1) }
+                }
             case Self.replace:
                 switch WorkflowReplace.apply(to: argument, object) {
                 case .success(let text):
@@ -128,6 +137,9 @@ extension Workflow {
                 case .failure(let problem):
                     return [.unsupported(problem.kind)]
                 }
+            case Self.joinArgs:
+                // One argument joins to itself.
+                return next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
             case Self.json:
                 guard let output = WorkflowJSON.read(object, query: argument, variables: variables) else {
                     return [.unsupported("utility.json with JSON that does not parse")]
