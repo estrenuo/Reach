@@ -25,6 +25,14 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Run this command in a new window of the terminal app from Settings > Terminal (S-055).
+    case terminalCommand(String)
+    /// Show this text in a window named after the workflow (S-055).
+    case textView(String)
+    /// Show an alert with this title, text and buttons (S-055).
+    case dialog(title: String, text: String, buttons: [String])
+    /// Wait `seconds`, then go on after `then` with the argument (S-055).
+    case wait(seconds: Double, then: String, argument: String, variables: [String: String], environment: [String: String])
     /// Open the action panel for this path, or for this text when it is not one (S-054).
     case actions(String)
     /// Read the front browser tab's URL, then go on after `then` with it (S-054).
@@ -63,6 +71,10 @@ extension Workflow {
     public static let dispatchKeys = "alfred.workflow.output.dispatchkeycombo"
     public static let grid = "alfred.workflow.userinterface.grid"
     public static let actionInAlfred = "alfred.workflow.action.actioninalfred"
+    public static let delay = "alfred.workflow.utility.delay"
+    public static let dialog = "alfred.workflow.utility.dialog"
+    public static let terminalCommand = "alfred.workflow.action.terminalcommand"
+    public static let textView = "alfred.workflow.userinterface.text"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -105,6 +117,31 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.terminalCommand:
+                // `{query}` escaped as `escaping` says, like an inline script; one
+                // pass, so text in the argument is never filled again.
+                let query = ScriptSource.escape(argument, object.int("escaping"))
+                return [.terminalCommand(WorkflowText.fill(object.string("script"), query: query, variables: variables))]
+            case Self.textView:
+                // Only the plain text view, as Homebrew uses it; a script as input
+                // (inputtype 1), output to the next objects, or a footer is not mapped.
+                // `fontsizing` and `stackview` only change how Alfred draws it.
+                let plain = ["inputtype", "outputmode", "behaviour", "fontmode"].filter { object.int($0) != 0 }
+                    .map { "\($0) \(object.int($0))" }
+                    + ["footertext", "loadingtext"].filter { !object.string($0).isEmpty }
+                guard plain.isEmpty else { return [.unsupported("userinterface.text with \(plain.joined(separator: ", "))")] }
+                let step = WorkflowStep.textView(argument)
+                return (connections[object.uid] ?? []).isEmpty ? [step] : [step, .unsupported("userinterface.text with lines after it")]
+            case Self.dialog:
+                let buttons = ["button1", "button2", "button3"].map { fill(object.string($0)) }.filter { !$0.isEmpty }
+                let step = WorkflowStep.dialog(title: fill(object.string("title")), text: fill(object.string("description")),
+                                               buttons: buttons.isEmpty ? ["OK"] : buttons)
+                // Sander's dialogs end the workflow; lines out of one are named, not followed.
+                return (connections[object.uid] ?? []).isEmpty ? [step] : [step, .unsupported("utility.dialog with lines after it")]
+            case Self.delay:
+                // `seconds` is text in Alfred's plist, like "0.3".
+                let seconds = max(0, object.config["seconds"]?.double ?? 0)
+                return [.wait(seconds: seconds, then: object.uid, argument: argument, variables: variables, environment: environment)]
             case Self.actionInAlfred:
                 // Type 1 jumping to `_popUpItemAction:`: the actions for the path (the argument when empty).
                 guard object.int("type") == 1, ["", "_popUpItemAction:"].contains(object.string("jumpto")) else {
@@ -210,6 +247,17 @@ extension Workflow {
             case Self.automationTask where object.string("taskuid").hasSuffix(CurrentTab.taskSuffix):
                 let allowEmpty = object.config["tasksettings"]?.dict?["allow_empty"]?.bool ?? false
                 return [.currentTab(then: object.uid, allowEmpty: allowEmpty, variables: variables, environment: environment)]
+            case WorkflowShortcut.runType:
+                switch WorkflowShortcut.run(object, argument: argument, variables: variables, folder: folder, environment: environment) {
+                case .success(let command): return [.run(command, then: object.uid, variables: variables)]
+                case .failure(let problem): return [.unsupported(problem.kind)]
+                }
+            case Self.automationTask where FinderTask.command(for: object.string("taskuid"), folder: folder, environment: environment) != nil:
+                let command = FinderTask.command(for: object.string("taskuid"), folder: folder, environment: environment)!
+                return [.run(command, then: object.uid, variables: variables)]
+            case Self.automationTask where object.string("taskuid") == WorkflowShortcut.viewTask:
+                let command = WorkflowShortcut.view(object, argument: argument, variables: variables, folder: folder, environment: environment)
+                return [.run(command, then: object.uid, variables: variables)]
             case Self.automationTask where object.string("taskuid") == Self.trashTask:
                 let target = object.config["tasksettings"]?.dict?["target_path"]?.string ?? ""
                 let path = target.isEmpty ? argument : fill(target)

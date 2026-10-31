@@ -866,6 +866,20 @@ Acceptance:
 - [self] The Current Tab task sends the (fake) browser's URL on; a denied Apple Event shows in the debugger. Action in Alfred opens the action panel for a file path, or for text that is not one, and the launcher stays.
 Status: done
 
+### S-055 Delay, Dialog, Terminal Command, Text View, Shortcuts and the Finder from a workflow
+As the user, Default Browser, Homebrew, Shortcuts and Visual Studio Code run in Reach from start to end.
+Depends: S-054
+Acceptance:
+- [unit] Delay (`alfred.workflow.utility.delay`) waits `seconds` (text like "0.3"), then sends the argument on.
+- [unit] Dialog (`alfred.workflow.utility.dialog`) shows a system alert with its `title`, `description` and the non-empty `button1`–`button3`, `{query}` and `{var:…}` filled. Lines out of a dialog (none in Sander's workflows) are named in the debugger.
+- [unit] Terminal Command (`alfred.workflow.action.terminalcommand`) runs its `script`, `{query}` escaped as `escaping` says, in a new window of the terminal app from Settings > Terminal.
+- [unit] Text View (`alfred.workflow.userinterface.text`) with text as input shows that text in a window named after the workflow; selectable, Esc closes it. A script as input, output to the next objects, a footer or loading text show in the debugger. `fontsizing` and `stackview` only change how Alfred draws it and are ignored.
+- [unit] Run Shortcut (`alfred.workflow.automation.runshortcut`) runs the shortcut in `shortcut` (also set by JSON Config) with `/usr/bin/shortcuts`: `inputmode` -1 gives it nothing, 0 the text (through a temporary file), 1 the files. The next objects get what it prints. Another `inputmode` or `outputmode` shows in the debugger.
+- [unit] View Shortcut (`shortcut.view`) opens the shortcut in `target_shortcut`, else the text, in the Shortcuts app.
+- [unit] The Finder tasks ask Finder through `osascript`: `finder.selection` sends the selected files on, tab-separated; `finder.windows.current` sends the front window's folder, empty without a window. Without the Automation permission the error shows in the debugger.
+- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). The Finder tasks send on what Finder answers (faked). Dialog shows its filled title, text and buttons (recorded, never shown).
+Status: done
+
 ---
 
 ## Later

@@ -55,6 +55,8 @@ extension WorkflowObject {
         Workflow.runScript: "Run Script",
         "alfred.workflow.action.applescript": "Run NSAppleScript",
         "alfred.workflow.action.terminalcommand": "Terminal Command",
+        "alfred.workflow.userinterface.text": "Text View",
+        WorkflowShortcut.runType: "Run Shortcut",
         Workflow.copyToClipboard: "Copy to Clipboard",
         Workflow.largeType: "Large Type",
         "alfred.workflow.output.notification": "Post Notification",

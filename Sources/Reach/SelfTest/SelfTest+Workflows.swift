@@ -88,6 +88,27 @@ extension SelfTest {
                 // S-054: Action in Alfred opens the action panel for the text.
                 ["uid": "ACTKW", "type": KeywordInput.type, "config": ["keyword": "ract", "argumenttype": 0, "text": "Actions"]],
                 ["uid": "ACT", "type": Workflow.actionInAlfred, "config": ["jumpto": "_popUpItemAction:", "path": "", "type": 1]],
+                // S-055: Delay, then Copy to Clipboard.
+                ["uid": "WAITKW", "type": KeywordInput.type, "config": ["keyword": "rwait", "argumenttype": 0, "text": "Wait"]],
+                ["uid": "WAIT", "type": Workflow.delay, "config": ["seconds": "0.2"]],
+                ["uid": "ASKKW", "type": KeywordInput.type, "config": ["keyword": "rask", "argumenttype": 0, "text": "Ask"]],
+                ["uid": "ASK", "type": Workflow.dialog, "config": ["title": "About {query}", "description": "Details", "button1": "Ok"]],
+                ["uid": "BREWKW", "type": KeywordInput.type, "config": ["keyword": "rbrew", "argumenttype": 0, "text": "Brew"]],
+                ["uid": "BREW", "type": Workflow.terminalCommand, "config": ["escaping": 0, "script": "brew install {query}"]],
+                ["uid": "INFOKW", "type": KeywordInput.type, "config": ["keyword": "rinfo", "argumenttype": 0, "text": "Info"]],
+                ["uid": "INFO", "type": Workflow.textView, "config": ["inputtype": 0, "outputmode": 0, "behaviour": 0, "fontmode": 0,
+                                                                       "fontsizing": 4, "stackview": true, "footertext": "", "loadingtext": ""]],
+                ["uid": "SHORTKW", "type": KeywordInput.type, "config": ["keyword": "rshort", "argumenttype": 0, "text": "Shortcut"]],
+                ["uid": "SHORTJSON", "type": Workflow.json, "config": [
+                    "json": #"{"alfredworkflow": {"arg": "{query}", "config": {"shortcut": "Echo", "inputmode": "0", "outputmode": 0}}}"#]],
+                ["uid": "SHORT", "type": WorkflowShortcut.runType, "config": ["shortcut": "", "inputmode": -1, "outputmode": 0]],
+                ["uid": "VIEWKW", "type": KeywordInput.type, "config": ["keyword": "rview", "argumenttype": 0, "text": "View"]],
+                ["uid": "VIEW", "type": Workflow.automationTask, "config": ["taskuid": WorkflowShortcut.viewTask,
+                                                                          "tasksettings": ["target_shortcut": "{query}"]]],
+                ["uid": "SELKW", "type": KeywordInput.type, "config": ["keyword": "rsel", "argumenttype": 2, "text": "Selection"]],
+                ["uid": "SEL", "type": Workflow.automationTask, "config": ["taskuid": FinderTask.selection, "tasksettings": [String: String]()]],
+                ["uid": "WINKW", "type": KeywordInput.type, "config": ["keyword": "rwin", "argumenttype": 2, "text": "Window"]],
+                ["uid": "WIN", "type": Workflow.automationTask, "config": ["taskuid": FinderTask.currentWindow, "tasksettings": [String: String]()]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -147,6 +168,19 @@ extension SelfTest {
                 "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
                 "TABKW": [["destinationuid": "TAB", "modifiers": 0]],
                 "ACTKW": [["destinationuid": "ACT", "modifiers": 0]],
+                "WAITKW": [["destinationuid": "WAIT", "modifiers": 0]],
+                "WAIT": [["destinationuid": "COPY", "modifiers": 0]],
+                "ASKKW": [["destinationuid": "ASK", "modifiers": 0]],
+                "BREWKW": [["destinationuid": "BREW", "modifiers": 0]],
+                "INFOKW": [["destinationuid": "INFO", "modifiers": 0]],
+                "SHORTKW": [["destinationuid": "SHORTJSON", "modifiers": 0]],
+                "SHORTJSON": [["destinationuid": "SHORT", "modifiers": 0]],
+                "SHORT": [["destinationuid": "COPY", "modifiers": 0]],
+                "VIEWKW": [["destinationuid": "VIEW", "modifiers": 0]],
+                "SELKW": [["destinationuid": "SEL", "modifiers": 0]],
+                "SEL": [["destinationuid": "COPY", "modifiers": 0]],
+                "WINKW": [["destinationuid": "WIN", "modifiers": 0]],
+                "WIN": [["destinationuid": "COPY", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -665,6 +699,66 @@ extension SelfTest {
         check("for text that is not a path it opens the panel for the text",
               launcher.isVisible && lm.actions?.text == "hello", lm.actions?.target.title ?? "no panel")
         lm.closeActions()
+
+        // S-055
+        await enter("rwait later")
+        let early = copied.last
+        try? await Task.sleep(for: .milliseconds(400))
+        check("Delay waits, then sends the text on", early != "copied later" && copied.last == "copied later", copied.last ?? "none")
+
+        // Dialogs are recorded, never shown.
+        let realDialog = lm.showDialog
+        var dialogs: [String] = []
+        lm.showDialog = { title, text, buttons in dialogs.append("\(title) / \(text) / \(buttons.joined(separator: ","))") }
+        await enter("rask Safari")
+        lm.showDialog = realDialog
+        check("Dialog shows its filled title, text and buttons", dialogs == ["About Safari / Details / Ok"], dialogs.joined())
+
+        // Terminal commands are recorded, never run.
+        let realShell = lm.runShell
+        var shells: [String] = []
+        lm.runShell = { shells.append($0.command); return true }
+        await enter("rbrew wget")
+        lm.runShell = realShell
+        check("Terminal Command runs the filled command in the terminal", shells == ["brew install wget"], shells.joined())
+
+        // A Text View is recorded, not shown.
+        let realText = lm.showText
+        var texts: [String] = []
+        lm.showText = { texts.append("\($0): \($1)") }
+        await enter("rinfo wget 1.25")
+        lm.showText = realText
+        check("Text View shows the text under the workflow's name", texts.count == 1 && texts[0].hasSuffix(": wget 1.25"), texts.joined())
+
+        // Shortcuts never runs: a fake answers for /usr/bin/shortcuts.
+        let realShortcuts = lm.workflows.run
+        var shortcuts: [[String]] = []
+        lm.workflows.run = { command in
+            shortcuts.append(command.arguments)
+            return ScriptResult(output: Data("echoed\n".utf8))
+        }
+        await enter("rshort hello")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("Run Shortcut runs the shortcut JSON Config names with the text, and goes on with what it prints",
+              shortcuts.first?.suffix(2) == ["Echo", "hello"] && copied.last == "copied echoed", "\(shortcuts) \(copied.last ?? "")")
+        await enter("rview Echo")
+        try? await Task.sleep(for: .milliseconds(100))
+        lm.workflows.run = realShortcuts
+        check("View Shortcut opens the shortcut in Shortcuts", shortcuts.last == ["view", "Echo"], "\(shortcuts)")
+
+        // Finder is never asked: a fake answers for osascript.
+        let realFinder = lm.workflows.run
+        lm.workflows.run = { command in
+            let script = command.arguments.last ?? ""
+            return ScriptResult(output: Data((script.contains("selection") ? "/tmp/a.txt\t/tmp/b.txt" : "/tmp/folder/").utf8))
+        }
+        await enter("rsel")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("Finder Selection sends the selected files on, tab-separated", copied.last == "copied /tmp/a.txt\t/tmp/b.txt", copied.last ?? "")
+        await enter("rwin")
+        try? await Task.sleep(for: .milliseconds(100))
+        lm.workflows.run = realFinder
+        check("Current Finder Window sends its folder on", copied.last == "copied /tmp/folder/", copied.last ?? "")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
