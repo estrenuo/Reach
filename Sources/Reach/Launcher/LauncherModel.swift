@@ -85,6 +85,8 @@ final class LauncherModel {
     @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
     /// Shows text in Large Type. The self-test swaps in a recorder.
     @ObservationIgnored var largeType: @MainActor (String) -> Void = { LargeType.shared.show($0) }
+    /// Opens the terminal app from Settings > Terminal in a folder, for a workflow (S-053). The self-test swaps in a recorder.
+    @ObservationIgnored var openTerminal: @MainActor (URL) -> Bool = { ShellRunner.open(folder: $0) }
     /// Reads the clipboard's text for a workflow hotkey (S-049). The self-test swaps in a fake.
     @ObservationIgnored var readClipboard: @MainActor () -> String? = { NSPasteboard.general.string(forType: .string) }
     /// Plays a workflow's sound: a system sound's name or a file's path (S-048). The self-test swaps in a recorder.

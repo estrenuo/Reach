@@ -112,6 +112,8 @@ extension LauncherModel {
             switch step {
             case .open(let text):
                 worked = openWorkflowTarget(text) && worked
+            case .terminal(let path):
+                worked = openTerminal(URL(fileURLWithPath: (path as NSString).expandingTildeInPath)) && worked
             case .reveal(let path):
                 worked = perform(.action(.reveal), [URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) && worked
             case .trash(let path):

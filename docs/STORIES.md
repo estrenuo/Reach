@@ -843,6 +843,14 @@ UX:
 - Workflow fallbacks follow the web searches in the fallback list; workflow actions follow Reach's own in the action panel, with the workflow's icon and a ⌘ number.
 Status: done
 
+### S-053 Terminal, key presses and Grid View from a workflow
+As the user, imported Alfred workflows that open a folder in the terminal, press keys in the app in front, or show their items in a grid run in Reach.
+Depends: S-052
+Acceptance:
+- [unit] Browse in Terminal (`alfred.workflow.action.browseinterminal`) opens the terminal app from Settings > Terminal in its `path` (the argument when empty, `{query}` and `{var:…}` filled), or in the folder of a file, and passes the argument on.
+- [self] ↩ through Browse in Terminal opens the terminal at the path (recorded, never opened).
+Status: in progress
+
 ---
 
 ## Later

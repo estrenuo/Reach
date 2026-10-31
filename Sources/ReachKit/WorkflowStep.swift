@@ -23,6 +23,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case sound(String)
     /// Write a line to the workflow debugger, after clearing it when `clear` (S-048).
     case debug(String, clear: Bool)
+    /// Open the terminal in this folder, or the folder of this file (S-053).
+    case terminal(String)
     /// An object Reach does not run, by its kind, like `automation.task`.
     case unsupported(String)
 }
@@ -48,6 +50,7 @@ extension Workflow {
     public static let replace = "alfred.workflow.utility.replace"
     public static let json = "alfred.workflow.utility.json"
     public static let joinArgs = "alfred.workflow.utility.joinargs"
+    public static let browseInTerminal = "alfred.workflow.action.browseinterminal"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -90,6 +93,11 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.browseInTerminal:
+                // An empty path is the argument; the objects after it get the same argument.
+                let path = object.string("path")
+                return [.terminal(path.isEmpty ? argument : fill(path))]
+                    + next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
             case Self.copyToClipboard:
                 let text = object.string("clipboardtext")
                 return [.copy(text.isEmpty ? argument : fill(text))]

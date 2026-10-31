@@ -66,6 +66,9 @@ extension SelfTest {
                 ["uid": "JOINKW", "type": KeywordInput.type, "config": ["keyword": "rjoin", "argumenttype": 0, "text": "Join"]],
                 ["uid": "JOINSPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
                 ["uid": "JOIN", "type": Workflow.joinArgs, "config": ["delimiter": "+"]],
+                // S-053: Browse in Terminal with the argument as the path.
+                ["uid": "TERMKW", "type": KeywordInput.type, "config": ["keyword": "rterm", "argumenttype": 0, "text": "Terminal"]],
+                ["uid": "TERM", "type": Workflow.browseInTerminal, "config": ["path": ""]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -121,6 +124,7 @@ extension SelfTest {
                 "JOIN": [["destinationuid": "COPY", "modifiers": 0]],
                 "FALLBACK": [["destinationuid": "COPY", "modifiers": 0]],
                 "UATEXT": [["destinationuid": "COPY", "modifiers": 0]],
+                "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
                 "UAFILES": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
@@ -561,6 +565,14 @@ extension SelfTest {
               row != nil && row == titles.count - 1 && titles.first?.hasPrefix("Search Google") == true, titles.joined(separator: ", "))
         if let row { lm.open(at: row) }
         check("↩ on it sends the typed text on", copied.last == "copied zzqxv selftest", copied.last ?? "none")
+
+        // S-053: the terminal is recorded, never opened.
+        let realTerminal = lm.openTerminal
+        var terminals: [String] = []
+        lm.openTerminal = { terminals.append($0.path); return true }
+        await enter("rterm /tmp")
+        lm.openTerminal = realTerminal
+        check("Browse in Terminal opens the terminal at the path", terminals == ["/tmp"], terminals.joined(separator: ", "))
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

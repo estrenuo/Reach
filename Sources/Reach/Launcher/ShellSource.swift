@@ -72,6 +72,17 @@ final class ShellSource: ResultSource {
 /// Opens a new window in the terminal app and runs the command there.
 /// The command is never logged: it can hold paths and passwords.
 enum ShellRunner {
+    /// Opens the terminal app from Settings > Terminal in `url`, or in the
+    /// folder of a file (S-053). False when the path does not exist.
+    static func open(folder url: URL) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        let app = TerminalSettings.path(of: TerminalSettings.shared.app) ?? TerminalSettings.path(of: .terminal)
+        guard let app else { return false }
+        NSWorkspace.shared.open([ActionRunner.folder(of: url)], withApplicationAt: URL(fileURLWithPath: app),
+                                configuration: NSWorkspace.OpenConfiguration())
+        return true
+    }
+
     static func run(_ run: ShellRun) -> Bool {
         systemLog.notice("shell in \(run.app.rawValue, privacy: .public)")
         if let source = ShellCommand.script(for: run.app, command: run.command) {
