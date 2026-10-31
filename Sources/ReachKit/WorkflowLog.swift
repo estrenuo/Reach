@@ -54,6 +54,11 @@ public struct WorkflowLog: Equatable, Sendable {
         }
     }
 
+    /// Logs why an object that Reach runs did nothing, like a notification that is turned off.
+    public mutating func failed(workflow: String, text: String, at date: Date = .now) {
+        add(workflow, .error, text, date)
+    }
+
     /// Logs an object that Return reached but Reach does not run (S-047).
     public mutating func skipped(workflow: String, kind: String, at date: Date = .now) {
         add(workflow, .error, "Reach does not run \(kind) yet.", date)

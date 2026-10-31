@@ -781,6 +781,18 @@ Status: done
 
 ---
 
+### S-048 Notifications, sounds and debug lines from a workflow
+As the user, ↩ on an imported Alfred workflow that posts a notification, plays a sound or writes a debug line does that too, and goes on, so the workflows that only stopped there run.
+Depends: S-047
+Acceptance:
+- [unit] Post Notification (`alfred.workflow.output.notification`) fills `title` and `text` with `{query}` and `{var:…}` (the workflow's name when the title is empty), uses only the file name or drops its extension when set, shows nothing without text when "only show if query populated" is on, and passes the argument on.
+- [self] ↩ through Post Notification shows its text and passes it on; the self-test records the notification instead of posting it.
+UX:
+- macOS asks once whether Reach may post notifications. When that is off, the debugger says so; the rest of the workflow still runs.
+Status: done
+
+---
+
 ## Later
 
 - Full visual node editor: drag objects from the palette, connect, utilities (conditional, junction, transform) (30, 31).

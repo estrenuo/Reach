@@ -17,6 +17,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case show(String)
     /// Move a file to the Trash: the Automation Task `path.trash` (S-047).
     case trash(String)
+    /// Post a notification with this title and text (S-048).
+    case notify(title: String, text: String)
     /// An object Reach does not run, by its kind, like `automation.task`.
     case unsupported(String)
 }
@@ -35,6 +37,7 @@ extension Workflow {
     public static let externalTrigger = "alfred.workflow.trigger.external"
     public static let callExternalTrigger = "alfred.workflow.output.callexternaltrigger"
     public static let automationTask = "alfred.workflow.automation.task"
+    public static let notification = "alfred.workflow.output.notification"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -118,6 +121,17 @@ extension Workflow {
                 // The objects after it run once the file is in the Trash, with its path.
                 return [.trash(path)] + next(after: object.uid, argument: path, variables: variables,
                                              environment: environment, depth: depth)
+            case Self.notification:
+                // Like Alfred, the argument goes on to the objects after it.
+                let after = next(after: object.uid, argument: argument, variables: variables,
+                                 environment: environment, depth: depth)
+                if object.bool("onlyshowifquerypopulated") && argument.isEmpty { return after }
+                var shown = argument
+                if object.bool("lastpathcomponent") { shown = (shown as NSString).lastPathComponent }
+                if object.bool("removeextension") { shown = (shown as NSString).deletingPathExtension }
+                let title = WorkflowText.fill(object.string("title"), query: shown, variables: variables)
+                return [.notify(title: title.isEmpty ? name : title,
+                                text: WorkflowText.fill(object.string("text"), query: shown, variables: variables))] + after
             case ScriptFilter.type, KeywordInput.type:
                 guard let keyword = scriptFilters.first(where: { $0.uid == object.uid })?.keyword
                     ?? keywordInputs.first(where: { $0.uid == object.uid })?.keyword else { return [] }

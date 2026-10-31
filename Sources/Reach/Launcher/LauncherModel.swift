@@ -85,6 +85,13 @@ final class LauncherModel {
     @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
     /// Shows text in Large Type. The self-test swaps in a recorder.
     @ObservationIgnored var largeType: @MainActor (String) -> Void = { LargeType.shared.show($0) }
+    /// Posts a workflow's notification (S-048). The self-test swaps in a recorder.
+    @ObservationIgnored var notify: @MainActor (Workflow, String, String) -> Void = { workflow, title, text in
+        WorkflowNotifier.post(title: title, text: text) {
+            WorkflowLibrary.shared.log.failed(workflow: workflow.name,
+                                              text: "Notifications for Reach are off in System Settings > Notifications.")
+        }
+    }
     /// Runs an action from the action panel. The self-test swaps in a recorder.
     @ObservationIgnored var perform: @MainActor (ActionPanel.Item, [URL]) -> Bool = { ActionRunner.run($0, on: $1) }
     /// Seconds for the buffer's 5 minutes. The self-test moves it forward.
