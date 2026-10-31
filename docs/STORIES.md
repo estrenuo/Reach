@@ -806,6 +806,18 @@ UX:
 - Alfred leaves hotkeys out of an exported workflow, so the triggers start empty; the sheet says so. A combination another app owns stays off with that reason.
 Status: done
 
+### S-050 File Actions from a workflow
+As the user, the action panel for a file lists the File Actions of my imported Alfred workflows that are for that kind of file, and choosing one runs the workflow with the file, so the workflows I start on a file in Finder or the launcher work.
+Depends: S-047
+Acceptance:
+- [unit] A File Action (`alfred.workflow.trigger.action`) is read with its name, its file types (UTIs) and whether it takes several files (`acceptsmulti`).
+- [unit] It shows only when every item conforms to one of its types (any file when it names none; through a symlink, like /Applications/Safari.app), and only for one item when it does not take several.
+- [unit] The connected objects get the paths, tab-separated as Alfred passes them.
+- [self] The action panel for a file lists the enabled workflows' matching File Actions after Reach's own actions, filtered by what is typed; ↩ runs what is connected with the path and hides the launcher. Several files get their paths tab-separated. A workflow that is off adds nothing.
+UX:
+- The row has the workflow's icon; the footer says which workflow runs it. A workflow step Reach does not run shows in the panel's footer.
+Status: done
+
 ---
 
 ## Later

@@ -78,6 +78,32 @@ extension LauncherModel {
         onUsed(.workflows)
     }
 
+    enum FileActionOutcome: Equatable {
+        case done
+        /// The workflow showed the launcher with a keyword; it stays.
+        case shows
+        case failed(String)
+    }
+
+    /// Runs a workflow's File Action (S-050) with the items' paths, tab-separated.
+    func runFileAction(_ action: WorkflowFileAction, in id: String, on urls: [URL]) -> FileActionOutcome {
+        let library = workflows.library
+        guard let workflow = library.workflow(id), !workflow.disabled else { return .failed("This workflow is no longer installed.") }
+        let argument = WorkflowFileAction.argument(for: urls)
+        library.log.debug(workflow: workflow.name, text: "File Action “\(action.name)” ran with “\(argument)”")
+        let steps = workflow.steps(after: action.uid, argument: argument, variables: workflow.variables,
+                                   environment: library.environment(for: workflow))
+        guard !steps.isEmpty else { return .failed("Nothing in \(workflow.name) uses this action.") }
+        let skipped = steps.compactMap { if case .unsupported(let kind) = $0 { kind } else { nil } }
+        if skipped.count == steps.count {
+            skipped.forEach { library.skipped(workflow, kind: $0) }
+            return .failed("Reach does not run \(skipped[0]) yet.")
+        }
+        guard runSteps(steps, in: workflow) else { return .failed("Unable to run “\(action.name)”.") }
+        onUsed(.workflows)
+        return steps.contains { if case .show = $0 { true } else { false } } ? .shows : .done
+    }
+
     /// Runs the steps in order. A script runs in the background and its
     /// output goes on to the objects after it, at most five scripts deep.
     private func runSteps(_ steps: [WorkflowStep], in workflow: Workflow, depth: Int = 0) -> Bool {

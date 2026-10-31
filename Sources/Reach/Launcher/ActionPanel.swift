@@ -19,6 +19,8 @@ final class ActionPanel {
         case web(URL)
         /// A line of a contact card (S-024).
         case field(ContactField)
+        /// An imported workflow's File Action (S-050), by the workflow's id and name.
+        case workflow(id: String, name: String, action: WorkflowFileAction)
 
         /// For the log: the action without the text or the search it carries.
         var logName: String {
@@ -28,6 +30,7 @@ final class ActionPanel {
             case .text(let action, _): "text \(action.rawValue)"
             case .web(let search): "web search on \(search.host() ?? "?")"
             case .field(let field): "contact \(field.kind.rawValue)"
+            case .workflow(_, let name, let action): "workflow \(name) / \(action.name)"
             }
         }
     }
@@ -125,6 +128,7 @@ final class ActionPanel {
         case .app(let app): return "Open “\(target.title)” with \(Self.appName(app))"
         case .text(let action, _): return action.summary
         case .web: return "Open the search in your browser"
+        case .workflow(_, let name, _): return "Run it with the workflow “\(name)”"
         case nil: return ""
         }
     }
@@ -213,16 +217,32 @@ final class ActionPanel {
                                              quickLook: !isMany && QuickLook.file(for: target) != nil,
                                              many: isMany, off: ActionSettings.shared.off)
             let actions = FileAction.filtered(shown, by: filter)
-            items = actions.map { .action($0) }
+            let fromWorkflows = workflowActions()
+            items = actions.map { .action($0) } + fromWorkflows.map(\.item)
             rows = actions.map { action in
                 LaunchResult(id: "action:\(action.rawValue)", title: action.title, subtitle: "",
                              icon: .symbol(action.symbol), url: url, kindLabel: "Action")
-            }
+            } + fromWorkflows.map(\.row)
             if rows.isEmpty {
-                rows = [hint(shown.isEmpty ? Self.allOff : "No actions match “\(filter)”")]
+                rows = [hint(shown.isEmpty && filter.isEmpty ? Self.allOff : "No actions match “\(filter)”")]
             }
         }
         selection = 0
+    }
+
+    /// The enabled workflows' File Actions for these items (S-050), after
+    /// Reach's own, matching the filter.
+    private func workflowActions() -> [(item: Item, row: LaunchResult)] {
+        let text = filter.trimmingCharacters(in: .whitespaces)
+        return WorkflowLibrary.shared.workflows.filter { !$0.disabled }.flatMap { workflow in
+            workflow.fileActions.compactMap { action -> (item: Item, row: LaunchResult)? in
+                guard action.accepts(urls), text.isEmpty || Matcher.score(query: text, title: action.name) != nil else { return nil }
+                let row = LaunchResult(id: "workflow:\(workflow.id)/\(action.uid)", title: action.name, subtitle: "",
+                                       icon: workflow.icon.map { .image($0.path) } ?? .symbol(WorkflowSource.symbol),
+                                       url: url, kindLabel: workflow.name)
+                return (.workflow(id: workflow.id, name: workflow.name, action: action), row)
+            }
+        }
     }
 
     private func hint(_ title: String) -> LaunchResult {
@@ -273,8 +293,8 @@ enum ActionRunner {
             return NSPasteboard.general.setString(text, forType: .string)
         case .web(let search):
             return workspace.open(search)
-        case .field:
-            // The model opens or copies fields itself.
+        case .field, .workflow:
+            // The model opens or copies fields, and runs workflows, itself.
             return false
         case .app(let app):
             guard !urls.isEmpty else { return false }
