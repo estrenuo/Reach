@@ -837,8 +837,11 @@ Acceptance:
 - [unit] JSON Config (`alfred.workflow.utility.json`) fills `{query}` and `{var:…}` in its `json` (escaped, so a quote keeps it whole), then sets the argument from `arg` (an array joined with tabs), adds its `variables`, and overrides the configuration of the objects right after it with `config`. JSON that does not parse is named in the debugger.
 - [unit] Join Arguments (`alfred.workflow.utility.joinargs`) right after a Split Arguments that outputs arguments gets the parts back as one argument, joined with its `delimiter`; anywhere else one argument joins to itself.
 - [unit] A Fallback Search (`alfred.workflow.trigger.fallback`) has its `text` as the row title with `{query}` filled ("Search <workflow> for '…'" without one); ↩ sends the typed text on, so a script filter after it shows its keyword with the text.
-- [self] ↩ through JSON Config sets the next object's configuration; Split then Join Arguments puts the parts back together. An enabled workflow's Fallback Search shows after the web searches when nothing matches, and ↩ sends the text on.
-Status: in progress
+- [unit] A Universal Action (`alfred.workflow.trigger.universalaction`) is read with its `name` and what it accepts: `acceptsfiles` (one file, or several with `acceptsmulti`), `acceptstext`, and `acceptsurls` for selected text that is one web address.
+- [self] ↩ through JSON Config sets the next object's configuration; Split then Join Arguments puts the parts back together. An enabled workflow's Fallback Search shows after the web searches when nothing matches, and ↩ sends the text on. The action panel for selected text lists the Universal Actions that take text (not one that skips URLs for a web address) and sends the text on; for files it lists those that take files and sends the paths, tab-separated.
+UX:
+- Workflow fallbacks follow the web searches in the fallback list; workflow actions follow Reach's own in the action panel, with the workflow's icon and a ⌘ number.
+Status: done
 
 ---
 

@@ -19,8 +19,9 @@ final class ActionPanel {
         case web(URL)
         /// A line of a contact card (S-024).
         case field(ContactField)
-        /// An imported workflow's File Action (S-050), by the workflow's id and name.
-        case workflow(id: String, name: String, action: WorkflowFileAction)
+        /// An imported workflow's File Action (S-050) or Universal Action (S-052),
+        /// by the workflow's id and name, the trigger's uid and title, and what it gets.
+        case workflow(id: String, name: String, trigger: String, title: String, argument: String)
 
         /// For the log: the action without the text or the search it carries.
         var logName: String {
@@ -30,7 +31,7 @@ final class ActionPanel {
             case .text(let action, _): "text \(action.rawValue)"
             case .web(let search): "web search on \(search.host() ?? "?")"
             case .field(let field): "contact \(field.kind.rawValue)"
-            case .workflow(_, let name, let action): "workflow \(name) / \(action.name)"
+            case .workflow(_, let name, _, let title, _): "workflow \(name) / \(title)"
             }
         }
     }
@@ -128,7 +129,7 @@ final class ActionPanel {
         case .app(let app): return "Open “\(target.title)” with \(Self.appName(app))"
         case .text(let action, _): return action.summary
         case .web: return "Open the search in your browser"
-        case .workflow(_, let name, _): return "Run it with the workflow “\(name)”"
+        case .workflow(_, let name, _, _, _): return "Run it with the workflow “\(name)”"
         case nil: return ""
         }
     }
@@ -188,12 +189,13 @@ final class ActionPanel {
             }.filter { search in
                 filter.isEmpty || Matcher.score(query: filter, title: search.title) != nil
             }
-            items = actions.map { .text($0, text) } + searches.compactMap { $0.url.map { .web($0) } }
+            let fromWorkflows = workflowActions(text: text)
+            items = actions.map { .text($0, text) } + searches.compactMap { $0.url.map { .web($0) } } + fromWorkflows.map(\.item)
             rows = actions.map { action in
                 LaunchResult(id: "text:\(action.rawValue)", title: action.title, subtitle: "",
                              icon: .symbol(action.symbol), url: URL(string: "reach-action://\(action.rawValue)"),
                              kindLabel: "Action")
-            } + searches
+            } + searches + fromWorkflows.map(\.row)
             if rows.isEmpty { rows = [hint("No actions match “\(filter)”")] }
         } else if choosingApp, let url {
             // Apps that open every item, in the first item's order.
@@ -217,7 +219,7 @@ final class ActionPanel {
                                              quickLook: !isMany && QuickLook.file(for: target) != nil,
                                              many: isMany, off: ActionSettings.shared.off)
             let actions = FileAction.filtered(shown, by: filter)
-            let fromWorkflows = workflowActions()
+            let fromWorkflows = workflowActions(text: nil)
             items = actions.map { .action($0) } + fromWorkflows.map(\.item)
             rows = actions.map { action in
                 LaunchResult(id: "action:\(action.rawValue)", title: action.title, subtitle: "",
@@ -230,17 +232,23 @@ final class ActionPanel {
         selection = 0
     }
 
-    /// The enabled workflows' File Actions for these items (S-050), after
-    /// Reach's own, matching the filter.
-    private func workflowActions() -> [(item: Item, row: LaunchResult)] {
-        let text = filter.trimmingCharacters(in: .whitespaces)
+    /// The enabled workflows' actions after Reach's own, matching the filter:
+    /// for these items their File Actions (S-050) and Universal Actions that
+    /// take files, for `selected` text the Universal Actions that take it (S-052).
+    private func workflowActions(text selected: String?) -> [(item: Item, row: LaunchResult)] {
+        let typed = filter.trimmingCharacters(in: .whitespaces)
+        let argument = selected ?? WorkflowFileAction.argument(for: urls)
         return WorkflowLibrary.shared.workflows.filter { !$0.disabled }.flatMap { workflow in
-            workflow.fileActions.compactMap { action -> (item: Item, row: LaunchResult)? in
-                guard action.accepts(urls), text.isEmpty || Matcher.score(query: text, title: action.name) != nil else { return nil }
-                let row = LaunchResult(id: "workflow:\(workflow.id)/\(action.uid)", title: action.name, subtitle: "",
+            let files = selected != nil ? [] : workflow.fileActions.filter { $0.accepts(urls) }.map { ($0.uid, $0.name) }
+            let universal = workflow.universalActions
+                .filter { action in selected.map(action.accepts(text:)) ?? action.accepts(urls) }.map { ($0.uid, $0.name) }
+            return (files + universal).compactMap { uid, name -> (item: Item, row: LaunchResult)? in
+                guard typed.isEmpty || Matcher.score(query: typed, title: name) != nil else { return nil }
+                let row = LaunchResult(id: "workflow:\(workflow.id)/\(uid)", title: name, subtitle: "",
                                        icon: workflow.icon.map { .image($0.path) } ?? .symbol(WorkflowSource.symbol),
-                                       url: url, kindLabel: workflow.name)
-                return (.workflow(id: workflow.id, name: workflow.name, action: action), row)
+                                       // Selected text has no file; a reach: address keeps the row usable, like the text actions.
+                                       url: url ?? URL(string: "reach-workflow://\(uid)"), kindLabel: workflow.name)
+                return (.workflow(id: workflow.id, name: workflow.name, trigger: uid, title: name, argument: argument), row)
             }
         }
     }

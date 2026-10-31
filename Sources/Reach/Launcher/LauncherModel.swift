@@ -592,9 +592,9 @@ final class LauncherModel {
             }
             // Using a card's detail picks the contact, for Learning.
             onOpened(query, target)
-        case .workflow(let id, _, let action):
+        case .workflow(let id, _, let trigger, let title, let argument):
             actions = nil
-            switch runFileAction(action, in: id, on: panel.urls) {
+            switch runWorkflowAction(trigger, title: title, in: id, argument: argument) {
             case .failed(let message):
                 actions = panel
                 panel.failure = message
