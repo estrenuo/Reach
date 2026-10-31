@@ -98,6 +98,13 @@ extension SelfTest {
                 ["uid": "INFOKW", "type": KeywordInput.type, "config": ["keyword": "rinfo", "argumenttype": 0, "text": "Info"]],
                 ["uid": "INFO", "type": Workflow.textView, "config": ["inputtype": 0, "outputmode": 0, "behaviour": 0, "fontmode": 0,
                                                                        "fontsizing": 4, "stackview": true, "footertext": "", "loadingtext": ""]],
+                ["uid": "SHORTKW", "type": KeywordInput.type, "config": ["keyword": "rshort", "argumenttype": 0, "text": "Shortcut"]],
+                ["uid": "SHORTJSON", "type": Workflow.json, "config": [
+                    "json": #"{"alfredworkflow": {"arg": "{query}", "config": {"shortcut": "Echo", "inputmode": "0", "outputmode": 0}}}"#]],
+                ["uid": "SHORT", "type": WorkflowShortcut.runType, "config": ["shortcut": "", "inputmode": -1, "outputmode": 0]],
+                ["uid": "VIEWKW", "type": KeywordInput.type, "config": ["keyword": "rview", "argumenttype": 0, "text": "View"]],
+                ["uid": "VIEW", "type": Workflow.automationTask, "config": ["taskuid": WorkflowShortcut.viewTask,
+                                                                          "tasksettings": ["target_shortcut": "{query}"]]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -162,6 +169,10 @@ extension SelfTest {
                 "ASKKW": [["destinationuid": "ASK", "modifiers": 0]],
                 "BREWKW": [["destinationuid": "BREW", "modifiers": 0]],
                 "INFOKW": [["destinationuid": "INFO", "modifiers": 0]],
+                "SHORTKW": [["destinationuid": "SHORTJSON", "modifiers": 0]],
+                "SHORTJSON": [["destinationuid": "SHORT", "modifiers": 0]],
+                "SHORT": [["destinationuid": "COPY", "modifiers": 0]],
+                "VIEWKW": [["destinationuid": "VIEW", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -710,6 +721,22 @@ extension SelfTest {
         await enter("rinfo wget 1.25")
         lm.showText = realText
         check("Text View shows the text under the workflow's name", texts.count == 1 && texts[0].hasSuffix(": wget 1.25"), texts.joined())
+
+        // Shortcuts never runs: a fake answers for /usr/bin/shortcuts.
+        let realShortcuts = lm.workflows.run
+        var shortcuts: [[String]] = []
+        lm.workflows.run = { command in
+            shortcuts.append(command.arguments)
+            return ScriptResult(output: Data("echoed\n".utf8))
+        }
+        await enter("rshort hello")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("Run Shortcut runs the shortcut JSON Config names with the text, and goes on with what it prints",
+              shortcuts.first?.suffix(2) == ["Echo", "hello"] && copied.last == "copied echoed", "\(shortcuts) \(copied.last ?? "")")
+        await enter("rview Echo")
+        try? await Task.sleep(for: .milliseconds(100))
+        lm.workflows.run = realShortcuts
+        check("View Shortcut opens the shortcut in Shortcuts", shortcuts.last == ["view", "Echo"], "\(shortcuts)")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

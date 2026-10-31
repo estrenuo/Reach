@@ -247,6 +247,14 @@ extension Workflow {
             case Self.automationTask where object.string("taskuid").hasSuffix(CurrentTab.taskSuffix):
                 let allowEmpty = object.config["tasksettings"]?.dict?["allow_empty"]?.bool ?? false
                 return [.currentTab(then: object.uid, allowEmpty: allowEmpty, variables: variables, environment: environment)]
+            case WorkflowShortcut.runType:
+                switch WorkflowShortcut.run(object, argument: argument, variables: variables, folder: folder, environment: environment) {
+                case .success(let command): return [.run(command, then: object.uid, variables: variables)]
+                case .failure(let problem): return [.unsupported(problem.kind)]
+                }
+            case Self.automationTask where object.string("taskuid") == WorkflowShortcut.viewTask:
+                let command = WorkflowShortcut.view(object, argument: argument, variables: variables, folder: folder, environment: environment)
+                return [.run(command, then: object.uid, variables: variables)]
             case Self.automationTask where object.string("taskuid") == Self.trashTask:
                 let target = object.config["tasksettings"]?.dict?["target_path"]?.string ?? ""
                 let path = target.isEmpty ? argument : fill(target)

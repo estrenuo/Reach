@@ -54,3 +54,30 @@ private func line(_ to: String, _ modifiers: Int = 0) -> [[String: Any]] { [["de
     let chat = workflow([["uid": "TV", "type": Workflow.textView, "config": script]], ["KW": line("TV")])
     #expect(chat.steps(after: "KW", argument: "hi") == [.unsupported("userinterface.text with inputtype 1, footertext")])
 }
+
+@Test func runShortcutGivesTheShortcutNothingTheTextOrTheFiles() {
+    func steps(_ inputmode: Any, _ argument: String, outputmode: Int = 0) -> [WorkflowStep] {
+        let json = #"{"alfredworkflow": {"config": {"shortcut": "{var:shortcut}", "inputmode": "\#(inputmode)", "outputmode": \#(outputmode)}}}"#
+        return workflow([["uid": "J", "type": Workflow.json, "config": ["json": json]],
+                         ["uid": "S", "type": WorkflowShortcut.runType, "config": ["shortcut": "", "inputmode": -1, "outputmode": 0]]],
+                        ["KW": line("J"), "J": line("S")])
+            .steps(after: "KW", argument: argument, variables: ["shortcut": "Echo"])
+    }
+    guard case .run(let none, "S", _) = steps(-1, "x").first else { Issue.record("no run"); return }
+    #expect(none.executable == "/usr/bin/shortcuts" && none.arguments == ["run", "Echo"])
+    guard case .run(let text, _, _) = steps(0, "a \"b\" $c").first else { Issue.record("no run"); return }
+    #expect(text.executable == "/bin/zsh" && text.arguments.suffix(2) == ["Echo", "a \"b\" $c"])
+    guard case .run(let files, _, _) = steps(1, "/tmp/a\t/tmp/b").first else { Issue.record("no run"); return }
+    #expect(files.arguments == ["run", "Echo", "-i", "/tmp/a", "/tmp/b"])
+    #expect(steps(2, "x") == [.unsupported("automation.runshortcut with inputmode 2")])
+    #expect(steps(0, "x", outputmode: 1) == [.unsupported("automation.runshortcut with outputmode 1")])
+}
+
+@Test func viewShortcutOpensTheNamedShortcut() {
+    let view = workflow([["uid": "V", "type": Workflow.automationTask,
+                          "config": ["taskuid": WorkflowShortcut.viewTask, "tasksettings": ["target_shortcut": "{var:shortcut}"]]]],
+                        ["KW": line("V")])
+    guard case .run(let command, "V", _) = view.steps(after: "KW", argument: "", variables: ["shortcut": "Echo"]).first
+    else { Issue.record("no run"); return }
+    #expect(command.arguments == ["view", "Echo"])
+}

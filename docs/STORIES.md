@@ -874,7 +874,9 @@ Acceptance:
 - [unit] Dialog (`alfred.workflow.utility.dialog`) shows a system alert with its `title`, `description` and the non-empty `button1`–`button3`, `{query}` and `{var:…}` filled. Lines out of a dialog (none in Sander's workflows) are named in the debugger.
 - [unit] Terminal Command (`alfred.workflow.action.terminalcommand`) runs its `script`, `{query}` escaped as `escaping` says, in a new window of the terminal app from Settings > Terminal.
 - [unit] Text View (`alfred.workflow.userinterface.text`) with text as input shows that text in a window named after the workflow; selectable, Esc closes it. A script as input, output to the next objects, a footer or loading text show in the debugger. `fontsizing` and `stackview` only change how Alfred draws it and are ignored.
-- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Dialog shows its filled title, text and buttons (recorded, never shown).
+- [unit] Run Shortcut (`alfred.workflow.automation.runshortcut`) runs the shortcut in `shortcut` (also set by JSON Config) with `/usr/bin/shortcuts`: `inputmode` -1 gives it nothing, 0 the text (through a temporary file), 1 the files. The next objects get what it prints. Another `inputmode` or `outputmode` shows in the debugger.
+- [unit] View Shortcut (`shortcut.view`) opens the shortcut in `target_shortcut`, else the text, in the Shortcuts app.
+- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). Dialog shows its filled title, text and buttons (recorded, never shown).
 Status: in progress
 
 ---
