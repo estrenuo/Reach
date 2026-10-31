@@ -45,24 +45,15 @@ enum SelfTest {
                 MainActor.assumeIsolated { _ = blockers.insert(reason) }
             }
         }
+        // APP_SELFTEST_ONLY=workflows,launcher runs only those groups (tools/selftest.sh workflows).
+        let only = groupsAsked()
+        if let only, let unknown = only.first(where: { name in !groups.contains { $0.name == name } }) {
+            print("SELFTEST refused: no group “\(unknown)”. Groups: \(groups.map(\.name).joined(separator: ", "))")
+            finish(code: 1)
+            return
+        }
         Task {
             try? await Task.sleep(for: .seconds(0.5))
-            let context = model.container.mainContext
-            func snippets() -> [Snippet] { (try? context.fetch(FetchDescriptor<Snippet>())) ?? [] }
-
-            let before = snippets().count
-            model.addSnippet()
-            check("New Snippet adds one snippet", snippets().count == before + 1)
-            check("the new snippet is selected", model.selection != nil)
-
-            if let snippet = snippets().first(where: { $0.id == model.selection }) {
-                check("a new snippet always has a collection", snippet.collection != nil)
-                context.delete(snippet)
-                try? context.save()
-                check("deleting the snippet removes it", snippets().count == before)
-            }
-            check("names are cleaned", SnippetName.clean("  Email   signature ") == "Email signature")
-
             // The launcher hides when another app takes the keyboard, as it should.
             // Name those apps, so a failure caused by someone typing is easy to tell apart.
             var intruders: Set<String> = []
@@ -72,37 +63,9 @@ enum SelfTest {
                 // Finder: the Quick Look check brings it to the front on purpose.
                 if let app, app != .current, app.bundleIdentifier != "com.apple.finder" { MainActor.assumeIsolated { _ = intruders.insert(app.localizedName ?? "?") } }
             }
-            await checkLauncher(model: model)
-            await checkQuickLook(model: model)
-            await checkBuffer(model: model)
-            await checkSearch(model: model)
-            await checkCalculator(model: model)
-            await checkWebSearch(model: model)
-            await checkURLs(model: model)
-            await checkFallbacks(model: model)
-            await checkSystem(model: model)
-            await checkApps(model: model)
-            await checkShell(model: model)
-            await checkDictionary(model: model)
-            await checkLargeType(model: model)
-            await checkContacts(model: model)
-            await checkClipboard(model: model)
-            await checkClipboardViewer(model: model)
-            await checkMerging(model: model)
-            await checkSnippets(model: model)
-            await checkSnippetPaste(model: model)
-            await checkClipboardLoan(model: model)
-            await checkExpansion(model: model)
-            await checkThemes(model: model)
-            await checkOwnThemes(model: model)
-            await checkLauncherOptions(model: model)
-            await checkMenuBarIcon(model: model)
-            await checkSettingsWindow(model: model)
-            await checkAdvanced(model: model)
-            checkSync(model: model)
-            checkUsage(model: model)
-            await checkWorkflows(model: model)
-            await checkWorkflowList(model: model)
+            for group in groups where only?.contains(group.name) ?? true {
+                await group.run(model)
+            }
             NSWorkspace.shared.notificationCenter.removeObserver(watch)
             sleeps.forEach(center.removeObserver)
             if screenIsLocked { blockers.insert("the screen was locked") }
@@ -115,9 +78,73 @@ enum SelfTest {
                       + "Focus checks fail then; run again without using the Mac.")
             }
 
-            print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
+            let ran = only.map { $0.joined(separator: ", ") } ?? "all groups"
+            print(failures == 0 ? "SELFTEST PASS \(count) checks (\(ran))" : "SELFTEST FAIL \(failures) of \(count) checks (\(ran))")
             finish(code: failures == 0 ? 0 : 1)
         }
+    }
+
+
+    /// The check groups in run order, by the short name APP_SELFTEST_ONLY takes.
+    static let groups: [(name: String, run: @MainActor (AppModel) async -> Void)] = [
+        ("basics", { checkBasics(model: $0) }),
+        ("launcher", { await checkLauncher(model: $0) }),
+        ("quicklook", { await checkQuickLook(model: $0) }),
+        ("buffer", { await checkBuffer(model: $0) }),
+        ("search", { await checkSearch(model: $0) }),
+        ("calculator", { await checkCalculator(model: $0) }),
+        ("websearch", { await checkWebSearch(model: $0) }),
+        ("urls", { await checkURLs(model: $0) }),
+        ("fallbacks", { await checkFallbacks(model: $0) }),
+        ("system", { await checkSystem(model: $0) }),
+        ("apps", { await checkApps(model: $0) }),
+        ("shell", { await checkShell(model: $0) }),
+        ("dictionary", { await checkDictionary(model: $0) }),
+        ("largetype", { await checkLargeType(model: $0) }),
+        ("contacts", { await checkContacts(model: $0) }),
+        ("clipboard", { await checkClipboard(model: $0) }),
+        ("clipboardviewer", { await checkClipboardViewer(model: $0) }),
+        ("merging", { await checkMerging(model: $0) }),
+        ("snippets", { await checkSnippets(model: $0) }),
+        ("snippetpaste", { await checkSnippetPaste(model: $0) }),
+        ("clipboardloan", { await checkClipboardLoan(model: $0) }),
+        ("expansion", { await checkExpansion(model: $0) }),
+        ("themes", { await checkThemes(model: $0) }),
+        ("ownthemes", { await checkOwnThemes(model: $0) }),
+        ("launcheroptions", { await checkLauncherOptions(model: $0) }),
+        ("menubaricon", { await checkMenuBarIcon(model: $0) }),
+        ("settings", { await checkSettingsWindow(model: $0) }),
+        ("advanced", { await checkAdvanced(model: $0) }),
+        ("sync", { checkSync(model: $0) }),
+        ("usage", { checkUsage(model: $0) }),
+        ("workflows", { await checkWorkflows(model: $0) }),
+        ("workflowlist", { await checkWorkflowList(model: $0) }),
+    ]
+
+    /// The group names in APP_SELFTEST_ONLY, lowercased; nil runs every group.
+    private static func groupsAsked() -> [String]? {
+        let names = (ProcessInfo.processInfo.environment["APP_SELFTEST_ONLY"] ?? "")
+            .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+        return names.isEmpty ? nil : names
+    }
+
+    /// New Snippet and snippet names: the first checks, from before the groups had files.
+    private static func checkBasics(model: AppModel) {
+        let context = model.container.mainContext
+        func snippets() -> [Snippet] { (try? context.fetch(FetchDescriptor<Snippet>())) ?? [] }
+
+        let before = snippets().count
+        model.addSnippet()
+        check("New Snippet adds one snippet", snippets().count == before + 1)
+        check("the new snippet is selected", model.selection != nil)
+
+        if let snippet = snippets().first(where: { $0.id == model.selection }) {
+            check("a new snippet always has a collection", snippet.collection != nil)
+            context.delete(snippet)
+            try? context.save()
+            check("deleting the snippet removes it", snippets().count == before)
+        }
+        check("names are cleaned", SnippetName.clean("  Email   signature ") == "Email signature")
     }
 
     /// Shows the launcher again after a check hid it. Hide, show and a query in
