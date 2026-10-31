@@ -878,7 +878,7 @@ Acceptance:
 - [unit] View Shortcut (`shortcut.view`) opens the shortcut in `target_shortcut`, else the text, in the Shortcuts app.
 - [unit] The Finder tasks ask Finder through `osascript`: `finder.selection` sends the selected files on, tab-separated; `finder.windows.current` sends the front window's folder, empty without a window. Without the Automation permission the error shows in the debugger.
 - [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). The Finder tasks send on what Finder answers (faked). Dialog shows its filled title, text and buttons (recorded, never shown).
-Status: in progress
+Status: done
 
 ---
 
