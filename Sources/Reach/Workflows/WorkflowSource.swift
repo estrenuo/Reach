@@ -20,6 +20,7 @@ extension ReturnModifier {
         case .control: "ctrl"
         case .option: "alt"
         case .command: "cmd"
+        case .shift: "shift"
         }
     }
 
@@ -29,6 +30,7 @@ extension ReturnModifier {
         case .control: WorkflowConnection.control
         case .option: WorkflowConnection.option
         case .command: WorkflowConnection.command
+        case .shift: WorkflowConnection.shift
         }
     }
 }

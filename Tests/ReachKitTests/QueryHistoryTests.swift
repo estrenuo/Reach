@@ -57,6 +57,10 @@ import Testing
     #expect(ReturnModifier.held(control: false, option: false, command: true) == .command)
     #expect(ReturnModifier.held(control: true, option: true, command: false) == nil)
     #expect(ReturnModifier.held(control: false, option: false, command: false) == nil)
+    // S-054: ⇧ alone is ⇧↩, which only workflows use.
+    #expect(ReturnModifier.held(control: false, option: false, command: false, shift: true) == .shift)
+    #expect(ReturnModifier.held(control: false, option: false, command: true, shift: true) == nil)
+    #expect(!ReturnModifier.searchable.contains(.shift))
 }
 
 @Test func modifierReturnRunsTheMappedSearch() {

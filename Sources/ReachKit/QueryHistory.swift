@@ -70,25 +70,31 @@ public struct QueryHistory: Equatable, Sendable {
 /// The modifier held with Return for an alternative action (S-038): each
 /// runs a web search chosen in Settings > Advanced with the typed text.
 public enum ReturnModifier: String, CaseIterable, Identifiable, Sendable {
-    case control, option, command
+    /// ⇧↩ only follows a workflow's ⇧ line (S-054); it has no web search.
+    case control, option, command, shift
 
     public var id: String { rawValue }
+
+    /// The ones Settings > Advanced can give a web search.
+    public static let searchable: [ReturnModifier] = [.control, .option, .command]
 
     public var symbol: String {
         switch self {
         case .control: "⌃↩"
         case .option: "⌥↩"
         case .command: "⌘↩"
+        case .shift: "⇧↩"
         }
     }
 
-    /// The modifier for the keys held, when exactly one of these three is.
-    /// `control`, `option`, `command` say which of them are down.
-    public static func held(control: Bool, option: Bool, command: Bool) -> ReturnModifier? {
-        switch (control, option, command) {
-        case (true, false, false): .control
-        case (false, true, false): .option
-        case (false, false, true): .command
+    /// The modifier for the keys held, when exactly one of these is.
+    /// `control`, `option`, `command`, `shift` say which of them are down.
+    public static func held(control: Bool, option: Bool, command: Bool, shift: Bool = false) -> ReturnModifier? {
+        switch (control, option, command, shift) {
+        case (true, false, false, false): .control
+        case (false, true, false, false): .option
+        case (false, false, true, false): .command
+        case (false, false, false, true): .shift
         default: nil
         }
     }

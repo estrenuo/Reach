@@ -855,6 +855,14 @@ UX:
 - Reach has no grid: the items show as rows with their icons, "please wait" (or `loadingtext`) until the script answers. `columncount`, `imageaspect`, the title and subtitle placement and `fixedorder` do not apply to rows.
 Status: done
 
+### S-054 ⇧↩, the current tab and Action in Alfred from a workflow
+As the user, ⇧↩ on a workflow row follows its ⇧ line, workflows that read the browser's current tab get it, and a workflow that opens Alfred's actions opens Reach's action panel.
+Depends: S-053
+Acceptance:
+- [unit] ⇧ alone with Return is `ReturnModifier.shift`; Settings > Advanced still offers web searches for ⌃↩, ⌥↩ and ⌘↩ only.
+- [self] ⇧↩ on a workflow row follows its ⇧ line (`WorkflowConnection.shift`, or `mods.shift` in Script Filter JSON); on any other row ⇧↩ is plain Return, as before.
+Status: in progress
+
 ---
 
 ## Later

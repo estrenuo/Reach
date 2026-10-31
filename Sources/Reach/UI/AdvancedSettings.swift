@@ -45,7 +45,7 @@ struct AdvancedSettings: View {
         }
 
         Section {
-            ForEach(ReturnModifier.allCases) { modifier in
+            ForEach(ReturnModifier.searchable) { modifier in
                 Picker(modifier.symbol, selection: binding(for: modifier)) {
                     Text("Nothing").tag(String?.none)
                     Divider()

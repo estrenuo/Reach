@@ -77,6 +77,8 @@ extension SelfTest {
                 // S-053: a Grid View fed by a script file; a fake runner answers.
                 ["uid": "GRIDKW", "type": KeywordInput.type, "config": ["keyword": "rgrid", "argumenttype": 0, "text": "Grid"]],
                 ["uid": "GRID", "type": Workflow.grid, "config": ["inputtype": 1, "inputfile": "grid.sh", "filterable": true]],
+                // S-054: the grid's ⇧ line shows Large Type.
+                ["uid": "GRIDLARGE", "type": Workflow.largeType, "config": [:]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -135,7 +137,7 @@ extension SelfTest {
                 "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
                 "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
-                "GRID": [["destinationuid": "COPY", "modifiers": 0]],
+                "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
                 "KEYS": [["destinationuid": "COPY", "modifiers": 0]],
                 "UAFILES": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
@@ -612,8 +614,17 @@ extension SelfTest {
         check("typing filters the grid's items", lm.results.first?.title == "Grid two", lm.results.map(\.title).joined(separator: ", "))
         lm.openSelected()
         try? await Task.sleep(for: .milliseconds(50))
-        lm.workflows.run = realRun
         check("↩ on an item sends its argument on along the grid's lines", copied.last == "copied two", copied.last ?? "none")
+        // S-054: ⇧↩ follows the ⇧ line.
+        let realLarge = lm.largeType
+        var large: [String] = []
+        lm.largeType = { large.append($0) }
+        await enter("rgrid Red")
+        try? await Task.sleep(for: .milliseconds(100))
+        let shifted = lm.runAlternative(.shift)
+        lm.largeType = realLarge
+        lm.workflows.run = realRun
+        check("⇧↩ on a workflow row follows its ⇧ line", shifted && large == ["one"], "\(shifted) \(large)")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
