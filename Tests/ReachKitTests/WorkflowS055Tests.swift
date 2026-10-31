@@ -42,3 +42,15 @@ private func line(_ to: String, _ modifiers: Int = 0) -> [[String: Any]] { [["de
     #expect(escaped.steps(after: "KW", argument: "a b") == [.terminalCommand(#"echo a\ b"#)])
     #expect(brew.steps(after: "KW", argument: "{var:x}", variables: ["x": "; rm"]) == [.terminalCommand("brew install {var:x}")])
 }
+
+@Test func aPlainTextViewShowsItsInput() {
+    let plain: [String: Any] = ["inputtype": 0, "outputmode": 0, "behaviour": 0, "fontmode": 0, "fontsizing": 4, "stackview": true,
+                                "footertext": "", "loadingtext": ""]
+    let info = workflow([["uid": "TV", "type": Workflow.textView, "config": plain]], ["KW": line("TV")])
+    #expect(info.steps(after: "KW", argument: "==> wget") == [.textView("==> wget")])
+    var script = plain
+    script["inputtype"] = 1
+    script["footertext"] = "↩ Ask"
+    let chat = workflow([["uid": "TV", "type": Workflow.textView, "config": script]], ["KW": line("TV")])
+    #expect(chat.steps(after: "KW", argument: "hi") == [.unsupported("userinterface.text with inputtype 1, footertext")])
+}

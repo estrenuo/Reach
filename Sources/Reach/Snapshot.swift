@@ -501,6 +501,24 @@ enum Snapshot {
             library.log.clear()
         }
         window()?.close()
+        // S-055: a workflow's Text View, as Homebrew shows `brew info`.
+        TextViewWindow.shared.show(title: "Homebrew", text: """
+            ==> wget: stable 1.25.0 (bottled), HEAD
+            Internet file retriever
+            https://www.gnu.org/software/wget/
+            Not installed
+            From: https://github.com/Homebrew/homebrew-core/blob/HEAD/Formula/w/wget.rb
+            License: GPL-3.0-or-later
+            ==> Dependencies
+            Build: pkgconf ✘
+            Required: libidn2 ✘, openssl@3 ✔
+            """)
+        for mode in ["light", "dark"] {
+            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+            try? await Task.sleep(for: .seconds(0.8))
+            capture(to: "\(dir)/workflows-textview-\(mode).png", window: TextViewWindow.shared.shown)
+        }
+        TextViewWindow.shared.hide()
     }
 
     /// Captures the real window with screencapture, so glass, sidebars, and

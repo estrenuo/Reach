@@ -27,6 +27,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case terminal(String)
     /// Run this command in a new window of the terminal app from Settings > Terminal (S-055).
     case terminalCommand(String)
+    /// Show this text in a window named after the workflow (S-055).
+    case textView(String)
     /// Show an alert with this title, text and buttons (S-055).
     case dialog(title: String, text: String, buttons: [String])
     /// Wait `seconds`, then go on after `then` with the argument (S-055).
@@ -72,6 +74,7 @@ extension Workflow {
     public static let delay = "alfred.workflow.utility.delay"
     public static let dialog = "alfred.workflow.utility.dialog"
     public static let terminalCommand = "alfred.workflow.action.terminalcommand"
+    public static let textView = "alfred.workflow.userinterface.text"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -119,6 +122,16 @@ extension Workflow {
                 // pass, so text in the argument is never filled again.
                 let query = ScriptSource.escape(argument, object.int("escaping"))
                 return [.terminalCommand(WorkflowText.fill(object.string("script"), query: query, variables: variables))]
+            case Self.textView:
+                // Only the plain text view, as Homebrew uses it; a script as input
+                // (inputtype 1), output to the next objects, or a footer is not mapped.
+                // `fontsizing` and `stackview` only change how Alfred draws it.
+                let plain = ["inputtype", "outputmode", "behaviour", "fontmode"].filter { object.int($0) != 0 }
+                    .map { "\($0) \(object.int($0))" }
+                    + ["footertext", "loadingtext"].filter { !object.string($0).isEmpty }
+                guard plain.isEmpty else { return [.unsupported("userinterface.text with \(plain.joined(separator: ", "))")] }
+                let step = WorkflowStep.textView(argument)
+                return (connections[object.uid] ?? []).isEmpty ? [step] : [step, .unsupported("userinterface.text with lines after it")]
             case Self.dialog:
                 let buttons = ["button1", "button2", "button3"].map { fill(object.string($0)) }.filter { !$0.isEmpty }
                 let step = WorkflowStep.dialog(title: fill(object.string("title")), text: fill(object.string("description")),

@@ -85,6 +85,8 @@ final class LauncherModel {
     @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
     /// Shows text in Large Type. The self-test swaps in a recorder.
     @ObservationIgnored var largeType: @MainActor (String) -> Void = { LargeType.shared.show($0) }
+    /// Shows a workflow's Text View under its name (S-055). The self-test swaps in a recorder.
+    @ObservationIgnored var showText: @MainActor (String, String) -> Void = { TextViewWindow.shared.show(title: $0, text: $1) }
     /// Shows a workflow's dialog (S-055). The self-test swaps in a recorder.
     @ObservationIgnored var showDialog: @MainActor (String, String, [String]) -> Void = { title, text, buttons in
         let alert = NSAlert()

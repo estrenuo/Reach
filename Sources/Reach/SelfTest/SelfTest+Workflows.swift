@@ -95,6 +95,9 @@ extension SelfTest {
                 ["uid": "ASK", "type": Workflow.dialog, "config": ["title": "About {query}", "description": "Details", "button1": "Ok"]],
                 ["uid": "BREWKW", "type": KeywordInput.type, "config": ["keyword": "rbrew", "argumenttype": 0, "text": "Brew"]],
                 ["uid": "BREW", "type": Workflow.terminalCommand, "config": ["escaping": 0, "script": "brew install {query}"]],
+                ["uid": "INFOKW", "type": KeywordInput.type, "config": ["keyword": "rinfo", "argumenttype": 0, "text": "Info"]],
+                ["uid": "INFO", "type": Workflow.textView, "config": ["inputtype": 0, "outputmode": 0, "behaviour": 0, "fontmode": 0,
+                                                                       "fontsizing": 4, "stackview": true, "footertext": "", "loadingtext": ""]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -158,6 +161,7 @@ extension SelfTest {
                 "WAIT": [["destinationuid": "COPY", "modifiers": 0]],
                 "ASKKW": [["destinationuid": "ASK", "modifiers": 0]],
                 "BREWKW": [["destinationuid": "BREW", "modifiers": 0]],
+                "INFOKW": [["destinationuid": "INFO", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -698,6 +702,14 @@ extension SelfTest {
         await enter("rbrew wget")
         lm.runShell = realShell
         check("Terminal Command runs the filled command in the terminal", shells == ["brew install wget"], shells.joined())
+
+        // A Text View is recorded, not shown.
+        let realText = lm.showText
+        var texts: [String] = []
+        lm.showText = { texts.append("\($0): \($1)") }
+        await enter("rinfo wget 1.25")
+        lm.showText = realText
+        check("Text View shows the text under the workflow's name", texts.count == 1 && texts[0].hasSuffix(": wget 1.25"), texts.joined())
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

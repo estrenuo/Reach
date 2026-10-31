@@ -873,7 +873,8 @@ Acceptance:
 - [unit] Delay (`alfred.workflow.utility.delay`) waits `seconds` (text like "0.3"), then sends the argument on.
 - [unit] Dialog (`alfred.workflow.utility.dialog`) shows a system alert with its `title`, `description` and the non-empty `button1`–`button3`, `{query}` and `{var:…}` filled. Lines out of a dialog (none in Sander's workflows) are named in the debugger.
 - [unit] Terminal Command (`alfred.workflow.action.terminalcommand`) runs its `script`, `{query}` escaped as `escaping` says, in a new window of the terminal app from Settings > Terminal.
-- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Dialog shows its filled title, text and buttons (recorded, never shown).
+- [unit] Text View (`alfred.workflow.userinterface.text`) with text as input shows that text in a window named after the workflow; selectable, Esc closes it. A script as input, output to the next objects, a footer or loading text show in the debugger. `fontsizing` and `stackview` only change how Alfred draws it and are ignored.
+- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Dialog shows its filled title, text and buttons (recorded, never shown).
 Status: in progress
 
 ---
