@@ -115,10 +115,10 @@ extension Workflow {
             case Self.revealFile:
                 return [.reveal(argument)]
             case Self.terminalCommand:
-                // `{query}` escaped as `escaping` says, like an inline script.
-                let script = object.string("script").replacingOccurrences(
-                    of: "{query}", with: ScriptSource.escape(argument, object.int("escaping")))
-                return [.terminalCommand(WorkflowText.fill(script, query: argument, variables: variables))]
+                // `{query}` escaped as `escaping` says, like an inline script; one
+                // pass, so text in the argument is never filled again.
+                let query = ScriptSource.escape(argument, object.int("escaping"))
+                return [.terminalCommand(WorkflowText.fill(object.string("script"), query: query, variables: variables))]
             case Self.dialog:
                 let buttons = ["button1", "button2", "button3"].map { fill(object.string($0)) }.filter { !$0.isEmpty }
                 let step = WorkflowStep.dialog(title: fill(object.string("title")), text: fill(object.string("description")),

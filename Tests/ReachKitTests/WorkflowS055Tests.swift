@@ -40,4 +40,5 @@ private func line(_ to: String, _ modifiers: Int = 0) -> [[String: Any]] { [["de
     let escaped = workflow([["uid": "CMD", "type": Workflow.terminalCommand, "config": ["escaping": 1, "script": "echo {query}"]]],
                            ["KW": line("CMD")])
     #expect(escaped.steps(after: "KW", argument: "a b") == [.terminalCommand(#"echo a\ b"#)])
+    #expect(brew.steps(after: "KW", argument: "{var:x}", variables: ["x": "; rm"]) == [.terminalCommand("brew install {var:x}")])
 }
