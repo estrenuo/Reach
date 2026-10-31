@@ -49,6 +49,13 @@ extension SelfTest {
                 ["uid": "HKSEL", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 1]],
                 ["uid": "HKCLIP", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 2]],
                 ["uid": "HKFIND", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 4]],
+                // S-050: File Actions for text files (several) and for one image.
+                ["uid": "FATEXT", "type": WorkflowFileAction.type, "config": [
+                    "name": "Self Test Text Action", "acceptsmulti": 1, "filetypes": ["public.plain-text"],
+                ]],
+                ["uid": "FAPNG", "type": WorkflowFileAction.type, "config": [
+                    "name": "Self Test Image Action", "acceptsmulti": 0, "filetypes": ["public.png"],
+                ]],
             ],
             "variables": ["kw": "rkey"],
             "connections": [
@@ -70,6 +77,8 @@ extension SelfTest {
                 "HKSEL": [["destinationuid": "COPY", "modifiers": 0]],
                 "HKCLIP": [["destinationuid": "COPY", "modifiers": 0]],
                 "HKFIND": [["destinationuid": "COPY", "modifiers": 0]],
+                "FATEXT": [["destinationuid": "COPY", "modifiers": 0]],
+                "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -220,6 +229,7 @@ extension SelfTest {
         lm.copier = realCopier
         launcher.hide()
         await checkWorkflowHotkeys(model: model)
+        await checkWorkflowFileActions(model: model)
 
         // The real runner: a bash script gets the text as $1 and its output parses.
         let script = ScriptSource(language: .bash, text: "printf '{\"items\":[{\"title\":\"%s\"}]}' \"$1\"")
@@ -384,5 +394,62 @@ extension SelfTest {
         check("Turn Off takes the workflow's hotkeys off", !hotkeys.isRegistered(key("HKSEL")))
         if let current = library.workflow(workflow.id) { library.setEnabled(true, current) }
         check("Turn On puts them back", hotkeys.isRegistered(key("HKSEL")))
+    }
+
+    /// S-050: a workflow's File Action shows in the action panel for the files
+    /// it is for, and runs what is connected with their paths. Copy to
+    /// Clipboard is recorded; the files are temporary ones in /tmp.
+    private static func checkWorkflowFileActions(model: AppModel) async {
+        guard let launcher = model.launcher else { return }
+        let lm = model.launcherModel
+        let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-fileactions-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let notes = folder.appending(path: "notes.txt"), todo = folder.appending(path: "todo.txt"), photo = folder.appending(path: "photo.png")
+        for file in [notes, todo, photo] { FileManager.default.createFile(atPath: file.path, contents: Data("x".utf8)) }
+        let realCopier = lm.copier
+        var copied: [String] = []
+        lm.copier = { copied.append($0) }
+        defer {
+            lm.copier = realCopier
+            try? FileManager.default.removeItem(at: folder)
+            launcher.hide()
+        }
+        func titles() -> [String] { lm.actions?.rows.map(\.title) ?? [] }
+        func run(_ title: String) {
+            if let index = lm.actions?.rows.firstIndex(where: { $0.title == title }) { lm.runAction(at: index) }
+        }
+
+        launcher.show()
+        lm.showActions(for: .files([notes]))
+        check("a text file's action panel lists the workflow's text action after Reach's own",
+              titles().last == "Self Test Text Action" && !titles().contains("Self Test Image Action")
+                  && lm.actions?.rows.last?.kindLabel == "Self Test",
+              titles().joined(separator: ", "))
+        lm.actions?.filter = "self test"
+        check("the filter finds it by name", titles() == ["Self Test Text Action"], titles().joined(separator: ", "))
+        run("Self Test Text Action")
+        check("choosing it runs what is connected with the file's path, and the launcher hides",
+              copied == ["copied \(notes.path)"] && !launcher.isVisible, copied.joined(separator: " | "))
+
+        launcher.show()
+        lm.showActions(for: .files([notes, todo]))
+        run("Self Test Text Action")
+        check("for several files it gets their paths, tab-separated", copied.last == "copied \(notes.path)\t\(todo.path)",
+              copied.last ?? "none")
+
+        launcher.show()
+        lm.showActions(for: .files([photo]))
+        check("an image shows the image action, not the text action",
+              titles().contains("Self Test Image Action") && !titles().contains("Self Test Text Action"), titles().joined(separator: ", "))
+        lm.showActions(for: .files([photo, notes]))
+        check("an action for one file, or for other types, stays out with several files",
+              !titles().contains { $0.hasPrefix("Self Test") }, titles().joined(separator: ", "))
+
+        if let workflow = lm.workflows.library.workflow("selftest.workflow") {
+            lm.workflows.library.setEnabled(false, workflow)
+            lm.showActions(for: .files([notes]))
+            check("a workflow that is off adds no action", !titles().contains("Self Test Text Action"), titles().joined(separator: ", "))
+            if let current = lm.workflows.library.workflow(workflow.id) { lm.workflows.library.setEnabled(true, current) }
+        }
     }
 }

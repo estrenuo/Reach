@@ -81,7 +81,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -114,6 +114,29 @@ enum Snapshot {
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name == "confirm" { model.launcherModel.openSelected() }
+                        // S-050: a sample workflow's File Action after Reach's own, filtered by "op".
+                        if name == "file-actions" {
+                            let library = WorkflowLibrary.shared
+                            let folder = library.folder.appending(path: "snapshot-fileaction.workflow", directoryHint: .isDirectory)
+                            let plist: [String: Any] = ["name": "Image Tools", "objects": [
+                                ["uid": "FA", "type": WorkflowFileAction.type, "config": ["name": "Optimize Images", "acceptsmulti": 1]],
+                            ]]
+                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                                .write(to: folder.appending(path: "info.plist"))
+                            library.reload()
+                            let sample = (try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: SampleFiles.folder),
+                                                                                       includingPropertiesForKeys: nil))?
+                                .filter { !$0.hasDirectoryPath }.sorted { $0.path < $1.path }.first
+                            if let sample { model.launcherModel.showActions(for: .files([sample])) }
+                            model.launcherModel.actions?.filter = "op"
+                            try? await Task.sleep(for: .seconds(0.5))
+                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                            try? FileManager.default.removeItem(at: folder)
+                            library.reload()
+                            launcher.hide()
+                            continue
+                        }
                         if name == "actions" || name == "contact-card" {
                             _ = model.launcherModel.showActions()
                             try? await Task.sleep(for: .seconds(0.5))

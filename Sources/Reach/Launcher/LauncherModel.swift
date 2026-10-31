@@ -592,6 +592,19 @@ final class LauncherModel {
             }
             // Using a card's detail picks the contact, for Learning.
             onOpened(query, target)
+        case .workflow(let id, _, let action):
+            actions = nil
+            switch runFileAction(action, in: id, on: panel.urls) {
+            case .failed(let message):
+                actions = panel
+                panel.failure = message
+                return
+            case .shows:
+                if panel.fromBuffer { buffer.clear() }
+                return
+            case .done:
+                break
+            }
         default:
             guard perform(item, panel.urls) else {
                 let name = panel.rows.indices.contains(index) ? panel.rows[index].title : "the action"
