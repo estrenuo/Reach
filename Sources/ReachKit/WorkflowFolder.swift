@@ -96,7 +96,7 @@ public enum WorkflowFolder {
     public static func matches(_ workflow: Workflow, filter: String) -> Bool {
         let words = filter.lowercased().split(separator: " ")
         guard !words.isEmpty else { return true }
-        let text = ([workflow.name, workflow.author] + workflow.scriptFilters.map(\.keyword)).joined(separator: " ").lowercased()
+        let text = ([workflow.name, workflow.author] + workflow.keywords).joined(separator: " ").lowercased()
         let parts = text.split { !$0.isLetter && !$0.isNumber }
         return words.allSatisfy { word in parts.contains { $0.hasPrefix(word) } }
     }

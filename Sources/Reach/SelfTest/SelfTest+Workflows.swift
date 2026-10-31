@@ -19,11 +19,40 @@ extension SelfTest {
                 ]],
                 ["uid": "URL", "type": Workflow.openURL, "config": ["url": "https://example.com/{query}"]],
                 ["uid": "COPY", "type": Workflow.copyToClipboard, "config": ["clipboardtext": "copied {query}"]],
+                // S-047: a Keyword input whose keyword comes from a variable.
+                ["uid": "KW", "type": KeywordInput.type, "config": [
+                    "keyword": "{var:kw}", "withspace": true, "argumenttype": 0, "text": "Open {query}",
+                ]],
+                // S-047: keywords whose Return reaches an Automation Task, or an
+                // External Trigger that shows the rkey keyword again.
+                ["uid": "TASKKW", "type": KeywordInput.type, "config": ["keyword": "rtask", "argumenttype": 2, "text": "Task"]],
+                ["uid": "TASK", "type": "alfred.workflow.automation.task", "config": [:]],
+                ["uid": "BACKKW", "type": KeywordInput.type, "config": ["keyword": "rback", "argumenttype": 0, "text": "Back"]],
+                ["uid": "IF", "type": Workflow.conditional, "config": ["conditions": [
+                    ["uid": "ISWORLD", "inputstring": "", "matchmode": 0, "matchstring": "world"],
+                ]]],
+                ["uid": "CALL", "type": Workflow.callExternalTrigger, "config": [
+                    "externaltriggerid": "again", "workflowbundleid": "self", "passinputasargument": true,
+                ]],
+                ["uid": "AGAIN", "type": Workflow.externalTrigger, "config": ["triggerid": "again"]],
+                ["uid": "TRASHKW", "type": KeywordInput.type, "config": ["keyword": "rtrash", "argumenttype": 0, "text": "Trash"]],
+                ["uid": "TRASH", "type": Workflow.automationTask, "config": [
+                    "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "/tmp/{query}"],
+                ]],
             ],
-            "connections": ["SF": [
-                ["destinationuid": "URL", "modifiers": 0],
-                ["destinationuid": "COPY", "modifiers": WorkflowConnection.command, "modifiersubtext": "Copy"],
-            ]],
+            "variables": ["kw": "rkey"],
+            "connections": [
+                "SF": [
+                    ["destinationuid": "URL", "modifiers": 0],
+                    ["destinationuid": "COPY", "modifiers": WorkflowConnection.command, "modifiersubtext": "Copy"],
+                ],
+                "KW": [["destinationuid": "URL", "modifiers": 0]],
+                "TASKKW": [["destinationuid": "TASK", "modifiers": 0]],
+                "BACKKW": [["destinationuid": "IF", "modifiers": 0]],
+                "IF": [["destinationuid": "CALL", "modifiers": 0, "sourceoutputuid": "ISWORLD"]],
+                "AGAIN": [["destinationuid": "KW", "modifiers": 0]],
+                "TRASHKW": [["destinationuid": "TRASH", "modifiers": 0]],
+            ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         if let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0) {
@@ -105,6 +134,50 @@ extension SelfTest {
         check("a new query runs the script again with the new text", ranWith.value.last == "stopped")
         release()
         try? await Task.sleep(for: .milliseconds(100))
+
+        // S-047: a Keyword input answers its keyword and sends the text on.
+        await showAgain(launcher)
+        lm.query = "rke"
+        check("part of a Keyword input's keyword offers it", lm.results.contains { $0.completes == "rkey " },
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.query = "rkey world"
+        try? await Task.sleep(for: .milliseconds(50))
+        check("a Keyword input with its text shows one row, its title filled in", lm.results.first?.title == "Open world",
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.openSelected()
+        check("↩ on a Keyword input runs what is connected: it opens the URL with the text",
+              opened.last == URL(string: "https://example.com/world")! && !launcher.isVisible,
+              opened.map(\.absoluteString).joined(separator: ", "))
+
+        // S-047: Return follows a Conditional to an External Trigger, and says
+        // which object it does not run.
+        await showAgain(launcher)
+        lm.query = "rback world"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        try? await Task.sleep(for: .milliseconds(50))
+        check("↩ through a Conditional and an External Trigger shows the keyword again with the text",
+              lm.query == "rkey world" && launcher.isVisible && lm.results.first?.title == "Open world",
+              "\(lm.query) \(launcher.isVisible)")
+        lm.query = "rtask"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        check("↩ that reaches an Automation Task says Reach does not run it, and the launcher stays",
+              lm.errors.values.contains("Reach does not run automation.task yet.") && launcher.isVisible
+                  && library.log.shown(.errors).last?.text == "Reach does not run automation.task yet.",
+              lm.errors.values.joined(separator: ", "))
+        let realPerform = lm.perform
+        var trashed: [URL] = []
+        lm.perform = { item, urls in
+            if case .action(.trash) = item { trashed += urls }
+            return true
+        }
+        lm.query = "rtrash reach-selftest.dmg"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        check("↩ that reaches the Trash task moves the filled-in path to the Trash",
+              trashed == [URL(fileURLWithPath: "/tmp/reach-selftest.dmg")], trashed.map(\.path).joined(separator: ", "))
+        lm.perform = realPerform
         launcher.hide()
 
         // The real runner: a bash script gets the text as $1 and its output parses.

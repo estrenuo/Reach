@@ -69,6 +69,7 @@ final class LauncherController {
             self?.hide()
         }
         model.onHide = { [weak self] in self?.hide() }
+        model.onShow = { [weak self] in if self?.isVisible == false { self?.show() } }
         model.onResultsChange = { [weak self] in self?.resize() }
         model.onSelectionChange = { [weak self] in QuickLook.shared.follow(self?.model.selectedResult) }
         followTheme()

@@ -35,7 +35,8 @@ extension ReturnModifier {
 
 /// Script filters (S-041): while a workflow's keyword is typed, its script
 /// runs with the text after it, and the rows it prints replace a "please
-/// wait" row. A new query stops the script that is running.
+/// wait" row. A new query stops the script that is running. A Keyword
+/// input (S-047) shows one row; Return sends the typed text on.
 final class WorkflowSource: ResultSource {
     let library: WorkflowLibrary
     /// The query as typed, since a trailing space after the keyword matters. Set by the model.
@@ -81,6 +82,20 @@ final class WorkflowSource: ResultSource {
                     rows.append(Scored(result: keywordRow(filter, in: workflow, completes: !done), score: 1000))
                 case .run(let text):
                     runs.append((workflow, filter, text))
+                case nil:
+                    continue
+                }
+            }
+            for input in workflow.keywordInputs {
+                switch input.match(typed) {
+                case .keyword:
+                    rows.append(Scored(result: keywordRow(input, in: workflow, completes: true),
+                                       score: Matcher.score(query: typed, title: input.keyword) ?? 500))
+                case .needsText:
+                    let done = typed.lowercased() == input.completion.lowercased()
+                    rows.append(Scored(result: keywordRow(input, in: workflow, completes: !done), score: 1000))
+                case .run(let text):
+                    rows.append(Scored(result: inputRow(input, in: workflow, text: text), score: 1000))
                 case nil:
                     continue
                 }
@@ -161,11 +176,23 @@ final class WorkflowSource: ResultSource {
     }
 
     /// The row for a keyword typed in part, or typed with the text still missing.
-    private func keywordRow(_ filter: ScriptFilter, in workflow: Workflow, completes: Bool) -> LaunchResult {
-        var result = LaunchResult(id: "workflow:\(workflow.id):\(filter.uid)", title: filter.placeholder,
-                                  subtitle: filter.subtext.isEmpty ? workflow.name : filter.subtext, icon: icon(nil, in: workflow))
+    private func keywordRow(_ trigger: some KeywordTrigger, in workflow: Workflow, completes: Bool) -> LaunchResult {
+        var result = LaunchResult(id: "workflow:\(workflow.id):\(trigger.uid)", title: trigger.placeholder,
+                                  subtitle: trigger.subtext.isEmpty ? workflow.name : trigger.subtext, icon: icon(nil, in: workflow))
         result.kindLabel = workflow.name
-        if completes { result.completes = filter.completion }
+        if completes { result.completes = trigger.completion }
+        return result
+    }
+
+    /// A Keyword input with its text typed: Return sends the text on to
+    /// the objects connected to it.
+    private func inputRow(_ input: KeywordInput, in workflow: Workflow, text: String) -> LaunchResult {
+        var result = LaunchResult(id: "workflow:\(workflow.id):\(input.uid):run", title: input.title(for: text),
+                                  subtitle: input.subtext.isEmpty ? workflow.name : WorkflowText.fill(input.subtext, query: text),
+                                  icon: icon(nil, in: workflow))
+        result.kindLabel = workflow.name
+        result.isPinned = true
+        result.workflow = WorkflowRun(workflow: workflow.id, filter: input.uid, argument: text)
         return result
     }
 

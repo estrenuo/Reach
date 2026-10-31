@@ -758,6 +758,27 @@ UX:
 - Note: Export blanks the value of every Don't Export variable and leaves out what Configure Workflow… saved (prefs.plist)
 Status: done
 
+### S-047 Run a workflow from a Keyword input
+As the user, I type the keyword of an imported Alfred workflow that starts with a Keyword input (not a Script Filter), and ↩ runs what is connected to it.
+Screens: 64-alfred-workflow-script-filter.png
+Depends: S-041
+Acceptance:
+- [unit] A Keyword input (`alfred.workflow.input.keyword`) is read with its keyword, space, argument, title and subtext, and matches like a Script Filter.
+- [unit] A keyword written as `{var:name}` is filled from the workflow's variables and its configuration; one that stays empty adds no keyword.
+- [unit] The typed text goes on to the connected objects, per modifier line.
+- [self] Part of the keyword completes it; with the text typed, one row shows its title with `{query}` filled in; ↩ opens the connected URL.
+- [unit] Scripts of type 11 (Alfred's default `/bin/zsh --no-rcs`) run.
+- [unit] ↩ follows a Conditional (modes 0–4 from Alfred's help; 5 "is true" and 6 "is false" read from workflows that use them; other modes never match) down the line of the first matching condition, else the else line.
+- [unit] Arg and Vars passes its variables on, also after a Run Script; Hide Alfred does nothing; Call External Trigger in the same workflow follows its External Trigger, and one that reaches a script filter or keyword shows the launcher with that keyword typed.
+- [unit] The Automation Task "Move to Trash" (`path.trash`) trashes its filled-in `target_path` (the text when empty) and goes on with the objects after it; other Automation Tasks do not run.
+- [self] ↩ that reaches the Trash task moves the filled-in path to the Trash.
+- [self] ↩ through a Conditional and an External Trigger shows the keyword again with the text; ↩ that reaches an object Reach does not run says "Reach does not run <kind> yet." under the row and in the debugger.
+UX:
+- Flow: type the keyword → ↩ completes it → type the text → one row, the Keyword input's title with the text → ↩ (or ⌃↩ ⌥↩ ⌘↩ for a modifier line) runs the connected objects
+- States: argument required and no text = placeholder row, not openable; argument none = the row runs on the keyword alone
+- Note: the cause of "imported workflows do nothing": Reach only read Script Filters, and most Alfred workflows start with a Keyword input. Configurable keywords (`{var:keyword}`) never matched either. Hotkeys, List Filters, File Filters, Automation Tasks other than Move to Trash, Post Notification and triggers in another workflow still do nothing; Return on them now says so. Alfred's Purge Disk Images runs end to end: dmgeject detaches the image and trashes it, dmgtrash trashes the file, and both show their list again until the last one is gone.
+Status: done
+
 ---
 
 ## Later

@@ -92,6 +92,8 @@ final class LauncherModel {
     /// Reads the macOS selection for the selection hotkey. The self-test swaps in a fake.
     @ObservationIgnored var readSelection: @MainActor () async -> Selection = { await SelectionReader.read() }
     @ObservationIgnored var onHide: @MainActor () -> Void = {}
+    /// Shows the launcher when it is hidden, for a workflow that shows a list again (S-047).
+    @ObservationIgnored var onShow: @MainActor () -> Void = {}
     @ObservationIgnored var onResultsChange: @MainActor () -> Void = {}
     /// Called when another result is selected, or the results change under it (Quick Look follows).
     @ObservationIgnored var onSelectionChange: @MainActor () -> Void = {}

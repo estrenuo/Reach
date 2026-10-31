@@ -189,6 +189,11 @@ final class WorkflowLibrary {
                    status: result.status, failure: result.failure)
     }
 
+    /// Logs an object Reach does not run, so the debugger says why nothing happened.
+    func skipped(_ workflow: Workflow, kind: String) {
+        log.skipped(workflow: workflow.name, kind: kind)
+    }
+
     /// The selected workflow's log lines at the chosen level, as text for Copy.
     var selectedLogText: String {
         guard let name = selected?.name else { return "" }
