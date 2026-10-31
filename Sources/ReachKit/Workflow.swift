@@ -141,6 +141,8 @@ public struct Workflow: Equatable, Sendable, Identifiable {
     public var configuration: [String: String] = [:]
     /// Where each object's card sits on the canvas (S-044), from uidata.
     public var positions: [String: WorkflowPoint] = [:]
+    /// The note on each object's card, from uidata.
+    public var notes: [String: String] = [:]
 
     public init(id: String, folder: URL, bundleID: String = "", name: String, author: String = "", version: String = "",
                 description: String = "", readme: String = "", category: String = "", webAddress: String = "",
@@ -195,6 +197,7 @@ public struct Workflow: Equatable, Sendable, Identifiable {
         variables = (values["variables"]?.dict ?? [:]).compactMapValues(\.string)
         dontExport = (values["variablesdontexport"]?.array ?? []).compactMap(\.string)
         settings = (values["userconfigurationconfig"]?.array ?? []).compactMap(WorkflowSetting.init)
+        notes = (values["uidata"]?.dict ?? [:]).compactMapValues { $0.dict?["note"]?.string }
         positions = (values["uidata"]?.dict ?? [:]).compactMapValues { value in
             guard let x = value.dict?["xpos"]?.double, let y = value.dict?["ypos"]?.double else { return nil }
             return WorkflowPoint(x: x, y: y)
