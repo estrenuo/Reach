@@ -27,7 +27,13 @@ private func purgeWorkflow() -> Workflow {
             ["uid": "SETFILE", "type": Workflow.argument, "config": [
                 "argument": "", "variables": ["trash_type": "file", "origin_path": "{query}"],
             ]],
-            ["uid": "TASK", "type": "alfred.workflow.automation.task", "config": ["taskuid": "path.trash"]],
+            ["uid": "TASK", "type": Workflow.automationTask, "config": [
+                "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "{var:origin_path}"],
+            ]],
+            ["uid": "OTHERTASK", "type": Workflow.automationTask, "config": ["taskuid": "com.example/other"]],
+            ["uid": "REFRESHIF", "type": Workflow.conditional, "config": ["conditions": [
+                ["uid": "NOTLAST", "inputstring": "{var:last_item}", "matchmode": 6, "matchstring": ""],
+            ]]],
             ["uid": "HIDEIF", "type": Workflow.conditional, "config": ["conditions": [
                 ["uid": "LAST", "inputstring": "{var:last_item}", "matchmode": 5, "matchstring": ""],
             ]]],
@@ -36,6 +42,10 @@ private func purgeWorkflow() -> Workflow {
                 ["uid": "ISMOUNTED", "inputstring": "{var:trash_type}", "matchmode": 0, "matchstring": "mounted"],
                 ["uid": "ISFILE", "inputstring": "{var:trash_type}", "matchmode": 0, "matchstring": "file"],
             ]]],
+            ["uid": "CALLFILES", "type": Workflow.callExternalTrigger, "config": [
+                "externaltriggerid": "file_list", "workflowbundleid": "self",
+            ]],
+            ["uid": "FILELIST", "type": Workflow.externalTrigger, "config": ["triggerid": "file_list"]],
             ["uid": "CALLMOUNTED", "type": Workflow.callExternalTrigger, "config": [
                 "externaltriggerid": "mounted_list", "workflowbundleid": "self",
             ]],
@@ -48,12 +58,17 @@ private func purgeWorkflow() -> Workflow {
             "MOUNTED": [["destinationuid": "DETACH", "modifiers": 0], ["destinationuid": "HIDEIF", "modifiers": 0]],
             "FILES": [["destinationuid": "HIDEIF", "modifiers": 0], ["destinationuid": "SETFILE", "modifiers": 0],
                       ["destinationuid": "WHICH", "modifiers": WorkflowConnection.command],
-                      ["destinationuid": "OTHER", "modifiers": WorkflowConnection.option]],
+                      ["destinationuid": "OTHER", "modifiers": WorkflowConnection.option],
+                      ["destinationuid": "OTHERTASK", "modifiers": WorkflowConnection.control]],
             "DETACH": [["destinationuid": "SETMOUNTED", "modifiers": 0]],
             "SETMOUNTED": [["destinationuid": "TASK", "modifiers": 0]],
             "SETFILE": [["destinationuid": "TASK", "modifiers": 0]],
             "HIDEIF": [["destinationuid": "HIDE", "modifiers": 0, "sourceoutputuid": "LAST"]],
-            "WHICH": [["destinationuid": "CALLMOUNTED", "modifiers": 0, "sourceoutputuid": "ISMOUNTED"]],
+            "TASK": [["destinationuid": "REFRESHIF", "modifiers": 0]],
+            "REFRESHIF": [["destinationuid": "WHICH", "modifiers": 0, "sourceoutputuid": "NOTLAST"]],
+            "WHICH": [["destinationuid": "CALLMOUNTED", "modifiers": 0, "sourceoutputuid": "ISMOUNTED"],
+                      ["destinationuid": "CALLFILES", "modifiers": 0, "sourceoutputuid": "ISFILE"]],
+            "FILELIST": [["destinationuid": "FILES", "modifiers": 0]],
             "MOUNTEDLIST": [["destinationuid": "MOUNTED", "modifiers": 0]],
         ],
     ]
@@ -80,12 +95,13 @@ private func purgeWorkflow() -> Workflow {
     #expect(!WorkflowCondition.matches("a", "a", mode: 9, caseSensitive: false))
 }
 
-@Test func returnOnAFileRunsWhatIsConnectedAndSaysWhatReachSkips() {
+@Test func returnOnAFileTrashesItAndShowsTheListAgainUnlessItWasTheLast() {
     let workflow = purgeWorkflow()
-    for last in ["true", "false"] {
-        #expect(workflow.steps(after: "FILES", argument: "/tmp/a.dmg", variables: ["last_item": last])
-                == [.unsupported("automation.task")])
-    }
+    #expect(workflow.steps(after: "FILES", argument: "/tmp/a.dmg", variables: ["last_item": "false"])
+            == [.trash("/tmp/a.dmg"), .show("dmgtrash ")])
+    #expect(workflow.steps(after: "FILES", argument: "/tmp/a.dmg", variables: ["last_item": "true"]) == [.trash("/tmp/a.dmg")])
+    #expect(workflow.steps(after: "FILES", argument: "", modifiers: WorkflowConnection.control)
+            == [.unsupported("automation.task")])
 }
 
 @Test func argAndVarsPassItsVariablesOnAfterAScript() {
@@ -98,8 +114,9 @@ private func purgeWorkflow() -> Workflow {
     }
     #expect(command.executable == "/bin/zsh" && command.arguments.first == "--no-rcs")
     #expect(command.environment["mount_point"] == "/Volumes/X" && then == "DETACH" && variables["mount_point"] == "/Volumes/X")
-    let after = workflow.steps(after: "DETACH", argument: "", variables: variables, environment: command.environment)
-    #expect(after == [.unsupported("automation.task")])
+    let after = workflow.steps(after: "DETACH", argument: "", variables: variables.merging(["origin_path": "/tmp/x.dmg"]) { $1 },
+                               environment: command.environment)
+    #expect(after == [.trash("/tmp/x.dmg"), .show("dmgeject ")])
 }
 
 @Test func anExternalTriggerShowsItsScriptFilterAgain() {

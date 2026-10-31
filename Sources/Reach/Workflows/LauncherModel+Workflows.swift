@@ -59,6 +59,8 @@ extension LauncherModel {
                 worked = openWorkflowTarget(text) && worked
             case .reveal(let path):
                 worked = perform(.action(.reveal), [URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) && worked
+            case .trash(let path):
+                worked = perform(.action(.trash), [URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) && worked
             case .copy(let text):
                 copier(text)
             case .largeType(let text):

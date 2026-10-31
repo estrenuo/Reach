@@ -15,6 +15,8 @@ public enum WorkflowStep: Equatable, Sendable {
     /// Show the launcher with this text typed: an External Trigger that leads
     /// back to a script filter or keyword (S-047).
     case show(String)
+    /// Move a file to the Trash: the Automation Task `path.trash` (S-047).
+    case trash(String)
     /// An object Reach does not run, by its kind, like `automation.task`.
     case unsupported(String)
 }
@@ -32,6 +34,9 @@ extension Workflow {
     public static let hideAlfred = "alfred.workflow.utility.hidealfred"
     public static let externalTrigger = "alfred.workflow.trigger.external"
     public static let callExternalTrigger = "alfred.workflow.output.callexternaltrigger"
+    public static let automationTask = "alfred.workflow.automation.task"
+    /// The Automation Task that moves a path to the Trash.
+    public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
     static let deepest = 32
 
@@ -107,6 +112,12 @@ extension Workflow {
                 return next(after: trigger.uid, argument: object.bool("passinputasargument") ? argument : "",
                             variables: passes ? variables : self.variables, environment: passes ? environment : own,
                             depth: depth)
+            case Self.automationTask where object.string("taskuid") == Self.trashTask:
+                let target = object.config["tasksettings"]?.dict?["target_path"]?.string ?? ""
+                let path = target.isEmpty ? argument : fill(target)
+                // The objects after it run once the file is in the Trash, with its path.
+                return [.trash(path)] + next(after: object.uid, argument: path, variables: variables,
+                                             environment: environment, depth: depth)
             case ScriptFilter.type, KeywordInput.type:
                 guard let keyword = scriptFilters.first(where: { $0.uid == object.uid })?.keyword
                     ?? keywordInputs.first(where: { $0.uid == object.uid })?.keyword else { return [] }

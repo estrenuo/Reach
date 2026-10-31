@@ -35,6 +35,10 @@ extension SelfTest {
                     "externaltriggerid": "again", "workflowbundleid": "self", "passinputasargument": true,
                 ]],
                 ["uid": "AGAIN", "type": Workflow.externalTrigger, "config": ["triggerid": "again"]],
+                ["uid": "TRASHKW", "type": KeywordInput.type, "config": ["keyword": "rtrash", "argumenttype": 0, "text": "Trash"]],
+                ["uid": "TRASH", "type": Workflow.automationTask, "config": [
+                    "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "/tmp/{query}"],
+                ]],
             ],
             "variables": ["kw": "rkey"],
             "connections": [
@@ -47,6 +51,7 @@ extension SelfTest {
                 "BACKKW": [["destinationuid": "IF", "modifiers": 0]],
                 "IF": [["destinationuid": "CALL", "modifiers": 0, "sourceoutputuid": "ISWORLD"]],
                 "AGAIN": [["destinationuid": "KW", "modifiers": 0]],
+                "TRASHKW": [["destinationuid": "TRASH", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -161,6 +166,18 @@ extension SelfTest {
               lm.errors.values.contains("Reach does not run automation.task yet.") && launcher.isVisible
                   && library.log.shown(.errors).last?.text == "Reach does not run automation.task yet.",
               lm.errors.values.joined(separator: ", "))
+        let realPerform = lm.perform
+        var trashed: [URL] = []
+        lm.perform = { item, urls in
+            if case .action(.trash) = item { trashed += urls }
+            return true
+        }
+        lm.query = "rtrash reach-selftest.dmg"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        check("↩ that reaches the Trash task moves the filled-in path to the Trash",
+              trashed == [URL(fileURLWithPath: "/tmp/reach-selftest.dmg")], trashed.map(\.path).joined(separator: ", "))
+        lm.perform = realPerform
         launcher.hide()
 
         // The real runner: a bash script gets the text as $1 and its output parses.
