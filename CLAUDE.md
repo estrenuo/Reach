@@ -16,22 +16,23 @@ SwiftData database and no server.
 
 - Build and install: `./build.sh`. Add `--open` to restart the app with the new build. The build shows warnings; fix them.
 - Unit tests: `swift test --scratch-path ~/Library/Developer/Reach/test-build`.
-- Self-test (the app's real functions on a /tmp store): `tools/selftest.sh`. Exit 0 when every check passes. Add a check for every story with logic in `SelfTest.swift`.
-- After every UI change, take snapshots with sample data and look at them: `tools/snap.sh`.
+- Self-test (the app's real functions on a /tmp store): `tools/selftest.sh`. Exit 0 when every check passes. Add a check for every story with logic in `SelfTest.swift`. `tools/selftest.sh workflows,launcher` runs only those check groups (`SelfTest.groups`); a wrong name prints the list.
+- Snapshots with sample data: `tools/snap.sh`.
   It writes `/tmp/Reach-shots/<page>-light.png` and `-dark.png` for every sidebar page, and `settings-<tab>-light.png` and `-dark.png` for every Settings tab, then quits. `APP_SNAPSHOT_PAGES=all,settings tools/snap.sh` limits the pages.
   For a panel, sheet, or popover, add a capture to `Snapshot.swift` like the Settings loop.
 - Snapshots, seed data, and the self-test refuse to run without `APP_STORE` in /tmp.
 - Never test against the real database in `~/Library/Application Support/Reach/`.
-- Then check the grid: `tools/grid-lint.sh` and `swift tools/check-layout.swift /tmp/Reach-shots/*-layout.json`. Both print PASS.
-- A change is done when the build has no errors, the grid checks pass, and you looked at the light and dark snapshots.
+- Grid checks: `tools/grid-lint.sh` and `swift tools/check-layout.swift /tmp/Reach-shots/*-layout.json`. Both print PASS.
 
 ### How often to run what
 
-- Every commit: `swift test` and `./build.sh`, nothing more.
-- Once per round of work (a story or a PR), just before opening the PR: `tools/selftest.sh`.
-- Only for a commit that visibly changes UI: snapshots and the grid checks, limited to the pages it changes (`APP_SNAPSHOT_PAGES=…`).
-- Known flaky self-test checks (Quick Look, timing such as "file search answers within 200 ms") are not rerun to rule them out; name them in the report.
-- Option: when Sander asks for a full run ("draai alles", "full check"), run the self-test, all snapshots and the grid checks after every commit anyway.
+- Every commit: `swift test --scratch-path ~/Library/Developer/Reach/test-build` and `./build.sh`.
+- Quick feedback on the part you changed: `tools/selftest.sh <groups>`.
+- The full `tools/selftest.sh` once, just before opening a PR.
+- Snapshots and grid checks only for a commit that changes UI, and only the affected pages (`APP_SNAPSHOT_PAGES=…`). Look at light and dark.
+- The Quick Look focus checks (and the 200 ms file search timing) flake on this Mac: report them, don't loop re-running.
+- When Sander asks for a full run, run the full self-test, all snapshots and the grid checks anyway.
+- A change is done when `swift test` passes, the build has no errors or warnings, and, for a UI change, the grid checks pass and you looked at the light and dark snapshots. A PR is ready when the full self-test passed once (apart from the known flaky checks).
 
 ## Design rules
 
