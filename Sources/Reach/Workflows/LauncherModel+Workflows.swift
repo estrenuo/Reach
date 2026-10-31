@@ -61,6 +61,12 @@ extension LauncherModel {
                 worked = perform(.action(.reveal), [URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) && worked
             case .trash(let path):
                 worked = perform(.action(.trash), [URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) && worked
+            case .notify(let title, let text):
+                notify(workflow, title, text)
+            case .sound(let sound):
+                playSound(sound)
+            case .debug(let text, let clear):
+                workflows.library.log.debug(workflow: workflow.name, text: text, clear: clear)
             case .copy(let text):
                 copier(text)
             case .largeType(let text):

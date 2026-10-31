@@ -35,6 +35,11 @@ extension SelfTest {
                     "externaltriggerid": "again", "workflowbundleid": "self", "passinputasargument": true,
                 ]],
                 ["uid": "AGAIN", "type": Workflow.externalTrigger, "config": ["triggerid": "again"]],
+                // S-048: Post Notification passes the text on to Copy to Clipboard.
+                ["uid": "NOTEKW", "type": KeywordInput.type, "config": ["keyword": "rnote", "argumenttype": 0, "text": "Note"]],
+                ["uid": "NOTE", "type": Workflow.notification, "config": ["title": "Done", "text": "{query}"]],
+                ["uid": "SOUND", "type": Workflow.playSound, "config": ["soundname": "Blow", "systemsound": true]],
+                ["uid": "DEBUG", "type": Workflow.debug, "config": ["argument": "debug {query}", "processoutputs": true]],
                 ["uid": "TRASHKW", "type": KeywordInput.type, "config": ["keyword": "rtrash", "argumenttype": 0, "text": "Trash"]],
                 ["uid": "TRASH", "type": Workflow.automationTask, "config": [
                     "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "/tmp/{query}"],
@@ -52,6 +57,10 @@ extension SelfTest {
                 "IF": [["destinationuid": "CALL", "modifiers": 0, "sourceoutputuid": "ISWORLD"]],
                 "AGAIN": [["destinationuid": "KW", "modifiers": 0]],
                 "TRASHKW": [["destinationuid": "TRASH", "modifiers": 0]],
+                "NOTEKW": [["destinationuid": "NOTE", "modifiers": 0]],
+                "NOTE": [["destinationuid": "SOUND", "modifiers": 0]],
+                "SOUND": [["destinationuid": "DEBUG", "modifiers": 0]],
+                "DEBUG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -178,6 +187,28 @@ extension SelfTest {
         check("↩ that reaches the Trash task moves the filled-in path to the Trash",
               trashed == [URL(fileURLWithPath: "/tmp/reach-selftest.dmg")], trashed.map(\.path).joined(separator: ", "))
         lm.perform = realPerform
+
+        // S-048: the notification is recorded, never posted.
+        let realNotify = lm.notify
+        var notes: [String] = []
+        lm.notify = { _, title, text in notes.append(title + ": " + text) }
+        let realCopier = lm.copier
+        var copiedNote: [String] = []
+        lm.copier = { copiedNote.append($0) }
+        let realSound = lm.playSound
+        var sounds: [String] = []
+        lm.playSound = { sounds.append($0) }
+        await showAgain(launcher)
+        lm.query = "rnote hello"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        check("↩ through Post Notification, Play Sound and Debug shows the text, plays the sound, logs it and passes it on",
+              notes == ["Done: hello"] && sounds == ["Blow"] && copiedNote == ["copied hello"]
+                  && library.log.entries.last { $0.workflow == "Self Test" }?.text == "debug hello",
+              "\(notes) \(sounds) \(copiedNote)")
+        lm.playSound = realSound
+        lm.notify = realNotify
+        lm.copier = realCopier
         launcher.hide()
 
         // The real runner: a bash script gets the text as $1 and its output parses.

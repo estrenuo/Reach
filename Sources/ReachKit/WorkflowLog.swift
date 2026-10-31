@@ -54,6 +54,17 @@ public struct WorkflowLog: Equatable, Sendable {
         }
     }
 
+    /// Logs a Debug utility's line; `clear` first removes this workflow's lines (S-048).
+    public mutating func debug(workflow: String, text: String, clear: Bool = false, at date: Date = .now) {
+        if clear { entries.removeAll { $0.workflow == workflow } }
+        add(workflow, .output, text, date)
+    }
+
+    /// Logs why an object that Reach runs did nothing, like a notification that is turned off.
+    public mutating func failed(workflow: String, text: String, at date: Date = .now) {
+        add(workflow, .error, text, date)
+    }
+
     /// Logs an object that Return reached but Reach does not run (S-047).
     public mutating func skipped(workflow: String, kind: String, at date: Date = .now) {
         add(workflow, .error, "Reach does not run \(kind) yet.", date)
