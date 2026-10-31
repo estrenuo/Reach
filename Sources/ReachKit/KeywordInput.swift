@@ -117,6 +117,6 @@ extension Workflow {
         return objects.compactMap { KeywordInput($0, variables: values) }
     }
 
-    /// Every keyword the launcher answers, from script filters and keyword inputs.
-    public var keywords: [String] { scriptFilters.map(\.keyword) + keywordInputs.map(\.keyword) }
+    /// Every keyword the launcher answers, from script filters, keyword inputs and file filters.
+    public var keywords: [String] { scriptFilters.map(\.keyword) + keywordInputs.map(\.keyword) + fileFilters.map(\.keyword) }
 }

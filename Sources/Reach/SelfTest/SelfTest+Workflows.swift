@@ -49,6 +49,19 @@ extension SelfTest {
                 ["uid": "HKSEL", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 1]],
                 ["uid": "HKCLIP", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 2]],
                 ["uid": "HKFIND", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 4]],
+                // S-051: Split Arguments, as arguments, on a comma.
+                ["uid": "SPLITKW", "type": KeywordInput.type, "config": ["keyword": "rsplit", "argumenttype": 0, "text": "Split"]],
+                ["uid": "SPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
+                // S-051: Replace with a regular expression and its groups.
+                ["uid": "REPLKW", "type": KeywordInput.type, "config": ["keyword": "rrepl", "argumenttype": 0, "text": "Replace"]],
+                ["uid": "REPL", "type": Workflow.replace, "config": [
+                    "matchmode": 1, "matchstring": #".*github.com\/([^\/?]*\/[^\/?]*).*"#, "replacestring": "$1",
+                ]],
+                // S-051: a File Filter for text files.
+                ["uid": "FF", "type": FileFilter.type, "config": [
+                    "keyword": "rfiles", "withspace": true, "argumenttype": 0, "title": "Find Self Test Files",
+                    "types": ["public.plain-text"], "anchorfields": true, "limit": 0, "scopes": [String](),
+                ]],
                 // S-050: File Actions for text files (several) and for one image.
                 ["uid": "FATEXT", "type": WorkflowFileAction.type, "config": [
                     "name": "Self Test Text Action", "acceptsmulti": 1, "filetypes": ["public.plain-text"],
@@ -78,6 +91,11 @@ extension SelfTest {
                 "HKCLIP": [["destinationuid": "COPY", "modifiers": 0]],
                 "HKFIND": [["destinationuid": "COPY", "modifiers": 0]],
                 "FATEXT": [["destinationuid": "COPY", "modifiers": 0]],
+                "SPLITKW": [["destinationuid": "SPLIT", "modifiers": 0]],
+                "SPLIT": [["destinationuid": "COPY", "modifiers": 0]],
+                "REPLKW": [["destinationuid": "REPL", "modifiers": 0]],
+                "REPL": [["destinationuid": "COPY", "modifiers": 0]],
+                "FF": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -230,6 +248,7 @@ extension SelfTest {
         launcher.hide()
         await checkWorkflowHotkeys(model: model)
         await checkWorkflowFileActions(model: model)
+        await checkWorkflowUtilities(model: model)
 
         // The real runner: a bash script gets the text as $1 and its output parses.
         let script = ScriptSource(language: .bash, text: "printf '{\"items\":[{\"title\":\"%s\"}]}' \"$1\"")
@@ -451,5 +470,62 @@ extension SelfTest {
             check("a workflow that is off adds no action", !titles().contains("Self Test Text Action"), titles().joined(separator: ", "))
             if let current = lm.workflows.library.workflow(workflow.id) { lm.workflows.library.setEnabled(true, current) }
         }
+    }
+
+    /// S-051: ↩ on a keyword runs through Split Arguments and Replace, and a
+    /// File Filter lists files. Copy to Clipboard and Spotlight are fakes.
+    private static func checkWorkflowUtilities(model: AppModel) async {
+        guard let launcher = model.launcher else { return }
+        let lm = model.launcherModel
+        let realCopier = lm.copier
+        var copied: [String] = []
+        lm.copier = { copied.append($0) }
+        defer {
+            lm.copier = realCopier
+            launcher.hide()
+        }
+        func enter(_ query: String) async {
+            await showAgain(launcher)
+            lm.query = query
+            try? await Task.sleep(for: .milliseconds(50))
+            lm.openSelected()
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        await enter("rsplit one, two")
+        check("Split Arguments runs what is after it once for each part, trimmed",
+              copied == ["copied one", "copied two"], copied.joined(separator: " | "))
+
+        await enter("rrepl https://github.com/estrenuo/Reach/pull/9")
+        check("Replace rewrites the text with a regular expression and its groups",
+              copied.last == "copied estrenuo/Reach", copied.last ?? "none")
+
+        // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
+        let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let report = folder.appending(path: "report.txt")
+        FileManager.default.createFile(atPath: report.path, contents: Data("x".utf8))
+        let realFind = lm.workflows.findFiles
+        defer { lm.workflows.findFiles = realFind }
+        var asked: [String] = []
+        lm.workflows.findFiles = { predicate, _, _, done in
+            asked.append(predicate)
+            done([LaunchResult(id: report.path, title: "report.txt", subtitle: report.path, icon: .file(report.path), url: report)])
+        }
+        await showAgain(launcher)
+        lm.query = "rfil"
+        check("part of a File Filter's keyword offers it", lm.results.contains { $0.completes == "rfiles " },
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.query = "rfiles rep"
+        try? await Task.sleep(for: .milliseconds(100))
+        check("a File Filter asks Spotlight for the text in the names, of its types only",
+              asked.last?.contains(#"kMDItemDisplayName == "rep*"cdw"#) == true
+                  && asked.last?.contains(#"kMDItemContentTypeTree == "public.plain-text""#) == true, asked.last ?? "not asked")
+        check("its files show first, named by the file", lm.results.first?.title == "report.txt",
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.openSelected()
+        try? await Task.sleep(for: .milliseconds(50))
+        check("↩ on a file sends its path on", copied.last == "copied \(report.path)", copied.last ?? "none")
     }
 }

@@ -47,6 +47,13 @@ final class WorkflowSource: ResultSource {
     var onRun: (Workflow, ScriptFilter, String, ScriptResult) -> Void = { _, _, _, _ in }
     /// Called after a Run Script object ran, for the debugger (S-045).
     var onAction: (Workflow, ScriptCommand, ScriptResult) -> Void = { _, _, _ in }
+    /// Finds files for a File Filter (S-051): a Spotlight query, scopes and a
+    /// limit. The self-test swaps in a fake, since Spotlight skips /tmp.
+    var findFiles: (_ predicate: String, _ scopes: [String], _ limit: Int,
+                    _ done: @escaping @MainActor ([LaunchResult]) -> Void) -> Void
+    private let files = FileSearch()
+    /// File Filters whose unmapped options the debugger already named.
+    private var named: Set<String> = []
 
     private var task: Task<Void, Never>?
     /// Output of filters that let Reach filter: the script runs once while the launcher is open.
@@ -54,6 +61,9 @@ final class WorkflowSource: ResultSource {
 
     init(library: WorkflowLibrary = .shared) {
         self.library = library
+        findFiles = { [files] predicate, scopes, limit, done in
+            files.search(predicate, reveals: false, scopes: scopes, limit: limit, done: done)
+        }
         onRun = { [library] workflow, _, text, result in
             library.record(workflow, object: "Script Filter", input: text, result: result)
         }
@@ -71,6 +81,7 @@ final class WorkflowSource: ResultSource {
         }
         var rows: [Scored] = []
         var runs: [(workflow: Workflow, filter: ScriptFilter, text: String)] = []
+        var search: (workflow: Workflow, filter: FileFilter, text: String)?
         for workflow in library.workflows where !workflow.disabled {
             for filter in workflow.scriptFilters {
                 switch filter.match(typed) {
@@ -100,6 +111,24 @@ final class WorkflowSource: ResultSource {
                     continue
                 }
             }
+            for filter in workflow.fileFilters {
+                switch filter.match(typed) {
+                case .keyword:
+                    rows.append(Scored(result: keywordRow(filter, in: workflow, completes: true),
+                                       score: Matcher.score(query: typed, title: filter.keyword) ?? 500))
+                case .needsText:
+                    let done = typed.lowercased() == filter.completion.lowercased()
+                    rows.append(Scored(result: keywordRow(filter, in: workflow, completes: !done), score: 1000))
+                case .run(let text):
+                    if search == nil { search = (workflow, filter, text) }
+                case nil:
+                    continue
+                }
+            }
+        }
+        // One File Filter searches at a time, while no script filter runs.
+        if runs.isEmpty, let search {
+            return files(for: search.filter, in: search.workflow, text: search.text, rows: rows, later: later)
         }
         guard !runs.isEmpty else { return rows }
 
@@ -125,6 +154,38 @@ final class WorkflowSource: ResultSource {
     func cancel() {
         task?.cancel()
         task = nil
+        files.cancel()
+    }
+
+    /// A File Filter's rows (S-051): "please wait" until Spotlight answers,
+    /// then the files, each sending its path on.
+    private func files(for filter: FileFilter, in workflow: Workflow, text: String, rows: [Scored],
+                       later: @escaping @MainActor ([Scored]) -> Void) -> [Scored] {
+        let key = workflow.id + "/" + filter.uid
+        if !filter.unmapped.isEmpty, named.insert(key).inserted {
+            library.log.failed(workflow: workflow.name,
+                               text: "Reach does not follow these File Filter options yet: \(filter.unmapped.joined(separator: ", ")).")
+        }
+        var waiting = keywordRow(filter, in: workflow, completes: false)
+        waiting.id += ":waiting"
+        waiting.subtitle = "Searching…"
+        findFiles(filter.predicate(for: text), filter.scopes, filter.limit) { [weak self] found in
+            guard let self else { return }
+            let files = found.enumerated().map { index, file in
+                var result = file
+                result.id = "workflow:\(workflow.id):\(filter.uid):\(file.id)"
+                result.isPinned = true
+                result.workflow = WorkflowRun(workflow: workflow.id, filter: filter.uid, argument: file.url?.path ?? file.id)
+                return Scored(result: result, score: 1000 - index)
+            }
+            var none = self.keywordRow(filter, in: workflow, completes: false)
+            none.id += ":none"
+            none.subtitle = "No files match “\(text)”"
+            let answer = rows + (files.isEmpty ? [Scored(result: none, score: 0)] : files)
+            // After this call returns its "please wait" row, even when the answer comes at once.
+            Task { @MainActor in later(answer) }
+        }
+        return rows + [Scored(result: waiting, score: 1000)]
     }
 
     /// The launcher opened again: filters that Reach filters run their script again.

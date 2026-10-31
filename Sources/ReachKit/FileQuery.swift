@@ -184,7 +184,7 @@ public enum SpotlightPredicate {
     }
 
     /// Quotes and backslashes escaped; `*` dropped, since it is the wildcard.
-    static func escaped(_ text: String) -> String {
+    public static func escaped(_ text: String) -> String {
         text.replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "*", with: "")
