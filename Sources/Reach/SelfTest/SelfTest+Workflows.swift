@@ -49,6 +49,9 @@ extension SelfTest {
                 ["uid": "HKSEL", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 1]],
                 ["uid": "HKCLIP", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 2]],
                 ["uid": "HKFIND", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 4]],
+                // S-051: Split Arguments, as arguments, on a comma.
+                ["uid": "SPLITKW", "type": KeywordInput.type, "config": ["keyword": "rsplit", "argumenttype": 0, "text": "Split"]],
+                ["uid": "SPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
                 // S-050: File Actions for text files (several) and for one image.
                 ["uid": "FATEXT", "type": WorkflowFileAction.type, "config": [
                     "name": "Self Test Text Action", "acceptsmulti": 1, "filetypes": ["public.plain-text"],
@@ -78,6 +81,8 @@ extension SelfTest {
                 "HKCLIP": [["destinationuid": "COPY", "modifiers": 0]],
                 "HKFIND": [["destinationuid": "COPY", "modifiers": 0]],
                 "FATEXT": [["destinationuid": "COPY", "modifiers": 0]],
+                "SPLITKW": [["destinationuid": "SPLIT", "modifiers": 0]],
+                "SPLIT": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -230,6 +235,7 @@ extension SelfTest {
         launcher.hide()
         await checkWorkflowHotkeys(model: model)
         await checkWorkflowFileActions(model: model)
+        await checkWorkflowUtilities(model: model)
 
         // The real runner: a bash script gets the text as $1 and its output parses.
         let script = ScriptSource(language: .bash, text: "printf '{\"items\":[{\"title\":\"%s\"}]}' \"$1\"")
@@ -451,5 +457,29 @@ extension SelfTest {
             check("a workflow that is off adds no action", !titles().contains("Self Test Text Action"), titles().joined(separator: ", "))
             if let current = lm.workflows.library.workflow(workflow.id) { lm.workflows.library.setEnabled(true, current) }
         }
+    }
+
+    /// S-051: ↩ on a keyword runs through Split Arguments. Copy to Clipboard is recorded.
+    private static func checkWorkflowUtilities(model: AppModel) async {
+        guard let launcher = model.launcher else { return }
+        let lm = model.launcherModel
+        let realCopier = lm.copier
+        var copied: [String] = []
+        lm.copier = { copied.append($0) }
+        defer {
+            lm.copier = realCopier
+            launcher.hide()
+        }
+        func enter(_ query: String) async {
+            await showAgain(launcher)
+            lm.query = query
+            try? await Task.sleep(for: .milliseconds(50))
+            lm.openSelected()
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        await enter("rsplit one, two")
+        check("Split Arguments runs what is after it once for each part, trimmed",
+              copied == ["copied one", "copied two"], copied.joined(separator: " | "))
     }
 }
