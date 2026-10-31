@@ -876,7 +876,8 @@ Acceptance:
 - [unit] Text View (`alfred.workflow.userinterface.text`) with text as input shows that text in a window named after the workflow; selectable, Esc closes it. A script as input, output to the next objects, a footer or loading text show in the debugger. `fontsizing` and `stackview` only change how Alfred draws it and are ignored.
 - [unit] Run Shortcut (`alfred.workflow.automation.runshortcut`) runs the shortcut in `shortcut` (also set by JSON Config) with `/usr/bin/shortcuts`: `inputmode` -1 gives it nothing, 0 the text (through a temporary file), 1 the files. The next objects get what it prints. Another `inputmode` or `outputmode` shows in the debugger.
 - [unit] View Shortcut (`shortcut.view`) opens the shortcut in `target_shortcut`, else the text, in the Shortcuts app.
-- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). Dialog shows its filled title, text and buttons (recorded, never shown).
+- [unit] The Finder tasks ask Finder through `osascript`: `finder.selection` sends the selected files on, tab-separated; `finder.windows.current` sends the front window's folder, empty without a window. Without the Automation permission the error shows in the debugger.
+- [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). The Finder tasks send on what Finder answers (faked). Dialog shows its filled title, text and buttons (recorded, never shown).
 Status: in progress
 
 ---

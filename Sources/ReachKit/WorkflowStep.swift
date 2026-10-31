@@ -252,6 +252,9 @@ extension Workflow {
                 case .success(let command): return [.run(command, then: object.uid, variables: variables)]
                 case .failure(let problem): return [.unsupported(problem.kind)]
                 }
+            case Self.automationTask where FinderTask.command(for: object.string("taskuid"), folder: folder, environment: environment) != nil:
+                let command = FinderTask.command(for: object.string("taskuid"), folder: folder, environment: environment)!
+                return [.run(command, then: object.uid, variables: variables)]
             case Self.automationTask where object.string("taskuid") == WorkflowShortcut.viewTask:
                 let command = WorkflowShortcut.view(object, argument: argument, variables: variables, folder: folder, environment: environment)
                 return [.run(command, then: object.uid, variables: variables)]

@@ -81,3 +81,16 @@ private func line(_ to: String, _ modifiers: Int = 0) -> [[String: Any]] { [["de
     else { Issue.record("no run"); return }
     #expect(command.arguments == ["view", "Echo"])
 }
+
+@Test func theFinderTasksAskFinderThroughOsascript() {
+    for task in [FinderTask.selection, FinderTask.currentWindow] {
+        let finder = workflow([["uid": "F", "type": Workflow.automationTask, "config": ["taskuid": task, "tasksettings": [String: String]()]]],
+                              ["KW": line("F")])
+        guard case .run(let command, "F", _) = finder.steps(after: "KW", argument: "").first else { Issue.record("no run for \(task)"); continue }
+        #expect(command.executable == "/usr/bin/osascript" && command.arguments.first == "-e")
+        #expect(command.arguments.last?.contains("Finder") == true)
+    }
+    let other = workflow([["uid": "F", "type": Workflow.automationTask,
+                           "config": ["taskuid": "com.alfredapp.automation.core/files-and-folders/path.exists"]]], ["KW": line("F")])
+    #expect(other.steps(after: "KW", argument: "") == [.unsupported("automation.task")])
+}

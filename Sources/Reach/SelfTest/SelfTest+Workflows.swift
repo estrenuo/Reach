@@ -105,6 +105,10 @@ extension SelfTest {
                 ["uid": "VIEWKW", "type": KeywordInput.type, "config": ["keyword": "rview", "argumenttype": 0, "text": "View"]],
                 ["uid": "VIEW", "type": Workflow.automationTask, "config": ["taskuid": WorkflowShortcut.viewTask,
                                                                           "tasksettings": ["target_shortcut": "{query}"]]],
+                ["uid": "SELKW", "type": KeywordInput.type, "config": ["keyword": "rsel", "argumenttype": 2, "text": "Selection"]],
+                ["uid": "SEL", "type": Workflow.automationTask, "config": ["taskuid": FinderTask.selection, "tasksettings": [String: String]()]],
+                ["uid": "WINKW", "type": KeywordInput.type, "config": ["keyword": "rwin", "argumenttype": 2, "text": "Window"]],
+                ["uid": "WIN", "type": Workflow.automationTask, "config": ["taskuid": FinderTask.currentWindow, "tasksettings": [String: String]()]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -173,6 +177,10 @@ extension SelfTest {
                 "SHORTJSON": [["destinationuid": "SHORT", "modifiers": 0]],
                 "SHORT": [["destinationuid": "COPY", "modifiers": 0]],
                 "VIEWKW": [["destinationuid": "VIEW", "modifiers": 0]],
+                "SELKW": [["destinationuid": "SEL", "modifiers": 0]],
+                "SEL": [["destinationuid": "COPY", "modifiers": 0]],
+                "WINKW": [["destinationuid": "WIN", "modifiers": 0]],
+                "WIN": [["destinationuid": "COPY", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -737,6 +745,20 @@ extension SelfTest {
         try? await Task.sleep(for: .milliseconds(100))
         lm.workflows.run = realShortcuts
         check("View Shortcut opens the shortcut in Shortcuts", shortcuts.last == ["view", "Echo"], "\(shortcuts)")
+
+        // Finder is never asked: a fake answers for osascript.
+        let realFinder = lm.workflows.run
+        lm.workflows.run = { command in
+            let script = command.arguments.last ?? ""
+            return ScriptResult(output: Data((script.contains("selection") ? "/tmp/a.txt\t/tmp/b.txt" : "/tmp/folder/").utf8))
+        }
+        await enter("rsel")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("Finder Selection sends the selected files on, tab-separated", copied.last == "copied /tmp/a.txt\t/tmp/b.txt", copied.last ?? "")
+        await enter("rwin")
+        try? await Task.sleep(for: .milliseconds(100))
+        lm.workflows.run = realFinder
+        check("Current Finder Window sends its folder on", copied.last == "copied /tmp/folder/", copied.last ?? "")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
