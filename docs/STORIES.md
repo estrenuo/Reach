@@ -830,6 +830,14 @@ UX:
 - A File Filter shows "Searching…" under its title until Spotlight answers, and "No files match" when nothing does. → on a file opens Reach's own action panel for it.
 Status: done
 
+### S-052 JSON Config, Join, Fallbacks and Universal Actions from a workflow
+As the user, imported Alfred workflows that set their configuration with JSON, join split parts again, offer themselves as a fallback, or act on what I select run in Reach.
+Depends: S-051
+Acceptance:
+- [unit] JSON Config (`alfred.workflow.utility.json`) fills `{query}` and `{var:…}` in its `json` (escaped, so a quote keeps it whole), then sets the argument from `arg` (an array joined with tabs), adds its `variables`, and overrides the configuration of the objects right after it with `config`. JSON that does not parse is named in the debugger.
+- [self] ↩ through JSON Config sets the next object's configuration.
+Status: in progress
+
 ---
 
 ## Later

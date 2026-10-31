@@ -46,6 +46,7 @@ extension Workflow {
     public static let debug = "alfred.workflow.utility.debug"
     public static let split = "alfred.workflow.utility.split"
     public static let replace = "alfred.workflow.utility.replace"
+    public static let json = "alfred.workflow.utility.json"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -64,17 +65,19 @@ extension Workflow {
     }
 
     /// The steps after `uid` without a modifier, on the lines that leave `output`.
+    /// `config` overrides the next objects' configuration (JSON Config, S-052).
     private func next(after uid: String, output: String? = nil, argument: String, variables: [String: String],
-                      environment: [String: String], depth: Int) -> [WorkflowStep] {
+                      environment: [String: String], config: [String: PlistValue] = [:], depth: Int) -> [WorkflowStep] {
         let lines = (connections[uid] ?? []).filter { $0.modifiers == 0 && $0.sourceOutput == output }
-        return follow(lines, argument: argument, variables: variables, environment: environment, depth: depth + 1)
+        return follow(lines, argument: argument, variables: variables, environment: environment, config: config, depth: depth + 1)
     }
 
     private func follow(_ lines: [WorkflowConnection], argument: String, variables: [String: String],
-                        environment: [String: String], depth: Int) -> [WorkflowStep] {
+                        environment: [String: String], config: [String: PlistValue] = [:], depth: Int) -> [WorkflowStep] {
         guard depth < Self.deepest else { return [] }
         return lines.flatMap { line -> [WorkflowStep] in
-            guard let object = object(line.to) else { return [] }
+            guard var object = object(line.to) else { return [] }
+            object.config.merge(config) { _, new in new }
             let fill = { (text: String) in WorkflowText.fill(text, query: argument, variables: variables) }
             switch object.type {
             case Self.openURL:
@@ -125,6 +128,13 @@ extension Workflow {
                 case .failure(let problem):
                     return [.unsupported(problem.kind)]
                 }
+            case Self.json:
+                guard let output = WorkflowJSON.read(object, query: argument, variables: variables) else {
+                    return [.unsupported("utility.json with JSON that does not parse")]
+                }
+                return next(after: object.uid, argument: output.argument ?? argument,
+                            variables: variables.merging(output.variables) { _, new in new },
+                            environment: environment.merging(output.variables) { _, new in new }, config: output.config, depth: depth)
             case Self.hideAlfred:
                 // Reach hides the launcher after Return anyway.
                 return []

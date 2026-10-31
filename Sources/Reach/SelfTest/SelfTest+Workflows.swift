@@ -57,6 +57,11 @@ extension SelfTest {
                 ["uid": "REPL", "type": Workflow.replace, "config": [
                     "matchmode": 1, "matchstring": #".*github.com\/([^\/?]*\/[^\/?]*).*"#, "replacestring": "$1",
                 ]],
+                // S-052: JSON Config sets the argument and Copy to Clipboard's text.
+                ["uid": "JSONKW", "type": KeywordInput.type, "config": ["keyword": "rjson", "argumenttype": 0, "text": "JSON"]],
+                ["uid": "JSON", "type": Workflow.json, "config": [
+                    "json": #"{"alfredworkflow": {"arg": "{query}!", "config": {"clipboardtext": "json {query}"}}}"#,
+                ]],
                 // S-051: a File Filter for text files.
                 ["uid": "FF", "type": FileFilter.type, "config": [
                     "keyword": "rfiles", "withspace": true, "argumenttype": 0, "title": "Find Self Test Files",
@@ -96,6 +101,8 @@ extension SelfTest {
                 "REPLKW": [["destinationuid": "REPL", "modifiers": 0]],
                 "REPL": [["destinationuid": "COPY", "modifiers": 0]],
                 "FF": [["destinationuid": "COPY", "modifiers": 0]],
+                "JSONKW": [["destinationuid": "JSON", "modifiers": 0]],
+                "JSON": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -499,6 +506,11 @@ extension SelfTest {
         await enter("rrepl https://github.com/estrenuo/Reach/pull/9")
         check("Replace rewrites the text with a regular expression and its groups",
               copied.last == "copied estrenuo/Reach", copied.last ?? "none")
+
+        // S-052
+        await enter("rjson hello")
+        check("JSON Config sets the next object's configuration, filled with the text it got",
+              copied.last == "json hello", copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
