@@ -57,6 +57,24 @@ extension SelfTest {
                 ["uid": "REPL", "type": Workflow.replace, "config": [
                     "matchmode": 1, "matchstring": #".*github.com\/([^\/?]*\/[^\/?]*).*"#, "replacestring": "$1",
                 ]],
+                // S-052: JSON Config sets the argument and Copy to Clipboard's text.
+                ["uid": "JSONKW", "type": KeywordInput.type, "config": ["keyword": "rjson", "argumenttype": 0, "text": "JSON"]],
+                ["uid": "JSON", "type": Workflow.json, "config": [
+                    "json": #"{"alfredworkflow": {"arg": "{query}!", "config": {"clipboardtext": "json {query}"}}}"#,
+                ]],
+                // S-052: Split on a comma, then Join Arguments with a plus.
+                ["uid": "JOINKW", "type": KeywordInput.type, "config": ["keyword": "rjoin", "argumenttype": 0, "text": "Join"]],
+                ["uid": "JOINSPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
+                ["uid": "JOIN", "type": Workflow.joinArgs, "config": ["delimiter": "+"]],
+                // S-052: Universal Actions for text (not URLs) and for files.
+                ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
+                    "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
+                ]],
+                ["uid": "UAFILES", "type": WorkflowUniversalAction.type, "config": [
+                    "name": "Self Test Files Universal", "acceptsfiles": true, "acceptsmulti": 1,
+                ]],
+                // S-052: a Fallback Search.
+                ["uid": "FALLBACK", "type": WorkflowFallback.type, "config": ["text": "Self Test fallback for '{query}'"]],
                 // S-051: a File Filter for text files.
                 ["uid": "FF", "type": FileFilter.type, "config": [
                     "keyword": "rfiles", "withspace": true, "argumenttype": 0, "title": "Find Self Test Files",
@@ -96,6 +114,14 @@ extension SelfTest {
                 "REPLKW": [["destinationuid": "REPL", "modifiers": 0]],
                 "REPL": [["destinationuid": "COPY", "modifiers": 0]],
                 "FF": [["destinationuid": "COPY", "modifiers": 0]],
+                "JSONKW": [["destinationuid": "JSON", "modifiers": 0]],
+                "JSON": [["destinationuid": "COPY", "modifiers": 0]],
+                "JOINKW": [["destinationuid": "JOINSPLIT", "modifiers": 0]],
+                "JOINSPLIT": [["destinationuid": "JOIN", "modifiers": 0]],
+                "JOIN": [["destinationuid": "COPY", "modifiers": 0]],
+                "FALLBACK": [["destinationuid": "COPY", "modifiers": 0]],
+                "UATEXT": [["destinationuid": "COPY", "modifiers": 0]],
+                "UAFILES": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -441,10 +467,10 @@ extension SelfTest {
         launcher.show()
         lm.showActions(for: .files([notes]))
         check("a text file's action panel lists the workflow's text action after Reach's own",
-              titles().last == "Self Test Text Action" && !titles().contains("Self Test Image Action")
-                  && lm.actions?.rows.last?.kindLabel == "Self Test",
+              titles().suffix(2) == ["Self Test Text Action", "Self Test Files Universal"]
+                  && !titles().contains("Self Test Image Action") && lm.actions?.rows.last?.kindLabel == "Self Test",
               titles().joined(separator: ", "))
-        lm.actions?.filter = "self test"
+        lm.actions?.filter = "self test text"
         check("the filter finds it by name", titles() == ["Self Test Text Action"], titles().joined(separator: ", "))
         run("Self Test Text Action")
         check("choosing it runs what is connected with the file's path, and the launcher hides",
@@ -462,7 +488,24 @@ extension SelfTest {
               titles().contains("Self Test Image Action") && !titles().contains("Self Test Text Action"), titles().joined(separator: ", "))
         lm.showActions(for: .files([photo, notes]))
         check("an action for one file, or for other types, stays out with several files",
-              !titles().contains { $0.hasPrefix("Self Test") }, titles().joined(separator: ", "))
+              !titles().contains("Self Test Text Action") && !titles().contains("Self Test Image Action"), titles().joined(separator: ", "))
+
+        // S-052: Universal Actions, for selected text and for files.
+        launcher.show()
+        lm.showActions(for: .text("hello there", source: "TextEdit"))
+        check("selected text lists the workflow's text Universal Action, not the one for files",
+              titles().contains("Self Test Text Universal") && !titles().contains("Self Test Files Universal"), titles().joined(separator: ", "))
+        run("Self Test Text Universal")
+        check("choosing it sends the selected text on", copied.last == "copied hello there", copied.last ?? "none")
+        launcher.show()
+        lm.showActions(for: .text("https://example.com/docs", source: "Safari"))
+        check("a selected web address leaves out an action that does not take URLs",
+              !titles().contains("Self Test Text Universal"), titles().joined(separator: ", "))
+        lm.showActions(for: .files([notes, todo]))
+        check("files list the Universal Action that takes files", titles().contains("Self Test Files Universal"),
+              titles().joined(separator: ", "))
+        run("Self Test Files Universal")
+        check("choosing it sends the paths on, tab-separated", copied.last == "copied \(notes.path)\t\(todo.path)", copied.last ?? "none")
 
         if let workflow = lm.workflows.library.workflow("selftest.workflow") {
             lm.workflows.library.setEnabled(false, workflow)
@@ -499,6 +542,25 @@ extension SelfTest {
         await enter("rrepl https://github.com/estrenuo/Reach/pull/9")
         check("Replace rewrites the text with a regular expression and its groups",
               copied.last == "copied estrenuo/Reach", copied.last ?? "none")
+
+        // S-052
+        await enter("rjson hello")
+        check("JSON Config sets the next object's configuration, filled with the text it got",
+              copied.last == "json hello", copied.last ?? "none")
+
+        await enter("rjoin one, two")
+        check("Join Arguments puts the parts of a Split back together with its delimiter",
+              copied.last == "copied one+two", copied.last ?? "none")
+
+        await showAgain(launcher)
+        lm.query = "zzqxv selftest"
+        try? await Task.sleep(for: .milliseconds(400))
+        let titles = lm.results.map(\.title)
+        let row = titles.firstIndex(of: "Self Test fallback for 'zzqxv selftest'")
+        check("a workflow's Fallback Search shows after the web searches when nothing matches",
+              row != nil && row == titles.count - 1 && titles.first?.hasPrefix("Search Google") == true, titles.joined(separator: ", "))
+        if let row { lm.open(at: row) }
+        check("↩ on it sends the typed text on", copied.last == "copied zzqxv selftest", copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

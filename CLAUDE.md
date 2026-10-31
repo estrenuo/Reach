@@ -25,6 +25,14 @@ SwiftData database and no server.
 - Then check the grid: `tools/grid-lint.sh` and `swift tools/check-layout.swift /tmp/Reach-shots/*-layout.json`. Both print PASS.
 - A change is done when the build has no errors, the grid checks pass, and you looked at the light and dark snapshots.
 
+### How often to run what
+
+- Every commit: `swift test` and `./build.sh`, nothing more.
+- Once per round of work (a story or a PR), just before opening the PR: `tools/selftest.sh`.
+- Only for a commit that visibly changes UI: snapshots and the grid checks, limited to the pages it changes (`APP_SNAPSHOT_PAGES=…`).
+- Known flaky self-test checks (Quick Look, timing such as "file search answers within 200 ms") are not rerun to rule them out; name them in the report.
+- Option: when Sander asks for a full run ("draai alles", "full check"), run the self-test, all snapshots and the grid checks after every commit anyway.
+
 ## Design rules
 
 - Use Apple's controls and system styles. Only the accent color is custom: `UI/Theme.swift` (`ThemeStore.defaultID`). People change it, and light or dark mode, in Settings > Appearance.

@@ -81,7 +81,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -114,6 +114,45 @@ enum Snapshot {
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name == "confirm" { model.launcherModel.openSelected() }
+                        // S-052: a sample workflow's Universal Action on selected text, filtered by "a".
+                        if name == "selection-universal" {
+                            let library = WorkflowLibrary.shared
+                            let folder = library.folder.appending(path: "snapshot-universal.workflow", directoryHint: .isDirectory)
+                            let plist: [String: Any] = ["name": "ChatGPT", "objects": [
+                                ["uid": "UA", "type": WorkflowUniversalAction.type, "config": ["name": "Ask ChatGPT", "acceptstext": true]],
+                            ]]
+                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                                .write(to: folder.appending(path: "info.plist"))
+                            library.reload()
+                            model.launcherModel.showActions(for: .text("The quick brown fox jumps over the lazy dog.", source: "TextEdit"))
+                            model.launcherModel.actions?.filter = "a"
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                            try? FileManager.default.removeItem(at: folder)
+                            library.reload()
+                            launcher.hide()
+                            continue
+                        }
+                        // S-052: a sample workflow's Fallback Search below the web searches.
+                        if name == "workflow-fallback" {
+                            let library = WorkflowLibrary.shared
+                            let folder = library.folder.appending(path: "snapshot-fallback.workflow", directoryHint: .isDirectory)
+                            let plist: [String: Any] = ["name": "Shimmering Obsidian", "objects": [
+                                ["uid": "FB", "type": WorkflowFallback.type, "config": ["text": "Search Vault: '{query}'"]],
+                            ]]
+                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                                .write(to: folder.appending(path: "info.plist"))
+                            library.reload()
+                            model.launcherModel.query = "zzqxv meeting notes"
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                            try? FileManager.default.removeItem(at: folder)
+                            library.reload()
+                            launcher.hide()
+                            continue
+                        }
                         // S-051: a sample workflow's File Filter, with the sample files for Spotlight's answer.
                         if name == "file-filter" {
                             let library = WorkflowLibrary.shared

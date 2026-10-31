@@ -203,7 +203,7 @@ final class LauncherModel {
                                    learned: learning?.picks(for: query) ?? [:])
             .compactMap { byID[$0] }
         let found = pinned + ranked
-        let fallbacks = Fallbacks.results(for: kind.text)
+        let fallbacks = Fallbacks.results(for: kind.text) + workflows.fallbacks(for: kind.text)
         let split = FallbackList.split(found: found.count, fallbacks: fallbacks.count,
                                        mode: webSearches.settings.fallbackMode,
                                        limit: LauncherOptions.clampedVisible(LauncherOptionsStore.shared.visibleResults))
@@ -592,9 +592,9 @@ final class LauncherModel {
             }
             // Using a card's detail picks the contact, for Learning.
             onOpened(query, target)
-        case .workflow(let id, _, let action):
+        case .workflow(let id, _, let trigger, let title, let argument):
             actions = nil
-            switch runFileAction(action, in: id, on: panel.urls) {
+            switch runWorkflowAction(trigger, title: title, in: id, argument: argument) {
             case .failed(let message):
                 actions = panel
                 panel.failure = message
