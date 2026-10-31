@@ -21,3 +21,14 @@ private func line(_ to: String, _ modifiers: Int = 0) -> [[String: Any]] { [["de
     #expect(delayed.steps(after: "KW", argument: "x") == [.wait(seconds: 0.3, then: "WAIT", argument: "x", variables: [:], environment: [:])])
     #expect(delayed.steps(after: "WAIT", argument: "x") == [.copy("x")])
 }
+
+@Test func aDialogShowsItsFilledTitleTextAndButtons() {
+    let dialog = workflow([["uid": "ASK", "type": Workflow.dialog, "config": [
+        "button1": "Ok", "button2": "", "button3": "", "description": "{var:split2}", "title": "Bundle Identifier for\n\"{var:split1}\"",
+    ]]], ["KW": line("ASK")])
+    #expect(dialog.steps(after: "KW", argument: "x", variables: ["split1": "Safari", "split2": "com.apple.Safari"])
+        == [.dialog(title: "Bundle Identifier for\n\"Safari\"", text: "com.apple.Safari", buttons: ["Ok"])])
+    let followed = workflow([["uid": "ASK", "type": Workflow.dialog, "config": ["title": "T"]]], ["KW": line("ASK"), "ASK": line("COPY")])
+    #expect(followed.steps(after: "KW", argument: "x") == [.dialog(title: "T", text: "", buttons: ["OK"]),
+                                                          .unsupported("utility.dialog with lines after it")])
+}

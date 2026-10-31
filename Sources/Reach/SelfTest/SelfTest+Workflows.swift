@@ -91,6 +91,8 @@ extension SelfTest {
                 // S-055: Delay, then Copy to Clipboard.
                 ["uid": "WAITKW", "type": KeywordInput.type, "config": ["keyword": "rwait", "argumenttype": 0, "text": "Wait"]],
                 ["uid": "WAIT", "type": Workflow.delay, "config": ["seconds": "0.2"]],
+                ["uid": "ASKKW", "type": KeywordInput.type, "config": ["keyword": "rask", "argumenttype": 0, "text": "Ask"]],
+                ["uid": "ASK", "type": Workflow.dialog, "config": ["title": "About {query}", "description": "Details", "button1": "Ok"]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -152,6 +154,7 @@ extension SelfTest {
                 "ACTKW": [["destinationuid": "ACT", "modifiers": 0]],
                 "WAITKW": [["destinationuid": "WAIT", "modifiers": 0]],
                 "WAIT": [["destinationuid": "COPY", "modifiers": 0]],
+                "ASKKW": [["destinationuid": "ASK", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -676,6 +679,14 @@ extension SelfTest {
         let early = copied.last
         try? await Task.sleep(for: .milliseconds(400))
         check("Delay waits, then sends the text on", early != "copied later" && copied.last == "copied later", copied.last ?? "none")
+
+        // Dialogs are recorded, never shown.
+        let realDialog = lm.showDialog
+        var dialogs: [String] = []
+        lm.showDialog = { title, text, buttons in dialogs.append("\(title) / \(text) / \(buttons.joined(separator: ","))") }
+        await enter("rask Safari")
+        lm.showDialog = realDialog
+        check("Dialog shows its filled title, text and buttons", dialogs == ["About Safari / Details / Ok"], dialogs.joined())
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
