@@ -861,6 +861,8 @@ Depends: S-053
 Acceptance:
 - [unit] ⇧ alone with Return is `ReturnModifier.shift`; Settings > Advanced still offers web searches for ⌃↩, ⌥↩ and ⌘↩ only.
 - [self] ⇧↩ on a workflow row follows its ⇧ line (`WorkflowConnection.shift`, or `mods.shift` in Script Filter JSON); on any other row ⇧↩ is plain Return, as before.
+- [unit] The Automation Task "Current Tab of Frontmost Browser" (`frontmost.tabs.current`) asks the browser in front (else the first running one: Safari, Chrome, Brave, Edge, Vivaldi, Arc, Chromium) for its front tab's URL through Apple Events and goes on with it; with `allow_empty` it goes on with no text when there is none, without it the workflow stops there. When macOS denies the Apple Event, the debugger says where to allow it.
+- [self] The Current Tab task sends the (fake) browser's URL on; a denied Apple Event shows in the debugger.
 Status: in progress
 
 ---

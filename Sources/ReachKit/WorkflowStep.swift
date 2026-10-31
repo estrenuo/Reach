@@ -25,6 +25,9 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Read the front browser tab's URL, then go on after `then` with it (S-054).
+    /// `allowEmpty`: go on with an empty argument when there is no tab.
+    case currentTab(then: String, allowEmpty: Bool, variables: [String: String], environment: [String: String])
     /// Show the items a Grid View's script prints in the launcher (S-053).
     case grid(WorkflowGridRun)
     /// Press keys in the app in front, after the launcher hides (S-053).
@@ -193,6 +196,9 @@ extension Workflow {
                 return next(after: trigger.uid, argument: object.bool("passinputasargument") ? argument : "",
                             variables: passes ? variables : self.variables, environment: passes ? environment : own,
                             depth: depth)
+            case Self.automationTask where object.string("taskuid").hasSuffix(CurrentTab.taskSuffix):
+                let allowEmpty = object.config["tasksettings"]?.dict?["allow_empty"]?.bool ?? false
+                return [.currentTab(then: object.uid, allowEmpty: allowEmpty, variables: variables, environment: environment)]
             case Self.automationTask where object.string("taskuid") == Self.trashTask:
                 let target = object.config["tasksettings"]?.dict?["target_path"]?.string ?? ""
                 let path = target.isEmpty ? argument : fill(target)

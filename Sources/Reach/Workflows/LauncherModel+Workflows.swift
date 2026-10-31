@@ -151,6 +151,21 @@ extension LauncherModel {
                                               environment: command.environment)
                     _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
+            case .currentTab(let then, let allowEmpty, let variables, let environment):
+                guard depth < 5 else { continue }
+                Task { [weak self] in
+                    guard let self else { return }
+                    let url: String
+                    switch await self.readCurrentTab() {
+                    case .success(let found): url = found ?? ""
+                    case .failure(let problem):
+                        self.workflows.library.log.failed(workflow: workflow.name, text: problem.kind)
+                        url = ""
+                    }
+                    guard !url.isEmpty || allowEmpty else { return }
+                    let next = workflow.steps(after: then, argument: url, variables: variables, environment: environment)
+                    _ = self.runSteps(next, in: workflow, depth: depth + 1)
+                }
             case .grid(let run):
                 onShow()
                 workflows.forget()

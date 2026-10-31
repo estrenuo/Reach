@@ -79,6 +79,12 @@ extension SelfTest {
                 ["uid": "GRID", "type": Workflow.grid, "config": ["inputtype": 1, "inputfile": "grid.sh", "filterable": true]],
                 // S-054: the grid's ⇧ line shows Large Type.
                 ["uid": "GRIDLARGE", "type": Workflow.largeType, "config": [:]],
+                // S-054: the front browser tab's URL.
+                ["uid": "TABKW", "type": KeywordInput.type, "config": ["keyword": "rtab", "argumenttype": 2, "text": "Tab"]],
+                ["uid": "TAB", "type": Workflow.automationTask, "config": [
+                    "taskuid": "com.alfredapp.automation.extras/web-browsers/frontmost-browser/frontmost.tabs.current",
+                    "tasksettings": ["allow_empty": true],
+                ]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -136,6 +142,8 @@ extension SelfTest {
                 "UATEXT": [["destinationuid": "COPY", "modifiers": 0]],
                 "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
                 "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
+                "TABKW": [["destinationuid": "TAB", "modifiers": 0]],
+                "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
                 "KEYS": [["destinationuid": "COPY", "modifiers": 0]],
@@ -625,6 +633,21 @@ extension SelfTest {
         lm.largeType = realLarge
         lm.workflows.run = realRun
         check("⇧↩ on a workflow row follows its ⇧ line", shifted && large == ["one"], "\(shifted) \(large)")
+
+        // S-054: a fake browser answers.
+        let realTab = lm.readCurrentTab
+        lm.readCurrentTab = { .success("https://github.com/estrenuo/Reach") }
+        await enter("rtab")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("the Current Tab task sends the front browser tab's URL on", copied.last == "copied https://github.com/estrenuo/Reach",
+              copied.last ?? "none")
+        lm.readCurrentTab = { .failure(WorkflowProblem(kind: "Allow Reach to control Safari in System Settings > Privacy & Security > Automation.")) }
+        await enter("rtab")
+        try? await Task.sleep(for: .milliseconds(100))
+        lm.readCurrentTab = realTab
+        check("without permission the debugger says where to allow it, and allow_empty goes on with no text",
+              copied.last == "copied " && lm.workflows.library.log.shown(.errors).last?.text.hasPrefix("Allow Reach to control Safari") == true,
+              copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

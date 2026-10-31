@@ -17,7 +17,7 @@ public struct WorkflowKeys: Equatable, Sendable {
 
     /// The keys for `object`: `keycode`, or the key for `keychar` when it is -1.
     /// A failure names what Reach does not press, like `overridewithargument`.
-    public static func read(_ object: WorkflowObject) -> Result<WorkflowKeys, WorkflowReplace.Problem> {
+    public static func read(_ object: WorkflowObject) -> Result<WorkflowKeys, WorkflowProblem> {
         if object.bool("overridewithargument") {
             return .failure(.init(kind: "output.dispatchkeycombo with the argument as the keys"))
         }
