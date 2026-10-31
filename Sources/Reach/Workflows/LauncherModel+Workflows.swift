@@ -49,6 +49,35 @@ extension LauncherModel {
         return true
     }
 
+    /// A workflow's hotkey was pressed (S-049): reads the argument it asks
+    /// for, then shows the launcher with it or runs the objects connected to it.
+    func runHotkey(_ hotkey: WorkflowHotkey, in workflow: Workflow) async {
+        let library = workflows.library
+        var selection: String?
+        if hotkey.argument == .selection {
+            switch await readSelection() {
+            case .text(let text, _): selection = text
+            case .files(let urls): selection = urls.map(\.path).joined(separator: "\t")
+            case .nothing, .noAccess: selection = nil
+            }
+        }
+        let (text, unsupported) = hotkey.text(selection: selection,
+                                              clipboard: hotkey.argument == .clipboard ? readClipboard() : nil)
+        if let unsupported {
+            library.log.failed(workflow: workflow.name, text: "Reach does not pass \(unsupported) yet; the hotkey ran without it.")
+        }
+        library.log.debug(workflow: workflow.name, text: text.isEmpty ? "Hotkey ran" : "Hotkey ran with “\(text)”")
+        if hotkey.showsLauncher {
+            onShow()
+            query = text
+            return
+        }
+        let steps = workflow.steps(after: hotkey.uid, argument: text, variables: workflow.variables,
+                                   environment: library.environment(for: workflow))
+        _ = runSteps(steps, in: workflow)
+        onUsed(.workflows)
+    }
+
     /// Runs the steps in order. A script runs in the background and its
     /// output goes on to the objects after it, at most five scripts deep.
     private func runSteps(_ steps: [WorkflowStep], in workflow: Workflow, depth: Int = 0) -> Bool {

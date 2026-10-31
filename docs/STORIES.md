@@ -793,6 +793,19 @@ UX:
 - macOS asks once whether Reach may post notifications. When that is off, the debugger says so; the rest of the workflow still runs.
 Status: done
 
+### S-049 Hotkeys from a workflow
+As the user, a key combination I give an imported Alfred workflow's Hotkey trigger runs what is connected to it from any app, with the text Alfred would pass, so the workflows I start by hotkey work.
+Depends: S-047
+Acceptance:
+- [unit] A Hotkey trigger (`alfred.workflow.trigger.hotkey`) is read with its argument (0 none, 1 the macOS selection, 2 the clipboard, 3 a fixed text), its "Show Alfred" action, its related apps and their mode, and Alfred's `hotkey` and `hotmod` when the info.plist has them.
+- [unit] The argument is what Alfred would pass; any other kind, like 4 (the Find pasteboard), passes nothing and says which kind.
+- [unit] A combination that is Reach's launcher, selection or clipboard hotkey, or that another hotkey took first, is skipped with the reason.
+- [self] Workflow > Workflow Hotkeys… (⌥⌘K) sets a combination per trigger; it is registered at once, again on every read of the library, and taken off by Turn Off. A skipped one says why in the sheet and in the debugger.
+- [self] An injected press runs the connected objects with no text, the selection or the clipboard; an argument Reach does not pass runs without it and is logged.
+UX:
+- Alfred leaves hotkeys out of an exported workflow, so the triggers start empty; the sheet says so. A combination another app owns stays off with that reason.
+Status: done
+
 ---
 
 ## Later

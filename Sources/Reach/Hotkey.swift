@@ -27,6 +27,11 @@ final class HotkeyCenter {
     private static let launcherID: UInt32 = 1
     private static let selectionID: UInt32 = 3
     private static let clipboardID: UInt32 = 4
+    /// Workflow hotkeys (S-049) take ids from here on.
+    static let firstWorkflowID: UInt32 = 100
+    /// A workflow hotkey was pressed, by its id.
+    var onWorkflow: (UInt32) -> Void = { _ in }
+    private var workflowRefs: [EventHotKeyRef] = []
 
     private var ref: EventHotKeyRef?
     private var handlerInstalled = false
@@ -77,6 +82,26 @@ final class HotkeyCenter {
     func suspend() { unregister() }
     func resume() { if ref == nil { isRegistered = register(combo) } }
 
+    /// Reach's own hotkeys, which a workflow hotkey never takes (S-049).
+    var reserved: [(name: String, combo: KeyCombo)] {
+        [("launcher hotkey", combo), ("selection hotkey", .selection), ("clipboard hotkey", .clipboard)]
+    }
+
+    /// Registers a workflow hotkey; false when another app owns the combination.
+    func registerWorkflow(_ combo: KeyCombo, id: UInt32) -> Bool {
+        var ref: EventHotKeyRef?
+        let hotkey = EventHotKeyID(signature: Self.signature, id: id)
+        guard RegisterEventHotKey(combo.keyCode, combo.modifiers, hotkey, GetApplicationEventTarget(), 0, &ref) == noErr,
+              let ref else { return false }
+        workflowRefs.append(ref)
+        return true
+    }
+
+    func unregisterWorkflows() {
+        workflowRefs.forEach { UnregisterEventHotKey($0) }
+        workflowRefs = []
+    }
+
     /// True when this app could take `combo` right now; used by the self-test.
     func isFree(_ combo: KeyCombo) -> Bool {
         var probe: EventHotKeyRef?
@@ -102,6 +127,7 @@ final class HotkeyCenter {
         switch id {
         case Self.selectionID: onSelection()
         case Self.clipboardID: onClipboard()
+        case Self.firstWorkflowID...: onWorkflow(id)
         default: onPress()
         }
     }

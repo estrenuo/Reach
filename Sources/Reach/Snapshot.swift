@@ -323,6 +323,33 @@ enum Snapshot {
             }
         }
         library.infoTab = .about
+        // Hotkeys… (S-049): one set, one empty, one on Reach's launcher hotkey.
+        if let example = library.selected {
+            try? WorkflowFolder.update(example.folder) {
+                $0["objects"] = ($0["objects"] as? [[String: Any]] ?? []) + [
+                    ["uid": "HKSET", "type": WorkflowHotkey.type, "config": ["argument": 1]],
+                    ["uid": "HKEMPTY", "type": WorkflowHotkey.type, "config": ["argument": 2]],
+                    ["uid": "HKTAKEN", "type": WorkflowHotkey.type, "config": ["argument": 0]],
+                ]
+            }
+            library.reload()
+            let hotkeys = WorkflowHotkeys.shared
+            if let current = library.selected {
+                hotkeys.set(.init(combo: KeyCombo(keyCode: 40, modifiers: KeyCombo.control | KeyCombo.option), keyName: "K"),
+                            for: current, uid: "HKSET")
+                hotkeys.set(.init(combo: HotkeyCenter.shared.combo, keyName: "Space"), for: current, uid: "HKTAKEN")
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    library.editingHotkeys = current
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/workflow-hotkeys-\(mode).png", window: window()?.attachedSheet)
+                    library.editingHotkeys = nil
+                    try? await Task.sleep(for: .seconds(0.5))
+                }
+                hotkeys.set(nil, for: current, uid: "HKSET")
+                hotkeys.set(nil, for: current, uid: "HKTAKEN")
+            }
+        }
         // The debugger (S-045) with a run that printed and one that failed.
         if let example = library.selected {
             library.log.clear()

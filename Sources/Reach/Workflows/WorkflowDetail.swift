@@ -51,6 +51,10 @@ struct WorkflowDetail: View {
                 Button("Configure Workflow…") { library.configuring = workflow }
                     .help("Fill in the settings this workflow asks for")
             }
+            if !workflow.hotkeys.isEmpty {
+                Button("Hotkeys…") { library.editingHotkeys = workflow }
+                    .help("Set the key combinations of this workflow's hotkeys")
+            }
             Button {
                 library.debugging.toggle()
             } label: {
