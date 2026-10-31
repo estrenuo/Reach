@@ -58,6 +58,8 @@ import Testing
     let folder = URL(fileURLWithPath: "/tmp/wf")
     let argv = ScriptSource(language: .zsh, text: "echo $1").command(query: "a b", folder: folder)
     #expect(argv == ScriptCommand(executable: "/bin/zsh", arguments: ["-c", "echo $1", "zsh", "a b"], directory: folder))
+    let noRCs = ScriptSource(language: ScriptSource.Language(rawValue: 11), text: "echo $1").command(query: "a b", folder: folder)
+    #expect(noRCs == ScriptCommand(executable: "/bin/zsh", arguments: ["--no-rcs", "-c", "echo $1", "zsh", "a b"], directory: folder))
     let inline = ScriptSource(language: .bash, text: "echo \"{query}\"", passesArgument: false, escaping: 4 | 32 | 64)
         .command(query: "say \"$HOME\"", folder: folder)
     #expect(inline?.arguments == ["-c", "echo \"say \\\"\\$HOME\\\"\"", "bash"])

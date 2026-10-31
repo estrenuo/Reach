@@ -55,6 +55,8 @@ public struct ScriptSource: Equatable, Sendable {
     /// Alfred's script types that Reach runs.
     public enum Language: Int, CaseIterable, Sendable {
         case bash = 0, ruby = 2, perl = 4, zsh = 5, appleScript = 6, javaScript = 7, file = 8, python3 = 9
+        /// Alfred's default since 5.1.2: zsh without the user's startup files.
+        case zshNoRCs = 11
 
         public var title: String {
             switch self {
@@ -66,6 +68,7 @@ public struct ScriptSource: Equatable, Sendable {
             case .javaScript: "/usr/bin/osascript (JS)"
             case .file: "External Script"
             case .python3: "/usr/bin/python3"
+            case .zshNoRCs: "/bin/zsh --no-rcs"
             }
         }
     }
@@ -103,6 +106,7 @@ public struct ScriptSource: Equatable, Sendable {
         let (executable, arguments): (String, [String]) = switch language {
         case .bash: ("/bin/bash", ["-c", body, "bash"] + args)
         case .zsh: ("/bin/zsh", ["-c", body, "zsh"] + args)
+        case .zshNoRCs: ("/bin/zsh", ["--no-rcs", "-c", body, "zsh"] + args)
         case .ruby: ("/usr/bin/ruby", ["-e", body] + args)
         case .perl: ("/usr/bin/perl", ["-e", body] + args)
         case .python3: ("/usr/bin/python3", ["-c", body] + args)
