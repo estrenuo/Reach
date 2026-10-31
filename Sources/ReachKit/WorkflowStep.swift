@@ -45,6 +45,7 @@ extension Workflow {
     public static let playSound = "alfred.workflow.output.playsound"
     public static let debug = "alfred.workflow.utility.debug"
     public static let split = "alfred.workflow.utility.split"
+    public static let replace = "alfred.workflow.utility.replace"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -117,6 +118,13 @@ extension Workflow {
                                 environment: environment.merging(set) { _, new in new }, depth: depth)
                 }
                 return parts.flatMap { next(after: object.uid, argument: $0, variables: variables, environment: environment, depth: depth) }
+            case Self.replace:
+                switch WorkflowReplace.apply(to: argument, object) {
+                case .success(let text):
+                    return next(after: object.uid, argument: text, variables: variables, environment: environment, depth: depth)
+                case .failure(let problem):
+                    return [.unsupported(problem.kind)]
+                }
             case Self.hideAlfred:
                 // Reach hides the launcher after Return anyway.
                 return []

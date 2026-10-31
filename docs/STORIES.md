@@ -823,7 +823,8 @@ As the user, imported Alfred workflows that split or rewrite their text, or that
 Depends: S-047
 Acceptance:
 - [unit] Split Arguments (`alfred.workflow.utility.split`) cuts the argument on `delimiter`, trims each part with `trimarguments`, drops empty ones with `discardemptyarguments`. As variables (`outputas` 0) it sets `split1`, `split2`, … (by `variableprefix`) and passes the argument on; as arguments (`outputas` 1) Reach runs the objects after it once per part.
-- [self] ↩ through Split Arguments runs what is after it once for each part.
+- [unit] Replace (`alfred.workflow.utility.replace`) rewrites the argument: plain text for `matchmode` 0, a regular expression with `$1` groups for 1, with `regexcaseinsensitive` and `regexmultiline`. Another mode, or an expression that does not compile, stops there and is named in the debugger.
+- [self] ↩ through Split Arguments runs what is after it once for each part; through Replace it sends the rewritten text on.
 Status: in progress
 
 ---

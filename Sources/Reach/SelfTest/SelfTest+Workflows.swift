@@ -52,6 +52,11 @@ extension SelfTest {
                 // S-051: Split Arguments, as arguments, on a comma.
                 ["uid": "SPLITKW", "type": KeywordInput.type, "config": ["keyword": "rsplit", "argumenttype": 0, "text": "Split"]],
                 ["uid": "SPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
+                // S-051: Replace with a regular expression and its groups.
+                ["uid": "REPLKW", "type": KeywordInput.type, "config": ["keyword": "rrepl", "argumenttype": 0, "text": "Replace"]],
+                ["uid": "REPL", "type": Workflow.replace, "config": [
+                    "matchmode": 1, "matchstring": #".*github.com\/([^\/?]*\/[^\/?]*).*"#, "replacestring": "$1",
+                ]],
                 // S-050: File Actions for text files (several) and for one image.
                 ["uid": "FATEXT", "type": WorkflowFileAction.type, "config": [
                     "name": "Self Test Text Action", "acceptsmulti": 1, "filetypes": ["public.plain-text"],
@@ -83,6 +88,8 @@ extension SelfTest {
                 "FATEXT": [["destinationuid": "COPY", "modifiers": 0]],
                 "SPLITKW": [["destinationuid": "SPLIT", "modifiers": 0]],
                 "SPLIT": [["destinationuid": "COPY", "modifiers": 0]],
+                "REPLKW": [["destinationuid": "REPL", "modifiers": 0]],
+                "REPL": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -459,7 +466,7 @@ extension SelfTest {
         }
     }
 
-    /// S-051: ↩ on a keyword runs through Split Arguments. Copy to Clipboard is recorded.
+    /// S-051: ↩ on a keyword runs through Split Arguments and Replace. Copy to Clipboard is recorded.
     private static func checkWorkflowUtilities(model: AppModel) async {
         guard let launcher = model.launcher else { return }
         let lm = model.launcherModel
@@ -481,5 +488,9 @@ extension SelfTest {
         await enter("rsplit one, two")
         check("Split Arguments runs what is after it once for each part, trimmed",
               copied == ["copied one", "copied two"], copied.joined(separator: " | "))
+
+        await enter("rrepl https://github.com/estrenuo/Reach/pull/9")
+        check("Replace rewrites the text with a regular expression and its groups",
+              copied.last == "copied estrenuo/Reach", copied.last ?? "none")
     }
 }
