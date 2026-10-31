@@ -38,6 +38,7 @@ extension SelfTest {
                 // S-048: Post Notification passes the text on to Copy to Clipboard.
                 ["uid": "NOTEKW", "type": KeywordInput.type, "config": ["keyword": "rnote", "argumenttype": 0, "text": "Note"]],
                 ["uid": "NOTE", "type": Workflow.notification, "config": ["title": "Done", "text": "{query}"]],
+                ["uid": "SOUND", "type": Workflow.playSound, "config": ["soundname": "Blow", "systemsound": true]],
                 ["uid": "TRASHKW", "type": KeywordInput.type, "config": ["keyword": "rtrash", "argumenttype": 0, "text": "Trash"]],
                 ["uid": "TRASH", "type": Workflow.automationTask, "config": [
                     "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "/tmp/{query}"],
@@ -56,7 +57,8 @@ extension SelfTest {
                 "AGAIN": [["destinationuid": "KW", "modifiers": 0]],
                 "TRASHKW": [["destinationuid": "TRASH", "modifiers": 0]],
                 "NOTEKW": [["destinationuid": "NOTE", "modifiers": 0]],
-                "NOTE": [["destinationuid": "COPY", "modifiers": 0]],
+                "NOTE": [["destinationuid": "SOUND", "modifiers": 0]],
+                "SOUND": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -191,12 +193,16 @@ extension SelfTest {
         let realCopier = lm.copier
         var copiedNote: [String] = []
         lm.copier = { copiedNote.append($0) }
+        let realSound = lm.playSound
+        var sounds: [String] = []
+        lm.playSound = { sounds.append($0) }
         await showAgain(launcher)
         lm.query = "rnote hello"
         try? await Task.sleep(for: .milliseconds(50))
         lm.openSelected()
-        check("↩ through Post Notification shows its text and passes it on", notes == ["Done: hello"]
-              && copiedNote == ["copied hello"], "\(notes) \(copiedNote)")
+        check("↩ through Post Notification and Play Sound shows the text, plays the sound and passes it on",
+              notes == ["Done: hello"] && sounds == ["Blow"] && copiedNote == ["copied hello"], "\(notes) \(sounds) \(copiedNote)")
+        lm.playSound = realSound
         lm.notify = realNotify
         lm.copier = realCopier
         launcher.hide()

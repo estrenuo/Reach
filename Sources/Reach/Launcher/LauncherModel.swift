@@ -85,6 +85,10 @@ final class LauncherModel {
     @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
     /// Shows text in Large Type. The self-test swaps in a recorder.
     @ObservationIgnored var largeType: @MainActor (String) -> Void = { LargeType.shared.show($0) }
+    /// Plays a workflow's sound: a system sound's name or a file's path (S-048). The self-test swaps in a recorder.
+    @ObservationIgnored var playSound: @MainActor (String) -> Void = { sound in
+        (sound.hasPrefix("/") ? NSSound(contentsOfFile: sound, byReference: true) : NSSound(named: NSSound.Name(sound)))?.play()
+    }
     /// Posts a workflow's notification (S-048). The self-test swaps in a recorder.
     @ObservationIgnored var notify: @MainActor (Workflow, String, String) -> Void = { workflow, title, text in
         WorkflowNotifier.post(title: title, text: text) {

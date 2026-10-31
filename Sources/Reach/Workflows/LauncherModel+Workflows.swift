@@ -63,6 +63,8 @@ extension LauncherModel {
                 worked = perform(.action(.trash), [URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) && worked
             case .notify(let title, let text):
                 notify(workflow, title, text)
+            case .sound(let sound):
+                playSound(sound)
             case .copy(let text):
                 copier(text)
             case .largeType(let text):

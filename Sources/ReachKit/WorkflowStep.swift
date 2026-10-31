@@ -19,6 +19,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case trash(String)
     /// Post a notification with this title and text (S-048).
     case notify(title: String, text: String)
+    /// Play a system sound by name, or a sound file by its path (S-048).
+    case sound(String)
     /// An object Reach does not run, by its kind, like `automation.task`.
     case unsupported(String)
 }
@@ -38,6 +40,7 @@ extension Workflow {
     public static let callExternalTrigger = "alfred.workflow.output.callexternaltrigger"
     public static let automationTask = "alfred.workflow.automation.task"
     public static let notification = "alfred.workflow.output.notification"
+    public static let playSound = "alfred.workflow.output.playsound"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -132,6 +135,13 @@ extension Workflow {
                 let title = WorkflowText.fill(object.string("title"), query: shown, variables: variables)
                 return [.notify(title: title.isEmpty ? name : title,
                                 text: WorkflowText.fill(object.string("text"), query: shown, variables: variables))] + after
+            case Self.playSound:
+                let name = object.string("soundname")
+                let after = next(after: object.uid, argument: argument, variables: variables,
+                                 environment: environment, depth: depth)
+                guard !name.isEmpty else { return after }
+                // A sound that is not a system sound is a file in the workflow's folder.
+                return [.sound(object.bool("systemsound") ? name : folder.appending(path: name).path)] + after
             case ScriptFilter.type, KeywordInput.type:
                 guard let keyword = scriptFilters.first(where: { $0.uid == object.uid })?.keyword
                     ?? keywordInputs.first(where: { $0.uid == object.uid })?.keyword else { return [] }

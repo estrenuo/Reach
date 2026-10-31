@@ -27,6 +27,14 @@ private func outputWorkflow(_ type: String, _ config: [String: Any]) -> Workflow
             == [.notify(title: "Hi Sander", text: "Got a b"), .copy("a b")])
 }
 
+@Test func playSoundPlaysASystemSoundOrAFileInTheWorkflowAndPassesTheArgumentOn() {
+    #expect(outputWorkflow(Workflow.playSound, ["soundname": "Blow", "systemsound": true]).steps(after: "KW", argument: "x")
+            == [.sound("Blow"), .copy("x")])
+    #expect(outputWorkflow(Workflow.playSound, ["soundname": "End.aif", "systemsound": false]).steps(after: "KW", argument: "x")
+            == [.sound("/tmp/outputs.workflow/End.aif"), .copy("x")])
+    #expect(outputWorkflow(Workflow.playSound, ["soundname": ""]).steps(after: "KW", argument: "x") == [.copy("x")])
+}
+
 @Test func postNotificationShowsTheFileNameAndCanWaitForText() {
     let named = outputWorkflow(Workflow.notification, ["title": "", "text": "{query}", "lastpathcomponent": true,
                                                        "removeextension": true])
