@@ -10,6 +10,7 @@ final class FileSearch: ResultSource {
     private var query: NSMetadataQuery?
     private var observer: NSObjectProtocol?
     private var pending: (@MainActor ([LaunchResult]) -> Void)?
+    private var limit = FileSearch.limit
     let settings: SearchSettings
 
     init(settings: SearchSettings = .shared) {
@@ -58,11 +59,14 @@ final class FileSearch: ResultSource {
         }
     }
 
-    /// Calls `done` once with up to nine results for a Spotlight query string.
-    func search(_ predicate: String, reveals: Bool, done: @escaping @MainActor ([LaunchResult]) -> Void) {
+    /// Calls `done` once with up to `limit` results (nine for 0) for a Spotlight
+    /// query string, in `scopes` (the search scope when empty).
+    func search(_ predicate: String, reveals: Bool, scopes: [String] = [], limit: Int = 0,
+                done: @escaping @MainActor ([LaunchResult]) -> Void) {
         cancel()
         let query = NSMetadataQuery()
-        query.searchScopes = settings.scope
+        query.searchScopes = scopes.isEmpty ? settings.scope : scopes.map { ($0 as NSString).expandingTildeInPath }
+        self.limit = limit > 0 ? limit : Self.limit
         query.predicate = NSPredicate(fromMetadataQueryString: predicate)
         query.sortDescriptors = [NSSortDescriptor(key: NSMetadataItemLastUsedDateKey, ascending: false)]
         pending = done
@@ -78,10 +82,10 @@ final class FileSearch: ResultSource {
     private func finish(reveals: Bool) {
         guard let query, let done = pending else { return }
         query.disableUpdates()
-        // The first nine that are not in ~/Library, in Spotlight's order.
+        // The first nine (or the asked limit) that are not in ~/Library, in Spotlight's order.
         let home = NSHomeDirectory()
         var results: [LaunchResult] = []
-        for index in 0..<query.resultCount where results.count < Self.limit {
+        for index in 0..<query.resultCount where results.count < limit {
             guard let item = query.result(at: index) as? NSMetadataItem,
                   let result = Self.result(item, reveals: reveals),
                   ScopeFilter.keeps(result.id, home: home) else { continue }

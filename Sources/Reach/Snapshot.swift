@@ -81,7 +81,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -114,6 +114,40 @@ enum Snapshot {
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name == "confirm" { model.launcherModel.openSelected() }
+                        // S-051: a sample workflow's File Filter, with the sample files for Spotlight's answer.
+                        if name == "file-filter" {
+                            let library = WorkflowLibrary.shared
+                            let folder = library.folder.appending(path: "snapshot-filefilter.workflow", directoryHint: .isDirectory)
+                            let plist: [String: Any] = ["name": "Visual Studio Code", "objects": [
+                                ["uid": "FF", "type": FileFilter.type, "config": [
+                                    "keyword": "codef", "withspace": true, "title": "Find and open with Visual Studio Code",
+                                    "subtext": "Open files and folders",
+                                ]],
+                            ]]
+                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                                .write(to: folder.appending(path: "info.plist"))
+                            library.reload()
+                            let lm = model.launcherModel
+                            let realFind = lm.workflows.findFiles
+                            let samples = ((try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: SampleFiles.folder),
+                                                                                         includingPropertiesForKeys: nil)) ?? [])
+                                .sorted { $0.path < $1.path }.prefix(4)
+                            lm.workflows.findFiles = { _, _, _, done in
+                                done(samples.map { url in
+                                    LaunchResult(id: url.path, title: url.lastPathComponent,
+                                                 subtitle: (url.path as NSString).abbreviatingWithTildeInPath, icon: .file(url.path), url: url)
+                                })
+                            }
+                            lm.query = "codef brief"
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                            lm.workflows.findFiles = realFind
+                            try? FileManager.default.removeItem(at: folder)
+                            library.reload()
+                            launcher.hide()
+                            continue
+                        }
                         // S-050: a sample workflow's File Action after Reach's own, filtered by "op".
                         if name == "file-actions" {
                             let library = WorkflowLibrary.shared

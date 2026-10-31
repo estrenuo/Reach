@@ -824,8 +824,11 @@ Depends: S-047
 Acceptance:
 - [unit] Split Arguments (`alfred.workflow.utility.split`) cuts the argument on `delimiter`, trims each part with `trimarguments`, drops empty ones with `discardemptyarguments`. As variables (`outputas` 0) it sets `split1`, `split2`, … (by `variableprefix`) and passes the argument on; as arguments (`outputas` 1) Reach runs the objects after it once per part.
 - [unit] Replace (`alfred.workflow.utility.replace`) rewrites the argument: plain text for `matchmode` 0, a regular expression with `$1` groups for 1, with `regexcaseinsensitive` and `regexmultiline`. Another mode, or an expression that does not compile, stops there and is named in the debugger.
-- [self] ↩ through Split Arguments runs what is after it once for each part; through Replace it sends the rewritten text on.
-Status: in progress
+- [unit] A File Filter (`alfred.workflow.input.filefilter`) follows the keyword rules (`keyword` with `{var:…}`, `withspace`, `argumenttype`) and asks Spotlight for files whose `fields` match the text (each word at a word start, any field), of its `types` only, in its `scopes` (Reach's search scope when empty), at most `limit` (Reach's nine for 0). `sortmode`, `daterange`, `argumenttrimmode` other than 0, `includesystem` and `anchorfields` off are named once in the debugger.
+- [self] ↩ through Split Arguments runs what is after it once for each part; through Replace it sends the rewritten text on. A File Filter's keyword offers it, its files show first, and ↩ on a file sends its path on (Spotlight is a fake, since it skips /tmp).
+UX:
+- A File Filter shows "Searching…" under its title until Spotlight answers, and "No files match" when nothing does. → on a file opens Reach's own action panel for it.
+Status: done
 
 ---
 
