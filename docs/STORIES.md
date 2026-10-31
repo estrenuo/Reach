@@ -855,6 +855,17 @@ UX:
 - Reach has no grid: the items show as rows with their icons, "please wait" (or `loadingtext`) until the script answers. `columncount`, `imageaspect`, the title and subtitle placement and `fixedorder` do not apply to rows.
 Status: done
 
+### S-054 ⇧↩, the current tab and Action in Alfred from a workflow
+As the user, ⇧↩ on a workflow row follows its ⇧ line, workflows that read the browser's current tab get it, and a workflow that opens Alfred's actions opens Reach's action panel.
+Depends: S-053
+Acceptance:
+- [unit] ⇧ alone with Return is `ReturnModifier.shift`; Settings > Advanced still offers web searches for ⌃↩, ⌥↩ and ⌘↩ only.
+- [self] ⇧↩ on a workflow row follows its ⇧ line (`WorkflowConnection.shift`, or `mods.shift` in Script Filter JSON); on any other row ⇧↩ is plain Return, as before.
+- [unit] The Automation Task "Current Tab of Frontmost Browser" (`frontmost.tabs.current`) asks the browser in front (else the first running one: Safari, Chrome, Brave, Edge, Vivaldi, Arc, Chromium) for its front tab's URL through Apple Events and goes on with it; with `allow_empty` it goes on with no text when there is none, without it the workflow stops there. When macOS denies the Apple Event, the debugger says where to allow it.
+- [unit] Action in Alfred (`alfred.workflow.action.actioninalfred`) with `type` 1 and `jumpto` `_popUpItemAction:` opens Reach's action panel for its `path` (the argument when empty); another type or jump is named in the debugger.
+- [self] The Current Tab task sends the (fake) browser's URL on; a denied Apple Event shows in the debugger. Action in Alfred opens the action panel for a file path, or for text that is not one, and the launcher stays.
+Status: done
+
 ---
 
 ## Later

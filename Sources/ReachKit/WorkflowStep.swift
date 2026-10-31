@@ -25,6 +25,11 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Open the action panel for this path, or for this text when it is not one (S-054).
+    case actions(String)
+    /// Read the front browser tab's URL, then go on after `then` with it (S-054).
+    /// `allowEmpty`: go on with an empty argument when there is no tab.
+    case currentTab(then: String, allowEmpty: Bool, variables: [String: String], environment: [String: String])
     /// Show the items a Grid View's script prints in the launcher (S-053).
     case grid(WorkflowGridRun)
     /// Press keys in the app in front, after the launcher hides (S-053).
@@ -57,6 +62,7 @@ extension Workflow {
     public static let browseInTerminal = "alfred.workflow.action.browseinterminal"
     public static let dispatchKeys = "alfred.workflow.output.dispatchkeycombo"
     public static let grid = "alfred.workflow.userinterface.grid"
+    public static let actionInAlfred = "alfred.workflow.action.actioninalfred"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -99,6 +105,14 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.actionInAlfred:
+                // Type 1 jumping to `_popUpItemAction:`: the actions for the path (the argument when empty).
+                guard object.int("type") == 1, ["", "_popUpItemAction:"].contains(object.string("jumpto")) else {
+                    return [.unsupported("action.actioninalfred type \(object.int("type")) \(object.string("jumpto"))"
+                        .trimmingCharacters(in: .whitespaces))]
+                }
+                let path = object.string("path")
+                return [.actions(path.isEmpty ? argument : fill(path))]
             case Self.grid:
                 // Input type 1: a script in the workflow folder gets the argument and prints Script Filter JSON.
                 let file = object.string("inputfile")
@@ -193,6 +207,9 @@ extension Workflow {
                 return next(after: trigger.uid, argument: object.bool("passinputasargument") ? argument : "",
                             variables: passes ? variables : self.variables, environment: passes ? environment : own,
                             depth: depth)
+            case Self.automationTask where object.string("taskuid").hasSuffix(CurrentTab.taskSuffix):
+                let allowEmpty = object.config["tasksettings"]?.dict?["allow_empty"]?.bool ?? false
+                return [.currentTab(then: object.uid, allowEmpty: allowEmpty, variables: variables, environment: environment)]
             case Self.automationTask where object.string("taskuid") == Self.trashTask:
                 let target = object.config["tasksettings"]?.dict?["target_path"]?.string ?? ""
                 let path = target.isEmpty ? argument : fill(target)

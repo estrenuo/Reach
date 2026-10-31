@@ -104,10 +104,11 @@ extension LauncherModel {
         return steps.contains(where: Self.showsLauncher) ? .shows : .done
     }
 
-    /// A step that leaves the launcher open: a keyword shown again, or a Grid View (S-053).
+    /// A step that leaves the launcher open: a keyword shown again, a Grid View (S-053),
+    /// or the action panel (S-054).
     static func showsLauncher(_ step: WorkflowStep) -> Bool {
         switch step {
-        case .show, .grid: true
+        case .show, .grid, .actions: true
         default: false
         }
     }
@@ -149,6 +150,26 @@ extension LauncherModel {
                     self.workflows.onAction(workflow, command, result)
                     let next = workflow.steps(after: then, argument: result.text, variables: variables,
                                               environment: command.environment)
+                    _ = self.runSteps(next, in: workflow, depth: depth + 1)
+                }
+            case .actions(let text):
+                onShow()
+                let path = (text as NSString).expandingTildeInPath
+                showActions(for: path.hasPrefix("/") && FileManager.default.fileExists(atPath: path)
+                    ? .files([URL(fileURLWithPath: path)]) : .text(text, source: workflow.name))
+            case .currentTab(let then, let allowEmpty, let variables, let environment):
+                guard depth < 5 else { continue }
+                Task { [weak self] in
+                    guard let self else { return }
+                    let url: String
+                    switch await self.readCurrentTab() {
+                    case .success(let found): url = found ?? ""
+                    case .failure(let problem):
+                        self.workflows.library.log.failed(workflow: workflow.name, text: problem.kind)
+                        url = ""
+                    }
+                    guard !url.isEmpty || allowEmpty else { return }
+                    let next = workflow.steps(after: then, argument: url, variables: variables, environment: environment)
                     _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
             case .grid(let run):

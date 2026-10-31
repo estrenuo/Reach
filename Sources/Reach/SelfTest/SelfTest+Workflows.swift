@@ -77,6 +77,17 @@ extension SelfTest {
                 // S-053: a Grid View fed by a script file; a fake runner answers.
                 ["uid": "GRIDKW", "type": KeywordInput.type, "config": ["keyword": "rgrid", "argumenttype": 0, "text": "Grid"]],
                 ["uid": "GRID", "type": Workflow.grid, "config": ["inputtype": 1, "inputfile": "grid.sh", "filterable": true]],
+                // S-054: the grid's ⇧ line shows Large Type.
+                ["uid": "GRIDLARGE", "type": Workflow.largeType, "config": [:]],
+                // S-054: the front browser tab's URL.
+                ["uid": "TABKW", "type": KeywordInput.type, "config": ["keyword": "rtab", "argumenttype": 2, "text": "Tab"]],
+                ["uid": "TAB", "type": Workflow.automationTask, "config": [
+                    "taskuid": "com.alfredapp.automation.extras/web-browsers/frontmost-browser/frontmost.tabs.current",
+                    "tasksettings": ["allow_empty": true],
+                ]],
+                // S-054: Action in Alfred opens the action panel for the text.
+                ["uid": "ACTKW", "type": KeywordInput.type, "config": ["keyword": "ract", "argumenttype": 0, "text": "Actions"]],
+                ["uid": "ACT", "type": Workflow.actionInAlfred, "config": ["jumpto": "_popUpItemAction:", "path": "", "type": 1]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -134,8 +145,11 @@ extension SelfTest {
                 "UATEXT": [["destinationuid": "COPY", "modifiers": 0]],
                 "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
                 "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
+                "TABKW": [["destinationuid": "TAB", "modifiers": 0]],
+                "ACTKW": [["destinationuid": "ACT", "modifiers": 0]],
+                "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
-                "GRID": [["destinationuid": "COPY", "modifiers": 0]],
+                "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
                 "KEYS": [["destinationuid": "COPY", "modifiers": 0]],
                 "UAFILES": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
@@ -612,8 +626,45 @@ extension SelfTest {
         check("typing filters the grid's items", lm.results.first?.title == "Grid two", lm.results.map(\.title).joined(separator: ", "))
         lm.openSelected()
         try? await Task.sleep(for: .milliseconds(50))
-        lm.workflows.run = realRun
         check("↩ on an item sends its argument on along the grid's lines", copied.last == "copied two", copied.last ?? "none")
+        // S-054: ⇧↩ follows the ⇧ line.
+        let realLarge = lm.largeType
+        var large: [String] = []
+        lm.largeType = { large.append($0) }
+        await enter("rgrid Red")
+        try? await Task.sleep(for: .milliseconds(100))
+        let shifted = lm.runAlternative(.shift)
+        lm.largeType = realLarge
+        lm.workflows.run = realRun
+        check("⇧↩ on a workflow row follows its ⇧ line", shifted && large == ["one"], "\(shifted) \(large)")
+
+        // S-054: a fake browser answers.
+        let realTab = lm.readCurrentTab
+        lm.readCurrentTab = { .success("https://github.com/estrenuo/Reach") }
+        await enter("rtab")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("the Current Tab task sends the front browser tab's URL on", copied.last == "copied https://github.com/estrenuo/Reach",
+              copied.last ?? "none")
+        lm.readCurrentTab = { .failure(WorkflowProblem(kind: "Allow Reach to control Safari in System Settings > Privacy & Security > Automation.")) }
+        await enter("rtab")
+        try? await Task.sleep(for: .milliseconds(100))
+        lm.readCurrentTab = realTab
+        check("without permission the debugger says where to allow it, and allow_empty goes on with no text",
+              copied.last == "copied " && lm.workflows.library.log.shown(.errors).last?.text.hasPrefix("Allow Reach to control Safari") == true,
+              copied.last ?? "none")
+
+        // Action in Alfred: a path gets the file's panel, other text the text panel.
+        let renamed = URL(fileURLWithPath: "/tmp/Reach-selftest-renamed-\(UUID().uuidString).txt")
+        FileManager.default.createFile(atPath: renamed.path, contents: Data("x".utf8))
+        defer { try? FileManager.default.removeItem(at: renamed) }
+        await enter("ract \(renamed.path)")
+        check("Action in Alfred opens the action panel for the file, and the launcher stays",
+              launcher.isVisible && lm.actions?.url == renamed, lm.actions?.target.title ?? "no panel")
+        lm.closeActions()
+        await enter("ract hello")
+        check("for text that is not a path it opens the panel for the text",
+              launcher.isVisible && lm.actions?.text == "hello", lm.actions?.target.title ?? "no panel")
+        lm.closeActions()
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

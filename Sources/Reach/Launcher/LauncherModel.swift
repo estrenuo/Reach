@@ -85,6 +85,8 @@ final class LauncherModel {
     @ObservationIgnored var runShell: @MainActor (ShellRun) -> Bool = { ShellRunner.run($0) }
     /// Shows text in Large Type. The self-test swaps in a recorder.
     @ObservationIgnored var largeType: @MainActor (String) -> Void = { LargeType.shared.show($0) }
+    /// The front browser tab's URL for a workflow (S-054); nil when there is none. The self-test swaps in a fake.
+    @ObservationIgnored var readCurrentTab: @MainActor () async -> Result<String?, WorkflowProblem> = { CurrentTabReader.read() }
     /// Presses a workflow's keys in the app in front (S-053); false without Accessibility. The self-test swaps in a recorder.
     @ObservationIgnored var pressKeys: @MainActor (WorkflowKeys) -> Bool = { Paster.press($0) }
     /// Opens the terminal app from Settings > Terminal in a folder, for a workflow (S-053). The self-test swaps in a recorder.

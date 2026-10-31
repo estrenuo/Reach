@@ -214,9 +214,11 @@ final class LauncherController {
             }
         }
         if flags == .command, [36, 76].contains(event.keyCode), model.pasteSelected() { return true }
-        // ⌃↩, ⌥↩, ⌘↩: the search chosen in Settings > Advanced (S-038).
+        // ⌃↩, ⌥↩, ⌘↩: the search chosen in Settings > Advanced (S-038). ⇧↩ follows
+        // a workflow row's ⇧ line (S-054); elsewhere it is plain Return.
         if [36, 76].contains(event.keyCode),
-           let modifier = ReturnModifier.held(control: flags == .control, option: flags == .option, command: flags == .command),
+           let modifier = ReturnModifier.held(control: flags == .control, option: flags == .option, command: flags == .command,
+                                              shift: flags == .shift),
            model.runAlternative(modifier) { return true }
         // ⌃↑ and ⌃↓ walk the queries typed before.
         if flags == .control, [125, 126].contains(event.keyCode), model.walkHistory(older: event.keyCode == 126) { return true }
