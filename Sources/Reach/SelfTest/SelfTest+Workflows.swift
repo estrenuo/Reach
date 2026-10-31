@@ -85,6 +85,9 @@ extension SelfTest {
                     "taskuid": "com.alfredapp.automation.extras/web-browsers/frontmost-browser/frontmost.tabs.current",
                     "tasksettings": ["allow_empty": true],
                 ]],
+                // S-054: Action in Alfred opens the action panel for the text.
+                ["uid": "ACTKW", "type": KeywordInput.type, "config": ["keyword": "ract", "argumenttype": 0, "text": "Actions"]],
+                ["uid": "ACT", "type": Workflow.actionInAlfred, "config": ["jumpto": "_popUpItemAction:", "path": "", "type": 1]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -143,6 +146,7 @@ extension SelfTest {
                 "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
                 "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
                 "TABKW": [["destinationuid": "TAB", "modifiers": 0]],
+                "ACTKW": [["destinationuid": "ACT", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -648,6 +652,19 @@ extension SelfTest {
         check("without permission the debugger says where to allow it, and allow_empty goes on with no text",
               copied.last == "copied " && lm.workflows.library.log.shown(.errors).last?.text.hasPrefix("Allow Reach to control Safari") == true,
               copied.last ?? "none")
+
+        // Action in Alfred: a path gets the file's panel, other text the text panel.
+        let renamed = URL(fileURLWithPath: "/tmp/Reach-selftest-renamed-\(UUID().uuidString).txt")
+        FileManager.default.createFile(atPath: renamed.path, contents: Data("x".utf8))
+        defer { try? FileManager.default.removeItem(at: renamed) }
+        await enter("ract \(renamed.path)")
+        check("Action in Alfred opens the action panel for the file, and the launcher stays",
+              launcher.isVisible && lm.actions?.url == renamed, lm.actions?.target.title ?? "no panel")
+        lm.closeActions()
+        await enter("ract hello")
+        check("for text that is not a path it opens the panel for the text",
+              launcher.isVisible && lm.actions?.text == "hello", lm.actions?.target.title ?? "no panel")
+        lm.closeActions()
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")

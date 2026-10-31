@@ -104,10 +104,11 @@ extension LauncherModel {
         return steps.contains(where: Self.showsLauncher) ? .shows : .done
     }
 
-    /// A step that leaves the launcher open: a keyword shown again, or a Grid View (S-053).
+    /// A step that leaves the launcher open: a keyword shown again, a Grid View (S-053),
+    /// or the action panel (S-054).
     static func showsLauncher(_ step: WorkflowStep) -> Bool {
         switch step {
-        case .show, .grid: true
+        case .show, .grid, .actions: true
         default: false
         }
     }
@@ -151,6 +152,11 @@ extension LauncherModel {
                                               environment: command.environment)
                     _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
+            case .actions(let text):
+                onShow()
+                let path = (text as NSString).expandingTildeInPath
+                showActions(for: path.hasPrefix("/") && FileManager.default.fileExists(atPath: path)
+                    ? .files([URL(fileURLWithPath: path)]) : .text(text, source: workflow.name))
             case .currentTab(let then, let allowEmpty, let variables, let environment):
                 guard depth < 5 else { continue }
                 Task { [weak self] in
