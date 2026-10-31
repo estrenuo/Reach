@@ -45,7 +45,7 @@ extension LauncherModel {
             return true
         }
         onUsed(.workflows)
-        if !steps.contains(where: { if case .show = $0 { true } else { false } }) { onHide() }
+        if !steps.contains(where: Self.showsLauncher) { onHide() }
         return true
     }
 
@@ -101,7 +101,15 @@ extension LauncherModel {
         }
         guard runSteps(steps, in: workflow) else { return .failed("Unable to run “\(title)”.") }
         onUsed(.workflows)
-        return steps.contains { if case .show = $0 { true } else { false } } ? .shows : .done
+        return steps.contains(where: Self.showsLauncher) ? .shows : .done
+    }
+
+    /// A step that leaves the launcher open: a keyword shown again, or a Grid View (S-053).
+    static func showsLauncher(_ step: WorkflowStep) -> Bool {
+        switch step {
+        case .show, .grid: true
+        default: false
+        }
     }
 
     /// Runs the steps in order. A script runs in the background and its
@@ -143,6 +151,11 @@ extension LauncherModel {
                                               environment: command.environment)
                     _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
+            case .grid(let run):
+                onShow()
+                workflows.forget()
+                workflows.showGrid(run, in: workflow)
+                if query.isEmpty { refresh() } else { query = "" }
             case .show(let text):
                 onShow()
                 workflows.forget()

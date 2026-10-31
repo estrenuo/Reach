@@ -849,8 +849,11 @@ Depends: S-052
 Acceptance:
 - [unit] Browse in Terminal (`alfred.workflow.action.browseinterminal`) opens the terminal app from Settings > Terminal in its `path` (the argument when empty, `{query}` and `{var:…}` filled), or in the folder of a file, and passes the argument on.
 - [unit] Dispatch Key Combo (`alfred.workflow.output.dispatchkeycombo`) presses `keycode`, or the key for `keychar` when it is -1, with `keymod` (⌘ ⌥ ⌃ ⇧), `count` times in the app in front once the launcher has hidden, and passes the argument on. `overridewithargument`, or a character Reach has no key for, is named in the debugger; without Accessibility the debugger says how to allow it.
-- [self] ↩ through Browse in Terminal opens the terminal at the path; through Dispatch Key Combo it presses ⌘V and goes on (both recorded, never done).
-Status: in progress
+- [unit] Grid View (`alfred.workflow.userinterface.grid`) with `inputtype` 1 runs its `inputfile` script in the workflow folder with the argument; another input type is named in the debugger.
+- [self] ↩ through Browse in Terminal opens the terminal at the path; through Dispatch Key Combo it presses ⌘V and goes on (both recorded, never done). A Grid View shows its script's items as launcher rows, typing filters them when `filterable`, and ↩ (or ⌘↩ on a ⌘ line) sends the item's argument on along the grid's lines.
+UX:
+- Reach has no grid: the items show as rows with their icons, "please wait" (or `loadingtext`) until the script answers. `columncount`, `imageaspect`, the title and subtitle placement and `fixedorder` do not apply to rows.
+Status: done
 
 ---
 

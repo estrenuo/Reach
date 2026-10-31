@@ -25,6 +25,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Show the items a Grid View's script prints in the launcher (S-053).
+    case grid(WorkflowGridRun)
     /// Press keys in the app in front, after the launcher hides (S-053).
     case keys(WorkflowKeys)
     /// An object Reach does not run, by its kind, like `automation.task`.
@@ -54,6 +56,7 @@ extension Workflow {
     public static let joinArgs = "alfred.workflow.utility.joinargs"
     public static let browseInTerminal = "alfred.workflow.action.browseinterminal"
     public static let dispatchKeys = "alfred.workflow.output.dispatchkeycombo"
+    public static let grid = "alfred.workflow.userinterface.grid"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -96,6 +99,15 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.grid:
+                // Input type 1: a script in the workflow folder gets the argument and prints Script Filter JSON.
+                let file = object.string("inputfile")
+                guard object.int("inputtype") == 1, !file.isEmpty,
+                      let command = ScriptSource(language: .file, file: file).command(query: argument, folder: folder,
+                                                                                    environment: environment)
+                else { return [.unsupported("userinterface.grid with input type \(object.int("inputtype"))")] }
+                return [.grid(WorkflowGridRun(uid: object.uid, command: command, variables: variables,
+                                              filterable: object.bool("filterable"), loading: object.string("loadingtext")))]
             case Self.dispatchKeys:
                 switch WorkflowKeys.read(object) {
                 case .success(let keys):
@@ -304,5 +316,25 @@ public enum WorkflowCondition {
         let text = text.trimmingCharacters(in: .whitespaces).lowercased()
         if let number = Double(text) { return number != 0 }
         return ["true", "yes"].contains(text)
+    }
+}
+
+/// What a Grid View shows (S-053): its script's items, filtered by what is
+/// typed when `filterable`; the chosen item's argument goes on along the
+/// Grid View's lines.
+public struct WorkflowGridRun: Equatable, Sendable {
+    public var uid: String
+    public var command: ScriptCommand
+    public var variables: [String: String]
+    public var filterable: Bool
+    /// Shown while the script runs; empty for Reach's own.
+    public var loading: String
+
+    public init(uid: String, command: ScriptCommand, variables: [String: String] = [:], filterable: Bool = true, loading: String = "") {
+        self.uid = uid
+        self.command = command
+        self.variables = variables
+        self.filterable = filterable
+        self.loading = loading
     }
 }
