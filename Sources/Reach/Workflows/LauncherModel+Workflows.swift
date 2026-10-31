@@ -34,18 +34,24 @@ extension LauncherModel {
             showError("Nothing in \(workflow.name) uses this result.", on: result.id)
             return true
         }
-        guard runSteps(steps, in: workflow, variables: all) else {
+        let skipped = steps.compactMap { if case .unsupported(let kind) = $0 { kind } else { nil } }
+        if skipped.count == steps.count {
+            skipped.forEach { workflows.library.skipped(workflow, kind: $0) }
+            showError("Reach does not run \(skipped[0]) yet.", on: result.id)
+            return true
+        }
+        guard runSteps(steps, in: workflow) else {
             showError("Unable to open \(argument).", on: result.id)
             return true
         }
         onUsed(.workflows)
-        onHide()
+        if !steps.contains(where: { if case .show = $0 { true } else { false } }) { onHide() }
         return true
     }
 
     /// Runs the steps in order. A script runs in the background and its
     /// output goes on to the objects after it, at most five scripts deep.
-    private func runSteps(_ steps: [WorkflowStep], in workflow: Workflow, variables: [String: String], depth: Int = 0) -> Bool {
+    private func runSteps(_ steps: [WorkflowStep], in workflow: Workflow, depth: Int = 0) -> Bool {
         var worked = true
         for step in steps {
             switch step {
@@ -57,7 +63,7 @@ extension LauncherModel {
                 copier(text)
             case .largeType(let text):
                 largeType(text)
-            case .run(let command, let then):
+            case .run(let command, let then, let variables):
                 guard depth < 5 else { continue }
                 Task { [weak self] in
                     guard let self else { return }
@@ -65,8 +71,14 @@ extension LauncherModel {
                     self.workflows.onAction(workflow, command, result)
                     let next = workflow.steps(after: then, argument: result.text, variables: variables,
                                               environment: command.environment)
-                    _ = self.runSteps(next, in: workflow, variables: variables, depth: depth + 1)
+                    _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
+            case .show(let text):
+                onShow()
+                workflows.forget()
+                if query == text { refresh() } else { query = text }
+            case .unsupported(let kind):
+                workflows.library.skipped(workflow, kind: kind)
             }
         }
         return worked

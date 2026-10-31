@@ -50,7 +50,7 @@ private func keywordWorkflow(keyword: String = "yt", configured: [String: String
     let workflow = keywordWorkflow()
     #expect(workflow.steps(after: "KW", argument: "cats dogs") == [.open("https://youtube.com/results?q=cats%20dogs")])
     let script = workflow.steps(after: "KW", argument: "cats", modifiers: WorkflowConnection.command)
-    guard case .run(let command, let then) = script.first else {
+    guard case .run(let command, let then, _) = script.first else {
         Issue.record("⌘ runs the script")
         return
     }

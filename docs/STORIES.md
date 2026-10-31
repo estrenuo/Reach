@@ -767,10 +767,14 @@ Acceptance:
 - [unit] A keyword written as `{var:name}` is filled from the workflow's variables and its configuration; one that stays empty adds no keyword.
 - [unit] The typed text goes on to the connected objects, per modifier line.
 - [self] Part of the keyword completes it; with the text typed, one row shows its title with `{query}` filled in; ↩ opens the connected URL.
+- [unit] Scripts of type 11 (Alfred's default `/bin/zsh --no-rcs`) run.
+- [unit] ↩ follows a Conditional (modes 0–4 from Alfred's help; 5 "is true" and 6 "is false" read from workflows that use them; other modes never match) down the line of the first matching condition, else the else line.
+- [unit] Arg and Vars passes its variables on, also after a Run Script; Hide Alfred does nothing; Call External Trigger in the same workflow follows its External Trigger, and one that reaches a script filter or keyword shows the launcher with that keyword typed.
+- [self] ↩ through a Conditional and an External Trigger shows the keyword again with the text; ↩ that reaches an object Reach does not run says "Reach does not run <kind> yet." under the row and in the debugger.
 UX:
 - Flow: type the keyword → ↩ completes it → type the text → one row, the Keyword input's title with the text → ↩ (or ⌃↩ ⌥↩ ⌘↩ for a modifier line) runs the connected objects
 - States: argument required and no text = placeholder row, not openable; argument none = the row runs on the keyword alone
-- Note: the cause of "imported workflows do nothing": Reach only read Script Filters, and most Alfred workflows start with a Keyword input. Configurable keywords (`{var:keyword}`) never matched either. Hotkeys, List Filters, File Filters and External Triggers still do nothing.
+- Note: the cause of "imported workflows do nothing": Reach only read Script Filters, and most Alfred workflows start with a Keyword input. Configurable keywords (`{var:keyword}`) never matched either. Hotkeys, List Filters, File Filters, Automation Tasks, Post Notification and triggers in another workflow still do nothing; Return on them now says so. Alfred's Purge Disk Images: dmgeject detaches the image and dmgtrash lists the files, but trashing them is an Automation Task (`path.trash`), so neither trashes yet.
 Status: done
 
 ---

@@ -23,6 +23,18 @@ extension SelfTest {
                 ["uid": "KW", "type": KeywordInput.type, "config": [
                     "keyword": "{var:kw}", "withspace": true, "argumenttype": 0, "text": "Open {query}",
                 ]],
+                // S-047: keywords whose Return reaches an Automation Task, or an
+                // External Trigger that shows the rkey keyword again.
+                ["uid": "TASKKW", "type": KeywordInput.type, "config": ["keyword": "rtask", "argumenttype": 2, "text": "Task"]],
+                ["uid": "TASK", "type": "alfred.workflow.automation.task", "config": [:]],
+                ["uid": "BACKKW", "type": KeywordInput.type, "config": ["keyword": "rback", "argumenttype": 0, "text": "Back"]],
+                ["uid": "IF", "type": Workflow.conditional, "config": ["conditions": [
+                    ["uid": "ISWORLD", "inputstring": "", "matchmode": 0, "matchstring": "world"],
+                ]]],
+                ["uid": "CALL", "type": Workflow.callExternalTrigger, "config": [
+                    "externaltriggerid": "again", "workflowbundleid": "self", "passinputasargument": true,
+                ]],
+                ["uid": "AGAIN", "type": Workflow.externalTrigger, "config": ["triggerid": "again"]],
             ],
             "variables": ["kw": "rkey"],
             "connections": [
@@ -31,6 +43,10 @@ extension SelfTest {
                     ["destinationuid": "COPY", "modifiers": WorkflowConnection.command, "modifiersubtext": "Copy"],
                 ],
                 "KW": [["destinationuid": "URL", "modifiers": 0]],
+                "TASKKW": [["destinationuid": "TASK", "modifiers": 0]],
+                "BACKKW": [["destinationuid": "IF", "modifiers": 0]],
+                "IF": [["destinationuid": "CALL", "modifiers": 0, "sourceoutputuid": "ISWORLD"]],
+                "AGAIN": [["destinationuid": "KW", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -127,6 +143,24 @@ extension SelfTest {
         check("↩ on a Keyword input runs what is connected: it opens the URL with the text",
               opened.last == URL(string: "https://example.com/world")! && !launcher.isVisible,
               opened.map(\.absoluteString).joined(separator: ", "))
+
+        // S-047: Return follows a Conditional to an External Trigger, and says
+        // which object it does not run.
+        await showAgain(launcher)
+        lm.query = "rback world"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        try? await Task.sleep(for: .milliseconds(50))
+        check("↩ through a Conditional and an External Trigger shows the keyword again with the text",
+              lm.query == "rkey world" && launcher.isVisible && lm.results.first?.title == "Open world",
+              "\(lm.query) \(launcher.isVisible)")
+        lm.query = "rtask"
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.openSelected()
+        check("↩ that reaches an Automation Task says Reach does not run it, and the launcher stays",
+              lm.errors.values.contains("Reach does not run automation.task yet.") && launcher.isVisible
+                  && library.log.shown(.errors).last?.text == "Reach does not run automation.task yet.",
+              lm.errors.values.joined(separator: ", "))
         launcher.hide()
 
         // The real runner: a bash script gets the text as $1 and its output parses.

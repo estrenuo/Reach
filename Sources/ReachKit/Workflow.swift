@@ -95,11 +95,15 @@ public struct WorkflowConnection: Equatable, Sendable {
     public var to: String
     public var modifiers: Int
     public var modifierSubtext: String
+    /// The condition a Conditional's line leaves from; nil for its else line
+    /// and for every other object's lines.
+    public var sourceOutput: String?
 
-    public init(to: String, modifiers: Int = 0, modifierSubtext: String = "") {
+    public init(to: String, modifiers: Int = 0, modifierSubtext: String = "", sourceOutput: String? = nil) {
         self.to = to
         self.modifiers = modifiers
         self.modifierSubtext = modifierSubtext
+        self.sourceOutput = sourceOutput
     }
 
     public static let command = 1 << 20
@@ -184,7 +188,8 @@ public struct Workflow: Equatable, Sendable, Identifiable {
             (lines.array ?? []).compactMap { line in
                 guard let dict = line.dict, let to = dict["destinationuid"]?.string else { return nil }
                 return WorkflowConnection(to: to, modifiers: dict["modifiers"]?.int ?? 0,
-                                          modifierSubtext: dict["modifiersubtext"]?.string ?? "")
+                                          modifierSubtext: dict["modifiersubtext"]?.string ?? "",
+                                          sourceOutput: dict["sourceoutputuid"]?.string)
             }
         }
         variables = (values["variables"]?.dict ?? [:]).compactMapValues(\.string)
