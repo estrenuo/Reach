@@ -866,6 +866,14 @@ Acceptance:
 - [self] The Current Tab task sends the (fake) browser's URL on; a denied Apple Event shows in the debugger. Action in Alfred opens the action panel for a file path, or for text that is not one, and the launcher stays.
 Status: done
 
+### S-055 Delay, Dialog, Terminal Command, Text View, Shortcuts and the Finder from a workflow
+As the user, Default Browser, Homebrew, Shortcuts and Visual Studio Code run in Reach from start to end.
+Depends: S-054
+Acceptance:
+- [unit] Delay (`alfred.workflow.utility.delay`) waits `seconds` (text like "0.3"), then sends the argument on.
+- [self] ↩ through Delay sends the text on after the wait, not before.
+Status: in progress
+
 ---
 
 ## Later

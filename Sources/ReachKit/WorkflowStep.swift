@@ -25,6 +25,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case debug(String, clear: Bool)
     /// Open the terminal in this folder, or the folder of this file (S-053).
     case terminal(String)
+    /// Wait `seconds`, then go on after `then` with the argument (S-055).
+    case wait(seconds: Double, then: String, argument: String, variables: [String: String], environment: [String: String])
     /// Open the action panel for this path, or for this text when it is not one (S-054).
     case actions(String)
     /// Read the front browser tab's URL, then go on after `then` with it (S-054).
@@ -63,6 +65,7 @@ extension Workflow {
     public static let dispatchKeys = "alfred.workflow.output.dispatchkeycombo"
     public static let grid = "alfred.workflow.userinterface.grid"
     public static let actionInAlfred = "alfred.workflow.action.actioninalfred"
+    public static let delay = "alfred.workflow.utility.delay"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -105,6 +108,10 @@ extension Workflow {
                 return [.open(file.isEmpty ? argument : fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
+            case Self.delay:
+                // `seconds` is text in Alfred's plist, like "0.3".
+                let seconds = max(0, object.config["seconds"]?.double ?? 0)
+                return [.wait(seconds: seconds, then: object.uid, argument: argument, variables: variables, environment: environment)]
             case Self.actionInAlfred:
                 // Type 1 jumping to `_popUpItemAction:`: the actions for the path (the argument when empty).
                 guard object.int("type") == 1, ["", "_popUpItemAction:"].contains(object.string("jumpto")) else {

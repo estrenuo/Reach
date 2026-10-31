@@ -152,6 +152,13 @@ extension LauncherModel {
                                               environment: command.environment)
                     _ = self.runSteps(next, in: workflow, depth: depth + 1)
                 }
+            case .wait(let seconds, let then, let argument, let variables, let environment):
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(seconds))
+                    guard let self else { return }
+                    _ = self.runSteps(workflow.steps(after: then, argument: argument, variables: variables, environment: environment),
+                                      in: workflow, depth: depth)
+                }
             case .actions(let text):
                 onShow()
                 let path = (text as NSString).expandingTildeInPath

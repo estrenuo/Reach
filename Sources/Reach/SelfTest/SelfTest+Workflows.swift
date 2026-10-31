@@ -88,6 +88,9 @@ extension SelfTest {
                 // S-054: Action in Alfred opens the action panel for the text.
                 ["uid": "ACTKW", "type": KeywordInput.type, "config": ["keyword": "ract", "argumenttype": 0, "text": "Actions"]],
                 ["uid": "ACT", "type": Workflow.actionInAlfred, "config": ["jumpto": "_popUpItemAction:", "path": "", "type": 1]],
+                // S-055: Delay, then Copy to Clipboard.
+                ["uid": "WAITKW", "type": KeywordInput.type, "config": ["keyword": "rwait", "argumenttype": 0, "text": "Wait"]],
+                ["uid": "WAIT", "type": Workflow.delay, "config": ["seconds": "0.2"]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -147,6 +150,8 @@ extension SelfTest {
                 "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
                 "TABKW": [["destinationuid": "TAB", "modifiers": 0]],
                 "ACTKW": [["destinationuid": "ACT", "modifiers": 0]],
+                "WAITKW": [["destinationuid": "WAIT", "modifiers": 0]],
+                "WAIT": [["destinationuid": "COPY", "modifiers": 0]],
                 "TAB": [["destinationuid": "COPY", "modifiers": 0]],
                 "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
                 "GRID": [["destinationuid": "COPY", "modifiers": 0], ["destinationuid": "GRIDLARGE", "modifiers": WorkflowConnection.shift]],
@@ -665,6 +670,12 @@ extension SelfTest {
         check("for text that is not a path it opens the panel for the text",
               launcher.isVisible && lm.actions?.text == "hello", lm.actions?.target.title ?? "no panel")
         lm.closeActions()
+
+        // S-055
+        await enter("rwait later")
+        let early = copied.last
+        try? await Task.sleep(for: .milliseconds(400))
+        check("Delay waits, then sends the text on", early != "copied later" && copied.last == "copied later", copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
