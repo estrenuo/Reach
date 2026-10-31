@@ -157,6 +157,22 @@ final class WorkflowSource: ResultSource {
         files.cancel()
     }
 
+    /// The enabled workflows' Fallback Searches for `text` (S-052), after the
+    /// web searches; ↩ sends the text on.
+    func fallbacks(for text: String) -> [LaunchResult] {
+        guard !text.isEmpty else { return [] }
+        return library.workflows.filter { !$0.disabled }.flatMap { workflow in
+            workflow.fallbacks.map { fallback in
+                var result = LaunchResult(id: "fallback:workflow:\(workflow.id):\(fallback.uid)",
+                                          title: fallback.title(for: text, workflow: workflow.name), subtitle: workflow.name,
+                                          icon: icon(nil, in: workflow))
+                result.kindLabel = workflow.name
+                result.workflow = WorkflowRun(workflow: workflow.id, filter: fallback.uid, argument: text)
+                return result
+            }
+        }
+    }
+
     /// A File Filter's rows (S-051): "please wait" until Spotlight answers,
     /// then the files, each sending its path on.
     private func files(for filter: FileFilter, in workflow: Workflow, text: String, rows: [Scored],

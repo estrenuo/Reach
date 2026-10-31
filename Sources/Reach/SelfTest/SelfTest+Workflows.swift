@@ -66,6 +66,8 @@ extension SelfTest {
                 ["uid": "JOINKW", "type": KeywordInput.type, "config": ["keyword": "rjoin", "argumenttype": 0, "text": "Join"]],
                 ["uid": "JOINSPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
                 ["uid": "JOIN", "type": Workflow.joinArgs, "config": ["delimiter": "+"]],
+                // S-052: a Fallback Search.
+                ["uid": "FALLBACK", "type": WorkflowFallback.type, "config": ["text": "Self Test fallback for '{query}'"]],
                 // S-051: a File Filter for text files.
                 ["uid": "FF", "type": FileFilter.type, "config": [
                     "keyword": "rfiles", "withspace": true, "argumenttype": 0, "title": "Find Self Test Files",
@@ -110,6 +112,7 @@ extension SelfTest {
                 "JOINKW": [["destinationuid": "JOINSPLIT", "modifiers": 0]],
                 "JOINSPLIT": [["destinationuid": "JOIN", "modifiers": 0]],
                 "JOIN": [["destinationuid": "COPY", "modifiers": 0]],
+                "FALLBACK": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
@@ -522,6 +525,16 @@ extension SelfTest {
         await enter("rjoin one, two")
         check("Join Arguments puts the parts of a Split back together with its delimiter",
               copied.last == "copied one+two", copied.last ?? "none")
+
+        await showAgain(launcher)
+        lm.query = "zzqxv selftest"
+        try? await Task.sleep(for: .milliseconds(400))
+        let titles = lm.results.map(\.title)
+        let row = titles.firstIndex(of: "Self Test fallback for 'zzqxv selftest'")
+        check("a workflow's Fallback Search shows after the web searches when nothing matches",
+              row != nil && row == titles.count - 1 && titles.first?.hasPrefix("Search Google") == true, titles.joined(separator: ", "))
+        if let row { lm.open(at: row) }
+        check("↩ on it sends the typed text on", copied.last == "copied zzqxv selftest", copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
