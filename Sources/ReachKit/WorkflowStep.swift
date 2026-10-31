@@ -21,6 +21,8 @@ public enum WorkflowStep: Equatable, Sendable {
     case notify(title: String, text: String)
     /// Play a system sound by name, or a sound file by its path (S-048).
     case sound(String)
+    /// Write a line to the workflow debugger, after clearing it when `clear` (S-048).
+    case debug(String, clear: Bool)
     /// An object Reach does not run, by its kind, like `automation.task`.
     case unsupported(String)
 }
@@ -41,6 +43,7 @@ extension Workflow {
     public static let automationTask = "alfred.workflow.automation.task"
     public static let notification = "alfred.workflow.output.notification"
     public static let playSound = "alfred.workflow.output.playsound"
+    public static let debug = "alfred.workflow.utility.debug"
     /// The Automation Task that moves a path to the Trash.
     public static let trashTask = "com.alfredapp.automation.core/files-and-folders/path.trash"
     /// How many objects one Return follows at most, so a loop of triggers ends.
@@ -142,6 +145,15 @@ extension Workflow {
                 guard !name.isEmpty else { return after }
                 // A sound that is not a system sound is a file in the workflow's folder.
                 return [.sound(object.bool("systemsound") ? name : folder.appending(path: name).path)] + after
+            case Self.debug:
+                let template = object.string("argument")
+                let line = WorkflowText.fill(template.isEmpty ? "{query}" : template, query: argument, variables: variables)
+                    .replacingOccurrences(of: "{variables}", with: Self.describe(variables))
+                // Without "process outputs" the objects after it do not run.
+                let after = object.config["processoutputs"]?.bool ?? true
+                    ? next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
+                    : []
+                return [.debug(line, clear: object.bool("cleardebuggertext"))] + after
             case ScriptFilter.type, KeywordInput.type:
                 guard let keyword = scriptFilters.first(where: { $0.uid == object.uid })?.keyword
                     ?? keywordInputs.first(where: { $0.uid == object.uid })?.keyword else { return [] }
@@ -150,6 +162,11 @@ extension Workflow {
                 return [.unsupported(object.type.replacingOccurrences(of: "alfred.workflow.", with: ""))]
             }
         }
+    }
+
+    /// The variables as the debugger shows them: `{name = value, …}`, by name.
+    static func describe(_ variables: [String: String]) -> String {
+        "{" + variables.sorted { $0.key < $1.key }.map { "\($0.key) = \($0.value)" }.joined(separator: ", ") + "}"
     }
 
     static func opensItself(_ text: String) -> Bool {

@@ -65,6 +65,8 @@ extension LauncherModel {
                 notify(workflow, title, text)
             case .sound(let sound):
                 playSound(sound)
+            case .debug(let text, let clear):
+                workflows.library.log.debug(workflow: workflow.name, text: text, clear: clear)
             case .copy(let text):
                 copier(text)
             case .largeType(let text):

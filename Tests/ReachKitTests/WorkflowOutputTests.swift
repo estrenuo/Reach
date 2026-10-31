@@ -35,6 +35,23 @@ private func outputWorkflow(_ type: String, _ config: [String: Any]) -> Workflow
     #expect(outputWorkflow(Workflow.playSound, ["soundname": ""]).steps(after: "KW", argument: "x") == [.copy("x")])
 }
 
+@Test func debugWritesItsLineWithTheVariablesAndPassesTheArgumentOn() {
+    let debug = outputWorkflow(Workflow.debug, ["argument": "'{query}', {variables}", "cleardebuggertext": true,
+                                                "processoutputs": true])
+    #expect(debug.steps(after: "KW", argument: "x", variables: ["b": "2", "a": "1"])
+            == [.debug("'x', {a = 1, b = 2}", clear: true), .copy("x")])
+    let stops = outputWorkflow(Workflow.debug, ["argument": "", "processoutputs": false])
+    #expect(stops.steps(after: "KW", argument: "x") == [.debug("x", clear: false)])
+}
+
+@Test func theDebuggerClearsOnlyThisWorkflowsLines() {
+    var log = WorkflowLog()
+    log.debug(workflow: "A", text: "one")
+    log.debug(workflow: "B", text: "two")
+    log.debug(workflow: "A", text: "three", clear: true)
+    #expect(log.entries.map(\.text) == ["two", "three"])
+}
+
 @Test func postNotificationShowsTheFileNameAndCanWaitForText() {
     let named = outputWorkflow(Workflow.notification, ["title": "", "text": "{query}", "lastpathcomponent": true,
                                                        "removeextension": true])

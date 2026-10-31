@@ -39,6 +39,7 @@ extension SelfTest {
                 ["uid": "NOTEKW", "type": KeywordInput.type, "config": ["keyword": "rnote", "argumenttype": 0, "text": "Note"]],
                 ["uid": "NOTE", "type": Workflow.notification, "config": ["title": "Done", "text": "{query}"]],
                 ["uid": "SOUND", "type": Workflow.playSound, "config": ["soundname": "Blow", "systemsound": true]],
+                ["uid": "DEBUG", "type": Workflow.debug, "config": ["argument": "debug {query}", "processoutputs": true]],
                 ["uid": "TRASHKW", "type": KeywordInput.type, "config": ["keyword": "rtrash", "argumenttype": 0, "text": "Trash"]],
                 ["uid": "TRASH", "type": Workflow.automationTask, "config": [
                     "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "/tmp/{query}"],
@@ -58,7 +59,8 @@ extension SelfTest {
                 "TRASHKW": [["destinationuid": "TRASH", "modifiers": 0]],
                 "NOTEKW": [["destinationuid": "NOTE", "modifiers": 0]],
                 "NOTE": [["destinationuid": "SOUND", "modifiers": 0]],
-                "SOUND": [["destinationuid": "COPY", "modifiers": 0]],
+                "SOUND": [["destinationuid": "DEBUG", "modifiers": 0]],
+                "DEBUG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -200,8 +202,10 @@ extension SelfTest {
         lm.query = "rnote hello"
         try? await Task.sleep(for: .milliseconds(50))
         lm.openSelected()
-        check("↩ through Post Notification and Play Sound shows the text, plays the sound and passes it on",
-              notes == ["Done: hello"] && sounds == ["Blow"] && copiedNote == ["copied hello"], "\(notes) \(sounds) \(copiedNote)")
+        check("↩ through Post Notification, Play Sound and Debug shows the text, plays the sound, logs it and passes it on",
+              notes == ["Done: hello"] && sounds == ["Blow"] && copiedNote == ["copied hello"]
+                  && library.log.entries.last { $0.workflow == "Self Test" }?.text == "debug hello",
+              "\(notes) \(sounds) \(copiedNote)")
         lm.playSound = realSound
         lm.notify = realNotify
         lm.copier = realCopier

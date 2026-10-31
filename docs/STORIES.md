@@ -787,7 +787,8 @@ Depends: S-047
 Acceptance:
 - [unit] Post Notification (`alfred.workflow.output.notification`) fills `title` and `text` with `{query}` and `{var:…}` (the workflow's name when the title is empty), uses only the file name or drops its extension when set, shows nothing without text when "only show if query populated" is on, and passes the argument on.
 - [unit] Play Sound (`alfred.workflow.output.playsound`) plays the system sound `soundname`, or the file of that name in the workflow's folder when `systemsound` is off, and passes the argument on.
-- [self] ↩ through Post Notification and Play Sound shows the text, plays the sound and passes it on; the self-test records both instead of posting or playing.
+- [unit] Debug (`alfred.workflow.utility.debug`) writes its `argument` to the workflow debugger, with `{query}`, `{var:…}` and `{variables}` filled in, clears this workflow's lines first when set, and passes the argument on unless "process outputs" is off.
+- [self] ↩ through Post Notification, Play Sound and Debug shows the text, plays the sound, logs the line and passes it on; the self-test records the notification and sound instead of posting or playing.
 UX:
 - macOS asks once whether Reach may post notifications. When that is off, the debugger says so; the rest of the workflow still runs.
 Status: done
