@@ -54,6 +54,8 @@ final class WorkflowSource: ResultSource {
     private let files = FileSearch()
     /// File Filters whose unmapped options the debugger already named.
     private var named: Set<String> = []
+    /// The Grid View on screen (S-053) and its script's output once it answered.
+    private var grid: (run: WorkflowGridRun, workflow: Workflow, output: ScriptFilterOutput?)?
 
     private var task: Task<Void, Never>?
     /// Output of filters that let Reach filter: the script runs once while the launcher is open.
@@ -79,6 +81,7 @@ final class WorkflowSource: ResultSource {
         case .path, .shell: return []
         default: break
         }
+        if let grid { return gridRows(grid, later: later) }
         var rows: [Scored] = []
         var runs: [(workflow: Workflow, filter: ScriptFilter, text: String)] = []
         var search: (workflow: Workflow, filter: FileFilter, text: String)?
@@ -204,9 +207,58 @@ final class WorkflowSource: ResultSource {
         return rows + [Scored(result: waiting, score: 1000)]
     }
 
-    /// The launcher opened again: filters that Reach filters run their script again.
+    /// The launcher opened again: filters that Reach filters run their script
+    /// again, and a Grid View is gone.
     func forget() {
         cached = [:]
+        grid = nil
+    }
+
+    /// Shows a Grid View's items in the launcher until it opens again (S-053).
+    func showGrid(_ run: WorkflowGridRun, in workflow: Workflow) {
+        grid = (run, workflow, nil)
+    }
+
+    /// The Grid View's items as rows, filtered by what is typed when it is
+    /// filterable; a "please wait" row while its script runs.
+    private func gridRows(_ grid: (run: WorkflowGridRun, workflow: Workflow, output: ScriptFilterOutput?),
+                          later: @escaping @MainActor ([Scored]) -> Void) -> [Scored] {
+        let (run, workflow) = (grid.run, grid.workflow)
+        guard let output = grid.output else {
+            task = Task { [weak self] in
+                guard let self else { return }
+                let result = await self.run(run.command)
+                guard !Task.isCancelled, self.grid?.run == run else { return }
+                self.library.record(workflow, object: "Grid View", input: run.command.arguments.first ?? "", result: result)
+                // Output that does not parse shows as no items; the debugger has the script's errors.
+                guard let output = (try? ScriptFilterOutput.parse(result.output))
+                    ?? (try? ScriptFilterOutput.parse(Data(#"{"items": []}"#.utf8))) else { return }
+                self.grid = (run, workflow, output)
+                later(self.gridRows((run, workflow, output), later: later))
+            }
+            var waiting = LaunchResult(id: "workflow:\(workflow.id):\(run.uid):waiting", title: workflow.name,
+                                       subtitle: run.loading.isEmpty ? ScriptFilter.standardWaiting : run.loading,
+                                       icon: icon(nil, in: workflow))
+            waiting.kindLabel = workflow.name
+            return [Scored(result: waiting, score: 0)]
+        }
+        let items = run.filterable ? output.filtered(by: typed) : output.items
+        guard !items.isEmpty else {
+            var none = LaunchResult(id: "workflow:\(workflow.id):\(run.uid):none", title: typed.isEmpty ? "No items" : "No items match “\(typed)”",
+                                    subtitle: workflow.name, icon: .symbol("square.grid.3x3"))
+            none.kindLabel = workflow.name
+            return [Scored(result: none, score: 0)]
+        }
+        return items.enumerated().map { index, item in
+            var result = LaunchResult(id: "workflow:\(workflow.id):\(run.uid):\(index):\(item.uid ?? "")",
+                                      title: item.title, subtitle: item.subtitle, icon: icon(item.icon, in: workflow))
+            result.kindLabel = workflow.name
+            result.isPinned = true
+            result.workflow = WorkflowRun(workflow: workflow.id, filter: run.uid, argument: item.argument, valid: item.valid,
+                                          variables: run.variables.merging(output.variables) { _, new in new }
+                                              .merging(item.variables) { _, new in new }, mods: item.mods)
+            return Scored(result: result, score: 1000 - index)
+        }
     }
 
     private func rows(for filter: ScriptFilter, in workflow: Workflow, text: String) async -> [Scored] {

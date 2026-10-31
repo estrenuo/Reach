@@ -81,7 +81,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("workflow-grid", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -114,6 +114,44 @@ enum Snapshot {
                             try? await Task.sleep(for: .seconds(0.5))
                         }
                         if name == "confirm" { model.launcherModel.openSelected() }
+                        // S-053: a sample Grid View's items, from a fake script, filtered by "q".
+                        if name == "workflow-grid" {
+                            let library = WorkflowLibrary.shared
+                            let folder = library.folder.appending(path: "snapshot-grid.workflow", directoryHint: .isDirectory)
+                            let plist: [String: Any] = ["name": "Tag Finder", "objects": [
+                                ["uid": "GRID", "type": Workflow.grid, "config": ["inputtype": 1, "inputfile": "getTaggedFiles.sh", "filterable": true]],
+                            ]]
+                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                                .write(to: folder.appending(path: "info.plist"))
+                            library.reload()
+                            let lm = model.launcherModel
+                            let realRun = lm.workflows.run
+                            let samples = ((try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: SampleFiles.folder),
+                                                                                         includingPropertiesForKeys: nil)) ?? [])
+                                .sorted { $0.path < $1.path }.prefix(5)
+                            let items = samples.map { url in
+                                ["title": url.lastPathComponent, "subtitle": (url.path as NSString).abbreviatingWithTildeInPath, "arg": url.path,
+                                 "icon": ["type": "fileicon", "path": url.path]] as [String: Any]
+                            }
+                            let json = (try? JSONSerialization.data(withJSONObject: ["items": items])) ?? Data()
+                            lm.workflows.run = { _ in ScriptResult(output: json) }
+                            if let workflow = library.workflow("snapshot-grid.workflow") {
+                                let command = ScriptCommand(executable: folder.appending(path: "getTaggedFiles.sh").path,
+                                                            arguments: ["Red"], directory: folder)
+                                lm.workflows.showGrid(WorkflowGridRun(uid: "GRID", command: command), in: workflow)
+                            }
+                            lm.query = ""
+                            lm.refresh()
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                            lm.workflows.run = realRun
+                            lm.workflows.forget()
+                            try? FileManager.default.removeItem(at: folder)
+                            library.reload()
+                            launcher.hide()
+                            continue
+                        }
                         // S-052: a sample workflow's Universal Action on selected text, filtered by "a".
                         if name == "selection-universal" {
                             let library = WorkflowLibrary.shared

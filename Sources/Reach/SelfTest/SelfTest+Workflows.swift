@@ -66,6 +66,17 @@ extension SelfTest {
                 ["uid": "JOINKW", "type": KeywordInput.type, "config": ["keyword": "rjoin", "argumenttype": 0, "text": "Join"]],
                 ["uid": "JOINSPLIT", "type": Workflow.split, "config": ["delimiter": ",", "outputas": 1, "trimarguments": true]],
                 ["uid": "JOIN", "type": Workflow.joinArgs, "config": ["delimiter": "+"]],
+                // S-053: Browse in Terminal with the argument as the path.
+                ["uid": "TERMKW", "type": KeywordInput.type, "config": ["keyword": "rterm", "argumenttype": 0, "text": "Terminal"]],
+                ["uid": "TERM", "type": Workflow.browseInTerminal, "config": ["path": ""]],
+                // S-053: Dispatch Key Combo presses ⌘V, then Copy to Clipboard.
+                ["uid": "KEYSKW", "type": KeywordInput.type, "config": ["keyword": "rkeys", "argumenttype": 0, "text": "Keys"]],
+                ["uid": "KEYS", "type": Workflow.dispatchKeys, "config": [
+                    "keychar": "v", "keycode": -1, "keymod": 1_048_576, "count": 1, "overridewithargument": false,
+                ]],
+                // S-053: a Grid View fed by a script file; a fake runner answers.
+                ["uid": "GRIDKW", "type": KeywordInput.type, "config": ["keyword": "rgrid", "argumenttype": 0, "text": "Grid"]],
+                ["uid": "GRID", "type": Workflow.grid, "config": ["inputtype": 1, "inputfile": "grid.sh", "filterable": true]],
                 // S-052: Universal Actions for text (not URLs) and for files.
                 ["uid": "UATEXT", "type": WorkflowUniversalAction.type, "config": [
                     "name": "Self Test Text Universal", "acceptstext": true, "acceptsurls": false, "acceptsfiles": false,
@@ -121,6 +132,11 @@ extension SelfTest {
                 "JOIN": [["destinationuid": "COPY", "modifiers": 0]],
                 "FALLBACK": [["destinationuid": "COPY", "modifiers": 0]],
                 "UATEXT": [["destinationuid": "COPY", "modifiers": 0]],
+                "TERMKW": [["destinationuid": "TERM", "modifiers": 0]],
+                "KEYSKW": [["destinationuid": "KEYS", "modifiers": 0]],
+                "GRIDKW": [["destinationuid": "GRID", "modifiers": 0]],
+                "GRID": [["destinationuid": "COPY", "modifiers": 0]],
+                "KEYS": [["destinationuid": "COPY", "modifiers": 0]],
                 "UAFILES": [["destinationuid": "COPY", "modifiers": 0]],
                 "FAPNG": [["destinationuid": "COPY", "modifiers": 0]],
             ],
@@ -561,6 +577,43 @@ extension SelfTest {
               row != nil && row == titles.count - 1 && titles.first?.hasPrefix("Search Google") == true, titles.joined(separator: ", "))
         if let row { lm.open(at: row) }
         check("↩ on it sends the typed text on", copied.last == "copied zzqxv selftest", copied.last ?? "none")
+
+        // S-053: the terminal is recorded, never opened.
+        let realTerminal = lm.openTerminal
+        var terminals: [String] = []
+        lm.openTerminal = { terminals.append($0.path); return true }
+        await enter("rterm /tmp")
+        lm.openTerminal = realTerminal
+        check("Browse in Terminal opens the terminal at the path", terminals == ["/tmp"], terminals.joined(separator: ", "))
+
+        // Keys are recorded, never pressed.
+        let realKeys = lm.pressKeys
+        var pressed: [WorkflowKeys] = []
+        lm.pressKeys = { pressed.append($0); return true }
+        await enter("rkeys hello")
+        lm.pressKeys = realKeys
+        check("Dispatch Key Combo presses ⌘V once and the workflow goes on",
+              pressed == [WorkflowKeys(keyCode: 9, modifiers: 1 << 20)] && copied.last == "copied hello", "\(pressed) \(copied.last ?? "")")
+
+        let realRun = lm.workflows.run
+        var gridAsked: [String] = []
+        lm.workflows.run = { command in
+            gridAsked.append(URL(fileURLWithPath: command.executable).lastPathComponent)
+            gridAsked.append(command.arguments.joined(separator: " "))
+            return ScriptResult(output: Data(#"{"items": [{"title": "Grid one", "arg": "one"}, {"title": "Grid two", "arg": "two"}]}"#.utf8))
+        }
+        await enter("rgrid Red")
+        try? await Task.sleep(for: .milliseconds(100))
+        check("a Grid View runs its script file with the text and shows its items in the launcher",
+              gridAsked == ["grid.sh", "Red"] && launcher.isVisible && lm.results.prefix(2).map(\.title) == ["Grid one", "Grid two"],
+              "\(gridAsked) \(lm.results.map(\.title))")
+        lm.query = "two"
+        try? await Task.sleep(for: .milliseconds(50))
+        check("typing filters the grid's items", lm.results.first?.title == "Grid two", lm.results.map(\.title).joined(separator: ", "))
+        lm.openSelected()
+        try? await Task.sleep(for: .milliseconds(50))
+        lm.workflows.run = realRun
+        check("↩ on an item sends its argument on along the grid's lines", copied.last == "copied two", copied.last ?? "none")
 
         // A File Filter: Spotlight skips /tmp, so a fake answers with temp files.
         let folder = URL(fileURLWithPath: "/tmp/Reach-selftest-filefilter-\(UUID().uuidString)")
