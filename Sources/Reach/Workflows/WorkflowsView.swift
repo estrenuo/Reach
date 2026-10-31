@@ -35,6 +35,9 @@ struct WorkflowsView: View {
         .sheet(item: $library.editingInfo) { workflow in
             WorkflowInfoSheet(workflow: workflow)
         }
+        .sheet(item: $library.editingHotkeys) { workflow in
+            WorkflowHotkeysSheet(workflow: workflow)
+        }
         .confirmationDialog(removeTitle, isPresented: Binding(get: { library.removing != nil }, set: { if !$0 { library.removing = nil } })) {
             Button("Move to Trash", role: .destructive) {
                 if let workflow = library.removing { library.remove(workflow) }
@@ -92,6 +95,9 @@ private struct WorkflowList: View {
                             Button("Configure…") { library.configuring = workflow }
                         }
                         Button("Info…") { library.editingInfo = workflow }
+                        if !workflow.hotkeys.isEmpty {
+                            Button("Hotkeys…") { library.editingHotkeys = workflow }
+                        }
                         Button(workflow.disabled ? "Turn On" : "Turn Off") { library.setEnabled(workflow.disabled, workflow) }
                         Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([workflow.folder]) }
                         Divider()
@@ -263,6 +269,9 @@ struct WorkflowCommands: Commands {
             Button("Workflow Info…") { library.editingInfo = library.selected }
                 .keyboardShortcut("i")
                 .disabled(!inFront || library.selected == nil)
+            Button("Workflow Hotkeys…") { library.editingHotkeys = library.selected }
+                .keyboardShortcut("k", modifiers: [.command, .option])
+                .disabled(!inFront || library.selected?.hotkeys.isEmpty != false)
             Button(library.selected?.disabled == true ? "Turn On Workflow" : "Turn Off Workflow") {
                 if let workflow = library.selected { library.setEnabled(workflow.disabled, workflow) }
             }

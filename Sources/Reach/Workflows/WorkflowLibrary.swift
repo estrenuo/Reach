@@ -30,6 +30,10 @@ final class WorkflowLibrary {
     var log = WorkflowLog()
     var logLevel = WorkflowLogLevel.all
     var debugging = false
+    /// The workflow in the Hotkeys… sheet (S-049).
+    var editingHotkeys: Workflow?
+    /// Called after every read of the folder, so workflow hotkeys follow it.
+    @ObservationIgnored var onReload: () -> Void = {}
     /// When the folder was last read; it is read again when the launcher shows.
     @ObservationIgnored private var readAt = Date.distantPast
 
@@ -60,6 +64,7 @@ final class WorkflowLibrary {
         workflows = folders.compactMap(Workflow.init(folder:))
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         readAt = .now
+        onReload()
     }
 
     /// Reads the folder again when it was read more than two seconds ago,

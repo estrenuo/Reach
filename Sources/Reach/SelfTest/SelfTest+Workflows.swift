@@ -44,6 +44,11 @@ extension SelfTest {
                 ["uid": "TRASH", "type": Workflow.automationTask, "config": [
                     "taskuid": Workflow.trashTask, "tasksettings": ["target_path": "/tmp/{query}"],
                 ]],
+                // S-049: Hotkey triggers with each kind of argument.
+                ["uid": "HKNONE", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 0]],
+                ["uid": "HKSEL", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 1]],
+                ["uid": "HKCLIP", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 2]],
+                ["uid": "HKFIND", "type": WorkflowHotkey.type, "config": ["action": 0, "argument": 4]],
             ],
             "variables": ["kw": "rkey"],
             "connections": [
@@ -61,6 +66,10 @@ extension SelfTest {
                 "NOTE": [["destinationuid": "SOUND", "modifiers": 0]],
                 "SOUND": [["destinationuid": "DEBUG", "modifiers": 0]],
                 "DEBUG": [["destinationuid": "COPY", "modifiers": 0]],
+                "HKNONE": [["destinationuid": "COPY", "modifiers": 0]],
+                "HKSEL": [["destinationuid": "COPY", "modifiers": 0]],
+                "HKCLIP": [["destinationuid": "COPY", "modifiers": 0]],
+                "HKFIND": [["destinationuid": "COPY", "modifiers": 0]],
             ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -210,6 +219,7 @@ extension SelfTest {
         lm.notify = realNotify
         lm.copier = realCopier
         launcher.hide()
+        await checkWorkflowHotkeys(model: model)
 
         // The real runner: a bash script gets the text as $1 and its output parses.
         let script = ScriptSource(language: .bash, text: "printf '{\"items\":[{\"title\":\"%s\"}]}' \"$1\"")
@@ -317,5 +327,62 @@ extension SelfTest {
         check("Remove moves the folder to the Trash", trash.value.map(\.lastPathComponent) == [example.id]
               && library.workflow(example.id) == nil && library.selection == nil)
         lm.query = ""
+    }
+
+    /// S-049: a pressed workflow hotkey runs what is connected with Alfred's
+    /// argument, and a combination Reach or another hotkey has stays off.
+    /// The press is injected; no real key is registered in a test run.
+    private static func checkWorkflowHotkeys(model: AppModel) async {
+        let lm = model.launcherModel
+        let library = lm.workflows.library
+        let hotkeys = WorkflowHotkeys.shared
+        guard let workflow = library.workflow("selftest.workflow") else { return }
+        let realCopier = lm.copier, realSelection = lm.readSelection, realClipboard = lm.readClipboard, realRun = hotkeys.run
+        var copied: [String] = []
+        var pressed: [String] = []
+        lm.copier = { copied.append($0) }
+        lm.readSelection = { .text("picked", source: "TextEdit") }
+        lm.readClipboard = { "clip" }
+        hotkeys.run = { _, hotkey in pressed.append(hotkey.uid) }
+        let key = { (uid: String) in WorkflowHotkeys.key(workflow, uid) }
+        let other = KeyCombo(keyCode: 40, modifiers: KeyCombo.control | KeyCombo.option)
+        defer {
+            lm.copier = realCopier
+            lm.readSelection = realSelection
+            lm.readClipboard = realClipboard
+            hotkeys.run = realRun
+            for uid in ["HKNONE", "HKSEL", "HKCLIP"] { hotkeys.set(nil, for: workflow, uid: uid) }
+        }
+
+        check("a workflow's Hotkey triggers are read", workflow.hotkeys.map(\.uid) == ["HKNONE", "HKSEL", "HKCLIP", "HKFIND"])
+        hotkeys.set(.init(combo: HotkeyCenter.shared.combo, keyName: "Space"), for: workflow, uid: "HKNONE")
+        hotkeys.set(.init(combo: other, keyName: "K"), for: workflow, uid: "HKSEL")
+        hotkeys.set(.init(combo: other, keyName: "K"), for: workflow, uid: "HKCLIP")
+        check("a hotkey with a combination is turned on", hotkeys.isRegistered(key("HKSEL")))
+        check("a hotkey on Reach's launcher hotkey stays off and says why",
+              !hotkeys.isRegistered(key("HKNONE")) && hotkeys.problems[key("HKNONE")] == "Not active: it is Reach's launcher hotkey.",
+              hotkeys.problems[key("HKNONE")] ?? "on")
+        check("a hotkey another hotkey took first stays off, in the debugger too",
+              !hotkeys.isRegistered(key("HKCLIP"))
+                  && library.log.shown(.errors).contains { $0.text == "A hotkey was not turned on: another hotkey in this workflow has it." },
+              hotkeys.problems[key("HKCLIP")] ?? "on")
+
+        hotkeys.press(key("HKSEL"))
+        check("a press runs its workflow's trigger", pressed == ["HKSEL"], pressed.joined(separator: ", "))
+
+        for uid in ["HKNONE", "HKSEL", "HKCLIP", "HKFIND"] {
+            if let hotkey = workflow.hotkeys.first(where: { $0.uid == uid }) { await lm.runHotkey(hotkey, in: workflow) }
+        }
+        check("each hotkey passes Alfred's argument: none, the selection, the clipboard",
+              copied.prefix(3) == ["copied ", "copied picked", "copied clip"], copied.joined(separator: " | "))
+        check("an argument Reach does not pass runs without it and is logged",
+              copied.last == "copied " && library.log.shown(.errors).last?.text
+                  == "Reach does not pass the Find pasteboard yet; the hotkey ran without it.",
+              library.log.shown(.errors).last?.text ?? "none")
+
+        library.setEnabled(false, workflow)
+        check("Turn Off takes the workflow's hotkeys off", !hotkeys.isRegistered(key("HKSEL")))
+        if let current = library.workflow(workflow.id) { library.setEnabled(true, current) }
+        check("Turn On puts them back", hotkeys.isRegistered(key("HKSEL")))
     }
 }

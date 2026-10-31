@@ -155,6 +155,13 @@ final class AppModel {
         HotkeyCenter.shared.onSelection = { controller.showSelection() }
         HotkeyCenter.shared.onClipboard = { controller.toggleClipboard() }
         HotkeyCenter.shared.start(register: !Self.isTestRun)
+        // Workflow hotkeys (S-049): registered again whenever the library is read.
+        let hotkeys = WorkflowHotkeys.shared
+        hotkeys.registers = !Self.isTestRun
+        hotkeys.run = { [launcherModel] workflow, hotkey in Task { await launcherModel.runHotkey(hotkey, in: workflow) } }
+        HotkeyCenter.shared.onWorkflow = { hotkeys.pressed($0) }
+        WorkflowLibrary.shared.onReload = { hotkeys.apply() }
+        hotkeys.apply()
         // Snapshots and the self-test never sleep, lock or restart the Mac, run shell commands, or read contacts.
         if Self.isTestRun {
             launcherModel.runSystem = { _ in true }
