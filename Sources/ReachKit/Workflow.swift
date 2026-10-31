@@ -199,7 +199,10 @@ public struct Workflow: Equatable, Sendable, Identifiable {
     public func object(_ uid: String) -> WorkflowObject? { objects.first { $0.uid == uid } }
 
     /// The script filters, each with a keyword.
-    public var scriptFilters: [ScriptFilter] { objects.compactMap(ScriptFilter.init) }
+    public var scriptFilters: [ScriptFilter] {
+        let values = keywordVariables
+        return objects.compactMap { ScriptFilter($0, variables: values) }
+    }
 
     /// The icon in the folder, if there is one.
     public var icon: URL? {

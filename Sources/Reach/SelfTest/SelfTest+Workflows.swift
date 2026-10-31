@@ -19,11 +19,19 @@ extension SelfTest {
                 ]],
                 ["uid": "URL", "type": Workflow.openURL, "config": ["url": "https://example.com/{query}"]],
                 ["uid": "COPY", "type": Workflow.copyToClipboard, "config": ["clipboardtext": "copied {query}"]],
+                // S-047: a Keyword input whose keyword comes from a variable.
+                ["uid": "KW", "type": KeywordInput.type, "config": [
+                    "keyword": "{var:kw}", "withspace": true, "argumenttype": 0, "text": "Open {query}",
+                ]],
             ],
-            "connections": ["SF": [
-                ["destinationuid": "URL", "modifiers": 0],
-                ["destinationuid": "COPY", "modifiers": WorkflowConnection.command, "modifiersubtext": "Copy"],
-            ]],
+            "variables": ["kw": "rkey"],
+            "connections": [
+                "SF": [
+                    ["destinationuid": "URL", "modifiers": 0],
+                    ["destinationuid": "COPY", "modifiers": WorkflowConnection.command, "modifiersubtext": "Copy"],
+                ],
+                "KW": [["destinationuid": "URL", "modifiers": 0]],
+            ],
         ]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         if let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0) {
@@ -105,6 +113,20 @@ extension SelfTest {
         check("a new query runs the script again with the new text", ranWith.value.last == "stopped")
         release()
         try? await Task.sleep(for: .milliseconds(100))
+
+        // S-047: a Keyword input answers its keyword and sends the text on.
+        await showAgain(launcher)
+        lm.query = "rke"
+        check("part of a Keyword input's keyword offers it", lm.results.contains { $0.completes == "rkey " },
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.query = "rkey world"
+        try? await Task.sleep(for: .milliseconds(50))
+        check("a Keyword input with its text shows one row, its title filled in", lm.results.first?.title == "Open world",
+              lm.results.map(\.title).joined(separator: ", "))
+        lm.openSelected()
+        check("↩ on a Keyword input runs what is connected: it opens the URL with the text",
+              opened.last == URL(string: "https://example.com/world")! && !launcher.isVisible,
+              opened.map(\.absoluteString).joined(separator: ", "))
         launcher.hide()
 
         // The real runner: a bash script gets the text as $1 and its output parses.

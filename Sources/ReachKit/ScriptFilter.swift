@@ -1,14 +1,12 @@
 import Foundation
 
 /// A Script Filter (S-041): a keyword whose script returns launcher rows as JSON.
-public struct ScriptFilter: Equatable, Sendable {
+public struct ScriptFilter: KeywordTrigger, Equatable {
     public static let type = "alfred.workflow.input.scriptfilter"
     public static let standardWaiting = "Please wait…"
 
-    /// Whether text after the keyword is needed.
-    public enum Argument: Int, Sendable {
-        case required = 0, optional = 1, none = 2
-    }
+    public typealias Argument = KeywordArgument
+    public typealias Match = KeywordMatch
 
     public var uid: String
     public var keyword: String
@@ -38,10 +36,10 @@ public struct ScriptFilter: Equatable, Sendable {
         self.filtersResults = filtersResults
     }
 
-    public init?(_ object: WorkflowObject) {
-        guard object.type == Self.type else { return nil }
-        let keyword = object.string("keyword").trimmingCharacters(in: .whitespaces)
-        guard !keyword.isEmpty else { return nil }
+    /// Nil for another type of object, or one without a keyword.
+    /// `variables` fill a keyword like `{var:keyword}`.
+    public init?(_ object: WorkflowObject, variables: [String: String] = [:]) {
+        guard object.type == Self.type, let keyword = Workflow.keyword(of: object, variables: variables) else { return nil }
         self.init(uid: object.uid, keyword: keyword, withSpace: object.config["withspace"]?.bool ?? true,
                   argument: Argument(rawValue: object.int("argumenttype")) ?? .required,
                   title: object.string("title"), subtext: object.string("subtext"),
@@ -49,42 +47,7 @@ public struct ScriptFilter: Equatable, Sendable {
                   filtersResults: object.bool("alfredfiltersresults"))
     }
 
-    /// The row title before the script answers: the placeholder title, else the keyword.
-    public var placeholder: String { title.isEmpty ? keyword : title }
     public var waitingText: String { waiting.isEmpty ? Self.standardWaiting : waiting }
-
-    /// What the typed query means for this filter.
-    public enum Match: Equatable, Sendable {
-        /// Part of the keyword is typed: a row that completes it.
-        case keyword
-        /// The keyword is typed and the text is still missing.
-        case needsText
-        /// Run the script with this text.
-        case run(String)
-    }
-
-    public func match(_ query: String) -> Match? {
-        guard !query.isEmpty else { return nil }
-        let typed = query.lowercased()
-        let word = keyword.lowercased()
-        guard typed.hasPrefix(word) else {
-            return word.hasPrefix(typed) && !typed.contains(" ") ? .keyword : nil
-        }
-        var rest = Substring(query.dropFirst(keyword.count))
-        if rest.isEmpty {
-            return argument == .required ? .needsText : .run("")
-        }
-        if withSpace || rest.first == " " {
-            guard rest.first == " " else { return nil }
-            rest = rest.dropFirst()
-        }
-        if argument == .none { return rest.allSatisfy(\.isWhitespace) ? .run("") : nil }
-        if rest.isEmpty, argument == .required { return .needsText }
-        return .run(String(rest))
-    }
-
-    /// What Return types for a row of the `.keyword` or `.needsText` kind.
-    public var completion: String { keyword + (withSpace ? " " : "") }
 }
 
 /// The script of a Script Filter or Run Script object, in Alfred's settings.

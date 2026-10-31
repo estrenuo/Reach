@@ -758,6 +758,21 @@ UX:
 - Note: Export blanks the value of every Don't Export variable and leaves out what Configure Workflow… saved (prefs.plist)
 Status: done
 
+### S-047 Run a workflow from a Keyword input
+As the user, I type the keyword of an imported Alfred workflow that starts with a Keyword input (not a Script Filter), and ↩ runs what is connected to it.
+Screens: 64-alfred-workflow-script-filter.png
+Depends: S-041
+Acceptance:
+- [unit] A Keyword input (`alfred.workflow.input.keyword`) is read with its keyword, space, argument, title and subtext, and matches like a Script Filter.
+- [unit] A keyword written as `{var:name}` is filled from the workflow's variables and its configuration; one that stays empty adds no keyword.
+- [unit] The typed text goes on to the connected objects, per modifier line.
+- [self] Part of the keyword completes it; with the text typed, one row shows its title with `{query}` filled in; ↩ opens the connected URL.
+UX:
+- Flow: type the keyword → ↩ completes it → type the text → one row, the Keyword input's title with the text → ↩ (or ⌃↩ ⌥↩ ⌘↩ for a modifier line) runs the connected objects
+- States: argument required and no text = placeholder row, not openable; argument none = the row runs on the keyword alone
+- Note: the cause of "imported workflows do nothing": Reach only read Script Filters, and most Alfred workflows start with a Keyword input. Configurable keywords (`{var:keyword}`) never matched either. Hotkeys, List Filters, File Filters and External Triggers still do nothing.
+Status: done
+
 ---
 
 ## Later

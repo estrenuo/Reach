@@ -28,7 +28,7 @@ extension Workflow {
     public func steps(after uid: String, argument: String, modifiers: Int = 0,
                       variables: [String: String] = [:], environment: [String: String] = [:]) -> [WorkflowStep] {
         let all = connections[uid] ?? []
-        if all.isEmpty, object(uid)?.type == ScriptFilter.type {
+        if all.isEmpty, let type = object(uid)?.type, [ScriptFilter.type, KeywordInput.type].contains(type) {
             return Self.opensItself(argument) ? [.open(argument)] : []
         }
         let lines = all.filter { $0.modifiers == modifiers }
