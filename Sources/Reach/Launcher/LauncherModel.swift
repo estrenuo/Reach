@@ -187,6 +187,13 @@ final class LauncherModel {
         confirming = nil
         generation += 1
         let asked = generation
+        if let rows = miniPlayerRows() {
+            // The mini player (S-060) answers alone, in its own order.
+            browsing = nil
+            sources.forEach { $0.cancel() }
+            setResults(rows)
+            return
+        }
         let kind = files.settings.queryKind(query, shellPrefix: shell.settings.prefix)
         if case .path(let path) = kind { browsing = path } else { browsing = nil }
         sources.forEach { $0.cancel() }
@@ -301,6 +308,7 @@ final class LauncherModel {
 
     /// → while browsing: into the selected folder. False when there is none.
     func enter() -> Bool {
+        if enterMiniPlayer() { return true }
         guard let browsing, let result = selectedResult, result.isFolder else { return false }
         rewriteQuery(browsing.entering(result.title))
         return true
@@ -308,6 +316,7 @@ final class LauncherModel {
 
     /// ← while browsing: drops the typed name, then goes up one folder.
     func back() -> Bool {
+        if backMiniPlayer() { return true }
         guard let browsing else { return false }
         rewriteQuery(browsing.back(home: paths.home))
         return true
@@ -315,6 +324,7 @@ final class LauncherModel {
 
     /// Tab while browsing: enters a folder, or completes a file's name.
     func complete() -> Bool {
+        if enterMiniPlayer() { return true }
         guard let browsing, let result = selectedResult, result.isOpenable else { return false }
         if enter() { return true }
         rewriteQuery(browsing.folder + result.title)

@@ -154,6 +154,12 @@ final class AppModel {
         HotkeyCenter.shared.onPress = { controller.toggle() }
         HotkeyCenter.shared.onSelection = { controller.showSelection() }
         HotkeyCenter.shared.onClipboard = { controller.toggleClipboard() }
+        HotkeyCenter.shared.onMiniPlayer = { [launcherModel] in
+            if controller.isVisible, launcherModel.inMiniPlayer { return controller.hide() }
+            if !controller.isVisible { controller.show() }
+            launcherModel.openMiniPlayer()
+        }
+        launcherModel.followMusicLibrary()
         HotkeyCenter.shared.start(register: !Self.isTestRun)
         // Workflow hotkeys (S-049): registered again whenever the library is read.
         let hotkeys = WorkflowHotkeys.shared
@@ -170,6 +176,10 @@ final class AppModel {
             launcherModel.contacts.loader = { $0([]) }
             // Nor send Apple Events to Music (S-059).
             launcherModel.music.player = .silent
+            // Nor read the Music library (S-060): an empty one until a check brings samples.
+            launcherModel.music.library.loaderIsLive = false
+            launcherModel.music.library.loader = { $0(MusicLibrary()) }
+            launcherModel.music.library.artwork = { _ in nil }
         }
         // Starts following which app was used last, for `quit`.
         _ = AppRecency.shared

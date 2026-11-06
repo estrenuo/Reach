@@ -9,6 +9,10 @@ final class MusicSource: ResultSource {
     let settings: MusicSettings
     /// Music.app, or a fake in test runs.
     var player: MusicPlayer = .live
+    /// The Music library for the mini player (S-060).
+    let library = MusicLibraryReader()
+    /// Where → goes from a mini player row, by result id.
+    var enters: [String: String] = [:]
 
     init(settings: MusicSettings = .shared) {
         self.settings = settings

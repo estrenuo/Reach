@@ -285,6 +285,7 @@ enum Snapshot {
             }
             if only == nil || only?.contains("music") == true {
                 await captureMusic(model: model, dir: dir)
+                await captureMiniPlayer(model: model, dir: dir)
             }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
@@ -312,6 +313,12 @@ enum Snapshot {
                             capture(to: "\(dir)/settings-fallbacks-\(mode).png", window: settings?.attachedSheet)
                             WebSearchSettings.shared.editingFallbacks = false
                             try? await Task.sleep(for: .seconds(0.5))
+                        }
+                        if tab == .music {
+                            MusicSettings.shared.page = .keywords
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-music-keywords-\(mode).png", window: settings)
+                            MusicSettings.shared.page = .general
                         }
                         if tab == .clipboard {
                             ClipboardSettings.shared.page = .merging

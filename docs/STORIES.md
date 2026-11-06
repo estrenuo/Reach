@@ -941,7 +941,13 @@ Acceptance:
 - [self] `music` shows Albums, Artists, Playlists and "Random Album"; → or ↩ goes into one, ← goes back, typing filters; ↩ on an album or playlist plays it and hides the launcher when "Hide after choosing" is on.
 - [self] "Random Album" skips albums with fewer tracks than the setting.
 - [snap] Settings > Music > General: hotkey, keyword, the random and hide options, the include toggles; a launcher snapshot inside an album with artwork.
-Status: todo
+UX:
+- Flow: the mini player hotkey (default ⌃⌘↩), or type `music` → the launcher shows the mini player: Albums, Artists, Playlists, Random Album and Open Music → → or ↩ goes into a list, the search field shows where you are (`music Albums › `), typing filters it → ↩ on an album, artist, playlist or song plays it; → on an album, artist or playlist shows what is in it → ← with nothing typed goes back one level (with text typed, it clears the text) → Esc clears, a second Esc hides. With "Hide after choosing" on the launcher hides after ↩; off, it stays on the list
+- Surface: inline in the launcher, like browsing a folder: the list keeps its own order (A to Z), no ranking, no fallbacks; the path lives in the search field, so ⌃↑ history and ⌘⌫ work as usual. Settings > Music gets two pages, General and Keywords, as a segmented control at the top of its Form (like Clipboard)
+- States: library not read yet → the first time, one hint row "Reading your music library…" while it loads off the main thread, then the list; access to the library turned off → hint row "Allow Reach to read your music library in System Settings > Privacy & Security > Media & Apple Music", ↩ opens that pane; empty library or filter with no match → hint row "No albums match “xyz”" (per list); albums without artwork show the Music icon; long titles truncate in the middle with the full title in the tooltip; Random Album with no album long enough → hint "No album has 5 or more songs"; Automation turned off → the same row as in S-059
+- Words: root rows "Albums" (subtitle "128 albums"), "Artists", "Playlists", "Random Album" (subtitle "Play an album with at least 5 songs"), "Open Music"; album row = title, subtitle "Artist · 9 songs"; artist row subtitle "12 albums"; playlist subtitle "40 songs"; song row = title, subtitle "Artist — Album", badge with its track number; Settings > Music > General: "Mini player hotkey", "Keyword", "Random Album needs at least" (stepper, "5 songs"), "Hide after choosing", section "Include" with "Podcasts", "Videos", "Songs without album or artist"; Access: "Music library" and "Automation"
+- Access: VoiceOver reads "Album, Kind of Blue, Miles Davis, 5 songs"; artwork is decorative (no label); the hotkey button reads "Mini player hotkey, Control Command Return"; keyboard-only throughout
+Status: done
 
 ## M8 Workflow editor
 

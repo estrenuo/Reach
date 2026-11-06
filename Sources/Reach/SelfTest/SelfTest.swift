@@ -120,6 +120,7 @@ enum SelfTest {
         ("workflows", { await checkWorkflows(model: $0) }),
         ("workflowlist", { await checkWorkflowList(model: $0) }),
         ("music", { await checkMusic(model: $0) }),
+        ("miniplayer", { await checkMiniPlayer(model: $0) }),
     ]
 
     /// The group names in APP_SELFTEST_ONLY, lowercased; nil runs every group.

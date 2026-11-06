@@ -96,10 +96,23 @@ public struct MusicKeyword: Codable, Equatable, Sendable, Identifiable {
 public enum MusicRequest: Equatable, Sendable {
     case command(MusicCommand)
     case setVolume(Int)
+    /// One song, by Music's persistent ID (S-060).
+    case playSong(String)
+    case playPlaylist(String)
+    /// An album, an artist or Random Album: Reach fills its own playlist and plays it.
+    case playSongs([String])
+
+    /// The playlist Reach fills to play an album or artist; Reach changes no other playlist.
+    public static let playlistName = "Reach Mini Player"
 
     /// The AppleScript that does it. `tell application "Music"` starts Music when it is not running.
     public var script: String {
+        if case .playSongs(let ids) = self { return Self.fill(ids.map(Self.hex)) }
         let body: String = switch self {
+        case .playSongs: ""
+        case .playSong(let id): "play (some track of library playlist 1 whose persistent ID is \"\(Self.hex(id))\")"
+        case .playPlaylist(let id): "play (some playlist whose persistent ID is \"\(Self.hex(id))\")"
+
         case .command(.playPause): "playpause"
         case .command(.next): "next track"
         case .command(.back): "back track"
@@ -112,6 +125,28 @@ public enum MusicRequest: Equatable, Sendable {
         case .setVolume(let level): "set sound volume to \(MusicKeywords.volumeRange.clamp(level))"
         }
         return "tell application \"Music\" to \(body)"
+    }
+
+    /// Only hex digits, so an ID can never change the script.
+    static func hex(_ id: String) -> String { id.filter(\.isHexDigit) }
+
+    /// Empties Reach's own playlist (or makes it), adds the songs in order, and plays it.
+    static func fill(_ ids: [String]) -> String {
+        let list = ids.map { "\"\($0)\"" }.joined(separator: ", ")
+        return """
+            tell application "Music"
+                if exists user playlist "\(playlistName)" then
+                    set dest to user playlist "\(playlistName)"
+                    delete every track of dest
+                else
+                    set dest to make new user playlist with properties {name:"\(playlistName)"}
+                end if
+                repeat with pid in {\(list)}
+                    duplicate (some track of library playlist 1 whose persistent ID is (contents of pid)) to dest
+                end repeat
+                play dest
+            end tell
+            """
     }
 }
 

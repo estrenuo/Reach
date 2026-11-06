@@ -15,6 +15,7 @@
 <key>NSHighResolutionCapable</key><true/>
 <key>LSUIElement</key><true/>
 <key>NSContactsUsageDescription</key><string>Reach finds your contacts as you type a name, shows their details in the launcher, and starts emails to them.</string>
-<key>NSAppleEventsUsageDescription</key><string>Reach asks Finder to show Get Info and empty the Trash, asks macOS to log out, restart or shut down, asks your terminal app to run the shell commands you type, and tells Music to play, skip or change the volume when you type a music keyword.</string>
+<key>NSAppleMusicUsageDescription</key><string>Reach reads your Music library so you can browse and play your albums, artists and playlists from the launcher.</string>
+<key>NSAppleEventsUsageDescription</key><string>Reach asks Finder to show Get Info and empty the Trash, asks macOS to log out, restart or shut down, asks your terminal app to run the shell commands you type, and tells Music to play, skip, change the volume or play what you pick in the mini player.</string>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>

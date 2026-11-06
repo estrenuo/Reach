@@ -12,6 +12,10 @@ extension LauncherModel {
         }
         switch player.send(request) {
         case .sent:
+            if inMiniPlayer {
+                if MusicSettings.shared.hidesAfterChoosing { onHide() }
+                return
+            }
             onOpened(query, result)
             onHide()
         case .denied:
