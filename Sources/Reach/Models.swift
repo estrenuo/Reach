@@ -168,6 +168,8 @@ final class AppModel {
             launcherModel.runShell = { _ in true }
             // Nor read the person's contacts, or ask for access to them.
             launcherModel.contacts.loader = { $0([]) }
+            // Nor send Apple Events to Music (S-059).
+            launcherModel.music.player = .silent
         }
         // Starts following which app was used last, for `quit`.
         _ = AppRecency.shared

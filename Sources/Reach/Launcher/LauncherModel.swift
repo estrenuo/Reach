@@ -63,6 +63,7 @@ final class LauncherModel {
     let settingsRow = SettingsSource()
     let snippets = SnippetSource()
     let workflows = WorkflowSource()
+    let music = MusicSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -156,7 +157,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, workflows, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, webSearches, files, paths]
+        sources = [calculator, shell, workflows, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, webSearches, files, paths, music]
     }
 
     func didShow() {
@@ -336,6 +337,10 @@ final class LauncherModel {
         }
         if let run = result.workflow {
             runWorkflow(run, result: result)
+            return
+        }
+        if let request = result.music {
+            runMusic(request, result: result)
             return
         }
         if let text = result.pastes {

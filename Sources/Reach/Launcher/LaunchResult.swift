@@ -52,9 +52,11 @@ struct LaunchResult: Identifiable, Equatable {
     var opensSnippets = false
     /// A row from a workflow's script filter: Return runs what is connected to it (S-041).
     var workflow: WorkflowRun?
+    /// A music command: Return sends it to Music (S-059). It has no URL.
+    var music: MusicRequest?
 
     var isOpenable: Bool {
-        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || opensSnippets || workflow != nil
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || opensSnippets || workflow != nil || music != nil
     }
 }
 

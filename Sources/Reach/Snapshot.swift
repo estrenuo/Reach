@@ -283,6 +283,9 @@ enum Snapshot {
             if only == nil || only?.contains("workflows") == true {
                 await captureWorkflows(model: model, dir: dir)
             }
+            if only == nil || only?.contains("music") == true {
+                await captureMusic(model: model, dir: dir, openSettings: openSettings)
+            }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
                 openSettings()
@@ -526,7 +529,7 @@ enum Snapshot {
     /// permission for the app that started this one (your terminal, or Claude).
     /// Without it, falls back to drawing the view hierarchy, which leaves
     /// sidebars and glass blank.
-    private static func capture(to path: String, window: NSWindow? = nil) {
+    static func capture(to path: String, window: NSWindow? = nil) {
         // Another app can hide this one while snapshots run (computer use hides
         // apps it does not control). Hidden windows cannot be captured.
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }

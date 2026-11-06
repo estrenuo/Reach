@@ -85,3 +85,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Accent color | The color of the selected row and of buttons, picked apart from the theme | tint, highlight, theme color |
 | Show on Desktop Picture | Draws the theme preview on the desktop picture instead of the plain background | wallpaper, background toggle |
 | Expand | Replace a snippet keyword typed in any app with its snippet, as its last letter is typed | auto-expand, autocomplete, text replacement |
+| Music command | A keyword row that tells Music.app what to do: play or pause, next, back, previous, random, the volume, mute (S-059) | iTunes command, player action, media key |
+| Music keyword | The word that finds a music command, like `next`; each one can be turned off or changed in Settings > Music | trigger, shortcut |
+| Back to Start | Start the playing song again (`back`); Previous Track goes to the song before | rewind, restart |
+| Automation | The macOS permission that lets Reach send Apple Events to Music; in System Settings > Privacy & Security > Automation | Apple Events access, scripting permission |

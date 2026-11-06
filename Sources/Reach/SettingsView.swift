@@ -41,6 +41,7 @@ struct SettingsView: View {
             case .actions: ActionsSettings()
             case .previews: PreviewsSettings()
             case .workflows: WorkflowSettings()
+            case .music: MusicSettingsView()
             case .appearance: AppearanceSettings()
             case .advanced: AdvancedSettings()
             case .usage: UsageSettings()
@@ -157,7 +158,7 @@ private struct SettingsResults: View {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, workflows, appearance, advanced, usage
+    case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, workflows, music, appearance, advanced, usage
 
     var id: String { rawValue }
 
@@ -188,6 +189,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "Actions"
         case .previews: "Previews"
         case .workflows: "Workflows"
+        case .music: "Music"
         case .appearance: "Appearance"
         case .advanced: "Advanced"
         case .usage: "Usage"
@@ -209,6 +211,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "The action panel"
         case .previews: "Quick Look in the launcher"
         case .workflows: "Keywords that run scripts"
+        case .music: "Play, skip and set the volume"
         case .appearance: "Themes and launcher options"
         case .advanced: "Learning, query history, ⌥↩"
         case .usage: "Uses per day"
@@ -229,6 +232,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .actions: "arrow.right.square"
         case .previews: "eye"
         case .workflows: "flowchart"
+        case .music: "music.note"
         case .appearance: "paintpalette"
         case .advanced: "gearshape.2"
         case .usage: "chart.xyaxis.line"
