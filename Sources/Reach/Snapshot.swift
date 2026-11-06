@@ -81,7 +81,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("workflow-grid", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("thumbnails", "open o"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("workflow-grid", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -581,12 +581,29 @@ final class SampleFiles: ResultSource {
             let path = folder + name
             if name.contains(".") {
                 try? files.createDirectory(atPath: folder, withIntermediateDirectories: true)
-                files.createFile(atPath: path, contents: Data())
+                files.createFile(atPath: path, contents: sampleContents(name))
             } else {
                 try? files.createDirectory(atPath: path, withIntermediateDirectories: true)
             }
         }
         return SampleFiles()
+    }
+
+    /// A real picture and a real PDF, so their rows show thumbnails (S-056); the rest stay empty.
+    private static func sampleContents(_ name: String) -> Data {
+        if name.hasSuffix(".jpg") { return SelfTest.samplePNG(hue: 0.55, type: .jpeg) }
+        guard name.hasSuffix(".pdf") else { return Data() }
+        let data = NSMutableData()
+        var page = CGRect(x: 0, y: 0, width: 612, height: 792)
+        guard let consumer = CGDataConsumer(data: data), let pdf = CGContext(consumer: consumer, mediaBox: &page, nil) else { return Data() }
+        pdf.beginPDFPage(nil)
+        pdf.setFillColor(CGColor(red: 0.2, green: 0.45, blue: 0.85, alpha: 1))
+        pdf.fill(CGRect(x: 72, y: 600, width: 468, height: 120))
+        pdf.setFillColor(CGColor(gray: 0.6, alpha: 1))
+        for line in 0..<12 { pdf.fill(CGRect(x: 72, y: 540 - line * 32, width: line % 3 == 2 ? 300 : 468, height: 12)) }
+        pdf.endPDFPage()
+        pdf.closePDF()
+        return data as Data
     }
 
     func results(for query: QueryKind, later: @escaping @MainActor ([Scored]) -> Void) -> [Scored]? {

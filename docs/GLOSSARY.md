@@ -38,6 +38,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Paste | Put the answer in the app you were in, as ⌘V does | type, insert |
 | Reach | The app itself | Alfred, the launcher (that is the panel) |
 | Quick Look | The system's full-size preview of the selected result, opened by tapping ⇧ or ⌘Y | preview (that is the launcher's right side), peek |
+| Thumbnail | A small picture of an image, PDF or movie in its result row, in place of the file icon (S-056) | preview, image, picture |
 | Buffer | Files, folders and apps collected with ⌥↑ to run one action on all of them with ⌥→ | basket, cart, selection (that is S-011), stack |
 | Item | One file, folder or app in the buffer; "3 Items" in the panel header | entry, element |
 | Skip | Leave a file type or folder out of Quick Look and Preview dates, in Settings > Previews | exclude, ignore, blacklist |

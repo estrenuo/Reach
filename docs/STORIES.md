@@ -892,7 +892,15 @@ Acceptance:
 - [unit] Which files get a thumbnail follows the type and the "Skip These File Types" and "Skip These Folders" lists of Settings > Previews.
 - [self] A row for an image in the /tmp store shows a thumbnail made by Quick Look (`QLThumbnailGenerator`), off the main thread; until it arrives, and for a file without one, the row keeps the file icon. Scrolling 30 rows never makes the bar wait.
 - [snap] Settings > Previews has "Show thumbnails in results" (on by default); the launcher snapshot shows an image row with its thumbnail.
-Status: todo
+UX:
+- Flow: type or browse → file rows show their file icon at once → a thumbnail replaces the icon in place when Quick Look has made it (no animation, no layout shift) → the same file later shows its thumbnail straight from memory
+- Surface: inline, in the row's icon slot (the row already shows the file; a thumbnail only changes how it looks)
+- States: loading = the file icon, never a spinner or a blank square; no thumbnail (folder, app, text, unknown type, skipped type or folder, setting off, Quick Look has none) = the file icon; a wide or tall picture fits the icon square, never cropped
+- Which files: images, PDFs and movies only; apps, folders and other documents keep their icon, which already says what they are
+- Words: Settings > Previews, in the Quick Look section, checkbox "Show thumbnails in results" with "Images, PDFs and movies show a small picture instead of the file icon."; the skip list footers add thumbnails: "Files of these types get no Quick Look or thumbnail and show no dates in the Preview. …" and "Nothing inside these folders gets Quick Look, thumbnails or Preview dates. …"
+- Access: the thumbnail is decoration; VoiceOver still reads the kind, title and subtitle of the row, unchanged
+- Not now: thumbnails in the Preview's large icon while browsing
+Status: done
 
 ### S-057 Open a web bookmark
 As the user, I type part of a bookmark's name or address and ↩ opens it.

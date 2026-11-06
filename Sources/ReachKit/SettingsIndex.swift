@@ -102,6 +102,7 @@ public enum SettingsIndex {
         + page("actions", "Action Panel", ["Action Panel"], words: "actions")
         + page("actions", "Selection", ["Selection", "Act on the selection"], words: "hotkey selected")
         + page("previews", "Quick Look", ["Quick Look", "Tap ⇧ to Quick Look the selected result"], words: "preview shift")
+        + page("previews", "Quick Look", ["Show thumbnails in results"], words: "thumbnail picture image photo pdf movie icon")
         + page("previews", "Quick Look", ["Skip These File Types", "Skip These Folders"], words: "preview exclude ignore")
         + page("workflows", "Workflows", ["Workflows", "Installed", "Open Workflows…", "Workflows folder", "Show in Finder"],
                words: "alfred script filter keyword extension plugin install")

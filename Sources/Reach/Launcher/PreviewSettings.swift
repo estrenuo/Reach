@@ -9,9 +9,14 @@ final class PreviewSettings {
     private static let quickLookKey = "previews.quickLook"
     private static let typesKey = "previews.skipTypes"
     private static let foldersKey = "previews.skipFolders"
+    private static let thumbnailsKey = "previews.thumbnails"
 
     var quickLook: Bool {
         didSet { save(quickLook, Self.quickLookKey) }
+    }
+    /// Image, PDF and movie rows show a thumbnail instead of the file icon (S-056).
+    var thumbnails: Bool {
+        didSet { save(thumbnails, Self.thumbnailsKey) }
     }
     var skips: PreviewSkips {
         didSet {
@@ -23,6 +28,7 @@ final class PreviewSettings {
     private init() {
         let defaults = Store.settings
         quickLook = defaults.object(forKey: Self.quickLookKey) as? Bool ?? true
+        thumbnails = defaults.object(forKey: Self.thumbnailsKey) as? Bool ?? true
         skips = PreviewSkips(types: defaults.stringArray(forKey: Self.typesKey) ?? [],
                              folders: defaults.stringArray(forKey: Self.foldersKey) ?? [])
     }

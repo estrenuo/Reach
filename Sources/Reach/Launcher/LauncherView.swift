@@ -148,7 +148,16 @@ struct ResultRow: View {
     @Environment(\.launcherStyle) private var style
     private var options = LauncherOptionsStore.shared
 
+    private var thumbnails = Thumbnails.shared
+
     private var iconSize: CGFloat { compact ? LauncherLayout.compactIconSize : LauncherLayout.iconSize }
+    private var thumbnailPath: String? { thumbnails.path(for: result) }
+
+    /// The thumbnail once Quick Look has made it, the file icon until then.
+    private var icon: Image {
+        if let thumbnailPath, let image = thumbnails.images[thumbnailPath] { return Image(nsImage: image) }
+        return IconCache.image(for: result.icon)
+    }
 
     private var subtitle: String? {
         if let error { return error }
@@ -163,11 +172,15 @@ struct ResultRow: View {
 
     var body: some View {
         HStack(spacing: Space.md) {
-            IconCache.image(for: result.icon)
+            icon
                 .resizable()
                 .scaledToFit()
                 .frame(width: iconSize, height: iconSize)
                 .foregroundStyle(selected ? style.onSelection : Palette.accentText)
+                // S-056: ask Quick Look for a thumbnail; the file icon stays until it arrives.
+                .task(id: thumbnailPath) {
+                    if let thumbnailPath { await thumbnails.load(thumbnailPath) }
+                }
             VStack(alignment: .leading, spacing: 0) {
                 Text(result.title)
                     .font(compact ? style.compactFont : style.rowFont)

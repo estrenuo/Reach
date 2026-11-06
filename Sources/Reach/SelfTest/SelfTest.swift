@@ -90,6 +90,7 @@ enum SelfTest {
         ("basics", { checkBasics(model: $0) }),
         ("launcher", { await checkLauncher(model: $0) }),
         ("quicklook", { await checkQuickLook(model: $0) }),
+        ("thumbnails", { await checkThumbnails(model: $0) }),
         ("buffer", { await checkBuffer(model: $0) }),
         ("search", { await checkSearch(model: $0) }),
         ("calculator", { await checkCalculator(model: $0) }),

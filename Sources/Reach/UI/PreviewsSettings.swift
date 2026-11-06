@@ -13,13 +13,17 @@ struct PreviewsSettings: View {
                 Text("Tap ⇧ to Quick Look the selected result")
                 Text("Or press ⌘Y. Press it again or Esc to close Quick Look.")
             }
+            Toggle(isOn: $settings.thumbnails) {
+                Text("Show thumbnails in results")
+                Text("Images, PDFs and movies show a small picture instead of the file icon.")
+            }
         }
         EditableList(title: "Skip These File Types", empty: "No file types",
-                 footer: "Files of these types get no Quick Look and show no dates in the Preview. Drop a file here or click + to choose one.",
+                 footer: "Files of these types get no Quick Look or thumbnail and show no dates in the Preview. Drop a file here or click + to choose one.",
                  addHelp: "Add a file type to skip", removeHelp: "Stop skipping the selected item",
                  items: $settings.skips.types, label: Self.typeLabel, add: Self.chooseType, dropped: Self.type(of:))
         EditableList(title: "Skip These Folders", empty: "No folders",
-                 footer: "Nothing inside these folders gets Quick Look or Preview dates. Useful for slow network drives.",
+                 footer: "Nothing inside these folders gets Quick Look, thumbnails or Preview dates. Useful for slow network drives.",
                  addHelp: "Add a folder to skip", removeHelp: "Stop skipping the selected item",
                  items: $settings.skips.folders, label: Self.folderLabel, add: Self.chooseFolder, dropped: Self.folder(of:))
     }
