@@ -213,7 +213,7 @@ final class ActionPanel {
             items = (builtIn ? [.field(field)] : []) + custom.map { .contactAction($0, field) }
             rows = (builtIn ? [LaunchResult(id: "field:\(field.id)", title: field.summary, subtitle: "",
                                             icon: .symbol(Self.symbol(field.kind)), url: URL(string: "reach-field://\(field.kind.rawValue)"),
-                                            kindLabel: "Action", badge: "↩")] : [])
+                                            kindLabel: "Action")] : [])
                 + custom.map { action in
                     LaunchResult(id: "contact-action:\(action.id)", title: action.title, subtitle: "",
                                  icon: .symbol("arrow.up.forward.app"), url: URL(string: "reach-action://\(action.id)"),

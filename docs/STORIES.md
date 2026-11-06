@@ -921,7 +921,7 @@ UX:
 - Words: section "Custom Actions"; columns "Detail", "Action", "Modifier" (the glossary's Detail, not Field); Detail names "Phone", "Email", "Address", "Website"; Modifier "None", "⌥↩", "⌃↩"; sheet titles "Add Custom Action" and "Edit Custom Action", buttons "Add"/"Save" and "Cancel"; placeholders "Call with FaceTime" and "facetime://{query}"; tooltips "Add a custom action" and "Remove the selected custom action"; the card's footer adds "⌥↩ Call with FaceTime" after the built-in action
 - Access: keyboard only in the launcher; Return adds, Escape cancels in the sheet; VoiceOver reads a row as "Phone, Call with FaceTime, ⌥↩" and the empty table as "Custom Actions, empty"
 - Not now: ⌘↩ and ⇧↩ (⌘ keys already copy, open and pick rows in the card), actions on birthdays, running a script instead of a URL
-Status: todo
+Status: done
 
 ### S-059 Control Music with a keyword
 As the user, I type `play`, `next`, `previous`, `random`, `mute` or `volume 50` and Music does it without leaving my app.
