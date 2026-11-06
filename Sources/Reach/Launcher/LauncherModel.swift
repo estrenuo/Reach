@@ -63,6 +63,7 @@ final class LauncherModel {
     let settingsRow = SettingsSource()
     let snippets = SnippetSource()
     let workflows = WorkflowSource()
+    let bookmarks = BookmarkSource()
     /// Every source is asked for every query; equal scores keep this order.
     @ObservationIgnored var sources: [any ResultSource]
     /// Set at launch; nil keeps plain text-match order.
@@ -73,6 +74,8 @@ final class LauncherModel {
 
     /// Opens a URL and says whether it worked. The self-test swaps in a recorder.
     @ObservationIgnored var opener: @MainActor (URL) -> Bool = { LauncherModel.openInWorkspace($0) }
+    /// Opens a URL in the app with this bundle id (a bookmark's browser, S-057). The self-test swaps in a recorder.
+    @ObservationIgnored var openerIn: @MainActor (URL, String) -> Bool = { BookmarkSource.open($0, in: $1) }
     /// Puts an answer on the clipboard. The self-test swaps in a recorder.
     @ObservationIgnored var copier: @MainActor (String) -> Void = { Paster.copy($0) }
     /// Presses ⌘V in the app behind the launcher once it has hidden.
@@ -156,7 +159,7 @@ final class LauncherModel {
         self.webSearches = webSearches
         self.system = system
         self.shell = shell
-        sources = [calculator, shell, workflows, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, webSearches, files, paths]
+        sources = [calculator, shell, workflows, dictionary, typedURLs, contacts, snippets, apps, system, clipboardRow, settingsRow, history, bookmarks, webSearches, files, paths]
     }
 
     func didShow() {
@@ -171,6 +174,7 @@ final class LauncherModel {
         apps.refreshIfStale()
         workflows.library.reloadIfStale()
         workflows.forget()
+        bookmarks.checkFiles()
     }
 
     func didHide() {
@@ -380,7 +384,8 @@ final class LauncherModel {
         }
         guard let url = result.url else { return }
         let missing = url.isFileURL && !FileManager.default.fileExists(atPath: url.path)
-        let worked = !missing && (result.reveals ? perform(.action(.reveal), [url]) : opener(url))
+        let worked = !missing && (result.reveals ? perform(.action(.reveal), [url])
+                                  : result.opensIn.map { openerIn(url, $0) || opener(url) } ?? opener(url))
         guard worked else {
             selection = index
             errors[result.id] = String(format: Self.openError, result.title)

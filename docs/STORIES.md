@@ -904,6 +904,12 @@ Acceptance:
 - [self] ↩ opens the URL in the default browser, or in the browser the bookmark came from when "Open in" says so. A changed bookmark file is read again on the next query, never while typing.
 - [self] Without Full Disk Access, Safari's bookmarks are skipped and Settings > Web Bookmarks says why, with a button that opens the Full Disk Access pane.
 - [snap] Settings > Web Bookmarks: Safari and Chrome checkboxes, "Show bookmarks" and "Open in" menus; a launcher snapshot with bookmark rows (title, URL as subtitle, the browser's icon).
+UX:
+- Flow: type part of a title or address (or `bm ` and the text) → bookmark rows among the results, ranked with Learning → ↩ or ⌘n opens the page and hides the launcher; Esc clears the query as everywhere. Settings > Web Bookmarks (sidebar page under Features) → checkboxes and menus apply at once.
+- Surface: inline rows in the launcher (results list); Settings is a sidebar page ("a place people come back to"), one grouped Form with Sources and Results.
+- States: no bookmarks or no match → no bookmark rows, the usual fallbacks; a browser that is not installed or has no file → "No Chrome bookmarks found." under its checkbox; Safari without Full Disk Access → "Needs Full Disk Access." under Safari plus a Full Disk Access row (warning symbol, not color alone) with "Open Full Disk Access…"; too much → at most 9 bookmark rows, long titles truncate with the full title in the tooltip. No loading state: the files read in milliseconds on the first query after a change.
+- Words: row title = bookmark title (the address when it has none), subtext = address without `https://`; Settings labels "Safari", "Google Chrome", "Show bookmarks" (In Default Results / With Keyword Only), "Open in" (Default Browser / The Bookmark’s Browser); counts as "128 bookmarks, from every profile."
+- Access: VoiceOver reads "Bookmark, title, address"; every setting is a standard checkbox or menu, reachable by keyboard; the warning row is a Label with text, so it does not rest on the yellow symbol.
 Status: todo
 
 ### S-058 Add my own action to a contact field

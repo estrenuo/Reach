@@ -32,6 +32,7 @@ struct SettingsView: View {
             case .general: GeneralSettings()
             case .search: SearchSettingsView()
             case .web: WebSearchSettingsView()
+            case .bookmarks: BookmarkSettingsView()
             case .system: SystemSettingsView()
             case .terminal: TerminalSettingsView()
             case .dictionary: DictionarySettingsView()
@@ -157,7 +158,7 @@ private struct SettingsResults: View {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, search, web, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, workflows, appearance, advanced, usage
+    case general, search, web, bookmarks, system, terminal, dictionary, contacts, clipboard, snippets, actions, previews, workflows, appearance, advanced, usage
 
     var id: String { rawValue }
 
@@ -179,6 +180,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "General"
         case .search: "Search"
         case .web: "Web Search"
+        case .bookmarks: "Web Bookmarks"
         case .system: "System"
         case .terminal: "Terminal"
         case .dictionary: "Dictionary"
@@ -200,6 +202,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "Hotkey and permissions"
         case .search: "Apps, files and fallbacks"
         case .web: "Web searches and typed URLs"
+        case .bookmarks: "Safari and Chrome bookmarks"
         case .system: "Sleep, lock, quit apps"
         case .terminal: "Run a command with >"
         case .dictionary: "Define and spell words"
@@ -220,6 +223,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .search: "magnifyingglass"
         case .web: "globe"
+        case .bookmarks: "bookmark"
         case .system: "power"
         case .terminal: "apple.terminal"
         case .dictionary: "character.book.closed"
