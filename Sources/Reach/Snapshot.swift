@@ -284,7 +284,7 @@ enum Snapshot {
                 await captureWorkflows(model: model, dir: dir)
             }
             if only == nil || only?.contains("music") == true {
-                await captureMusic(model: model, dir: dir, openSettings: openSettings)
+                await captureMusic(model: model, dir: dir)
             }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }

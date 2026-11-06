@@ -78,7 +78,7 @@ extension SelfTest {
         lm.query = "previ"
         check("with Show in default results off, part of a keyword finds nothing", !lm.results.contains { $0.music != nil })
         settings.showsInDefaultResults = true
-        lm.query = "previ"
+        lm.refresh()
         check("with it on, part of a keyword finds the command", lm.results.contains { $0.music == .command(.previous) })
 
         answers.access = .denied

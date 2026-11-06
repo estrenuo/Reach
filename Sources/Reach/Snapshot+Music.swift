@@ -4,8 +4,8 @@ import SwiftUI
 
 extension Snapshot {
     /// S-059: the music command rows with a fake Music (a sample song, never
-    /// this Mac's), the row without Automation, and Settings > Music.
-    static func captureMusic(model: AppModel, dir: String, openSettings: OpenSettingsAction) async {
+    /// this Mac's) and the row without Automation. Settings > Music is in the settings pages.
+    static func captureMusic(model: AppModel, dir: String) async {
         guard let launcher = model.launcher else { return }
         let lm = model.launcherModel
         let player = lm.music.player
@@ -25,17 +25,6 @@ extension Snapshot {
                 capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
                 launcher.hide()
             }
-        }
-        flag.denied = false
-        let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
-        openSettings()
-        model.settingsTab = .music
-        try? await Task.sleep(for: .seconds(1))
-        for mode in ["light", "dark"] {
-            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-            try? await Task.sleep(for: .seconds(0.8))
-            let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
-            capture(to: "\(dir)/settings-music-\(mode).png", window: settings)
         }
     }
 }
