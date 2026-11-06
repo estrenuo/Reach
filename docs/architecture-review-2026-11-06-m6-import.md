@@ -72,9 +72,11 @@ Plan: one commit. Do it at the next workflow story, or when the file passes 1,00
 
 Unchanged from the M5 and M6 reviews: split the action panel and buffer into `LauncherModel+Actions.swift` when the file passes 800 lines. It is 680.
 
-## One way to run a process  [Worth exploring]
+## One way to run a process  [Done]
 
 Unchanged from the M6 review: `WorkflowLibrary` install and export can use `ScriptRunner`. Do it when they become async for another reason, or someone reports a hang.
+
+Done: `install(from:)` and `export(_:to:)` are async and run `ditto` through `ScriptRunner` off the main thread; a failing `ditto` shows its stderr in the Workflows window's alert.
 
 ## Top recommendation
 
