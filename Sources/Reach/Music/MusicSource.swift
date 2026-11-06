@@ -23,10 +23,19 @@ final class MusicSource: ResultSource {
         let matches = MusicKeywords.matches(text, in: settings.keywords, defaultResults: settings.showsInDefaultResults)
         guard !matches.isEmpty else { return [] }
         let denied = player.access() == .denied
+        // A keyword a system command also uses (`mute`) keeps the system command
+        // first, as before; the music command shows right under it.
+        let system = Set(SystemSettings.shared.commands.filter(\.isOn).map { $0.keyword.lowercased() })
         return matches.map { match in
-            Scored(result: row(match, denied: denied), score: match.score)
+            var row = row(match, denied: denied)
+            let shared = match.score >= 2000 && system.contains(settings[match.command].keyword.lowercased())
+            if shared { row.isPinned = false }
+            return Scored(result: row, score: shared ? Self.sharedScore : match.score)
         }
     }
+
+    /// Below an exact system command, above most other matches.
+    static let sharedScore = 900
 
     private func row(_ match: MusicKeywords.Match, denied: Bool) -> LaunchResult {
         let command = match.command

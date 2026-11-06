@@ -43,10 +43,16 @@ extension SelfTest {
         lm.openSelected()
         check("↩ sends next track to Music and hides the launcher", sent == [.command(.next)] && !launcher.isVisible)
 
+        await showAgain(launcher)
+        lm.query = "mute"
+        check("mute keeps the system's Toggle Mute first, with Music's Mute or Unmute under it",
+              lm.results.prefix(2).map(\.id) == ["system:mute", "music:mute"], lm.results.map(\.id).joined(separator: ", "))
+
         for command in MusicCommand.allCases where !command.takesVolume {
             await showAgain(launcher)
             sent = []
             lm.query = command.defaultKeyword
+            if let index = lm.results.firstIndex(where: { $0.music == .command(command) }) { lm.select(index) }
             lm.openSelected()
             check("“\(command.defaultKeyword)” sends \(command.title)", sent == [.command(command)], "\(sent)")
         }
