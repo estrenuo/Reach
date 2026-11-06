@@ -880,15 +880,123 @@ Acceptance:
 - [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). The Finder tasks send on what Finder answers (faked). Dialog shows its filled title, text and buttons (recorded, never shown).
 Status: done
 
+## M7 Bookmarks, music and richer rows
+
+The features Alfred has that Reach still lacks for daily use, outside workflows.
+
+### S-056 See thumbnails in file rows
+As the user, I see a small picture of an image, PDF or video in its result row instead of the generic file icon.
+Screens: 28-features-previews.png
+Depends: S-012
+Acceptance:
+- [unit] Which files get a thumbnail follows the type and the "Skip These File Types" and "Skip These Folders" lists of Settings > Previews.
+- [self] A row for an image in the /tmp store shows a thumbnail made by Quick Look (`QLThumbnailGenerator`), off the main thread; until it arrives, and for a file without one, the row keeps the file icon. Scrolling 30 rows never makes the bar wait.
+- [snap] Settings > Previews has "Show thumbnails in results" (on by default); the launcher snapshot shows an image row with its thumbnail.
+Status: todo
+
+### S-057 Open a web bookmark
+As the user, I type part of a bookmark's name or address and ↩ opens it.
+Screens: 11-features-web-bookmarks.png
+Depends: S-006
+Acceptance:
+- [unit] Chrome's `Bookmarks` JSON (every profile) and Safari's `Bookmarks.plist` read into one list of title, URL and folder; a bookmark in both counts once.
+- [unit] Matching uses the launcher's own ranking on title and address; "In Default Results" or "With Keyword Only" (`bm <text>`) as the setting says.
+- [self] ↩ opens the URL in the default browser, or in the browser the bookmark came from when "Open in" says so. A changed bookmark file is read again on the next query, never while typing.
+- [self] Without Full Disk Access, Safari's bookmarks are skipped and Settings > Web Bookmarks says why, with a button that opens the Full Disk Access pane.
+- [snap] Settings > Web Bookmarks: Safari and Chrome checkboxes, "Show bookmarks" and "Open in" menus; a launcher snapshot with bookmark rows (title, URL as subtitle, the browser's icon).
+Status: todo
+
+### S-058 Add my own action to a contact field
+As the user, I add an action such as "Call with FaceTime" for phone numbers, and it shows on that field in the contact card.
+Screens: 18-features-contacts-contacts.png
+Depends: S-024
+Acceptance:
+- [unit] An action is a field (phone, email, address, URL), a title, a URL template with `{query}` (like `facetime://{query}`) and an optional modifier; the value is URL-encoded once.
+- [self] In the contact card, ↩ on a field still does the built-in action; the field's own action runs with its modifier (⌥↩, ⌃↩) or from the action panel (→).
+- [snap] Settings > Contacts: the Custom Actions table (Field | Action | Modifier) with + and −, an empty state, and the add sheet.
+Status: todo
+
+### S-059 Control Music with a keyword
+As the user, I type `play`, `next`, `previous`, `random`, `mute` or `volume 50` and Music does it without leaving my app.
+Screens: 22-features-music-keywords.png
+Depends: S-002
+Acceptance:
+- [unit] Each keyword maps to one Music command; every keyword can be turned off or renamed; `volume` takes 0 to 100.
+- [self] The commands go to Music through Apple Events (faked in the self-test, never sent); without the Automation permission the row says how to allow it.
+- [snap] A Settings > Music tab with the keyword list (checkbox and keyword per row) and "Show in default results"; the launcher row for `next` shows the playing track as its subtitle.
+Status: todo
+
+### S-060 Pick music in the mini player
+As the user, I press a hotkey or type `music`, browse my albums, artists and playlists in the launcher, and ↩ plays one.
+Screens: 21-features-music-general.png, 23-features-music-advanced.png
+Depends: S-059
+Acceptance:
+- [unit] The library comes from `iTunesLibrary` (albums, artists, playlists, tracks), read once and again when Music says it changed; podcasts, videos and untagged tracks only when their settings are on.
+- [self] `music` shows Albums, Artists, Playlists and "Random Album"; → or ↩ goes into one, ← goes back, typing filters; ↩ on an album or playlist plays it and hides the launcher when "Hide after choosing" is on.
+- [self] "Random Album" skips albums with fewer tracks than the setting.
+- [snap] Settings > Music > General: hotkey, keyword, the random and hide options, the include toggles; a launcher snapshot inside an album with artwork.
+Status: todo
+
+## M8 Workflow editor
+
+Change a workflow in Reach instead of in Alfred. Every change writes Alfred's own `info.plist`, so a workflow still opens in Alfred.
+
+### S-061 Move objects on the canvas
+As the user, I drag an object card to another place on a workflow's canvas, and it stays there.
+Screens: 30-workflows-editor-canvas.png
+Depends: S-044
+Acceptance:
+- [unit] A move changes only that object's `xpos`/`ypos` in `uidata`, snapped to the canvas grid; every other key in `info.plist` stays byte for byte the same.
+- [unit] The plist is written with a safe save (temporary file, then replace); a workflow folder that changed on disk since it was read is read again first.
+- [self] Drag a card, reopen the workflow: it is where it was dropped. ⌘Z puts it back.
+Status: todo
+
+### S-062 Connect and disconnect objects
+As the user, I drag from one card's output to another card to connect them, and remove a connection from its context menu.
+Screens: 30-workflows-editor-canvas.png
+Depends: S-061
+Acceptance:
+- [unit] A new connection is written to `connections` with `destinationuid`, `modifiers` 0 and `vitoclose` false; a connection that would make a loop is refused; a connection between kinds that cannot connect (an output into a trigger) is refused with the reason.
+- [unit] `WorkflowStep` follows the new line at once: the next ↩ runs it.
+- [self] Connect a keyword to Copy to Clipboard, run it, disconnect it, run it again: the second run copies nothing. ⌘Z undoes each.
+- [snap] A line being dragged, and the context menu on a line (Delete, Modifier ▸).
+Status: todo
+
+### S-063 Add an object from the palette
+As the user, I open the palette, type `/` and a name, and drop the object on the canvas.
+Screens: 31-workflows-palette-inputs.png
+Depends: S-061
+Acceptance:
+- [unit] The palette lists only the object kinds Reach runs (`WorkflowStep` and the inputs it knows), by category, with Alfred's type and version for each, so Alfred reads the new object.
+- [unit] A new object gets a fresh UID, default `config` for its kind, and a place in `uidata`.
+- [self] Add a Keyword input and an Open URL, connect them, set the keyword: typing it in the launcher shows the row.
+- [snap] The palette beside the canvas with the categories collapsed and the search field.
+Status: todo
+
+### S-064 Configure an object
+As the user, I double-click an object to change its settings in a sheet: a keyword, a URL, a script, text.
+Screens: 30-workflows-editor-canvas.png
+Depends: S-063
+Acceptance:
+- [unit] Each kind the palette offers has a form whose fields map one to one to its `config` keys; unknown keys are kept as they are.
+- [snap] The sheets for Keyword, Script Filter, Run Script and Open URL, in light and dark.
+- [self] Change an Open URL's address, ↩ in the launcher: the new address opens (recorded).
+Status: todo
+
+### S-065 Delete objects
+As the user, I select one or more objects and press Delete; their connections go with them.
+Screens: 30-workflows-editor-canvas.png
+Depends: S-061
+Acceptance:
+- [unit] Deleting removes the objects, every connection to or from them, and their `uidata`; nothing else in the plist changes.
+- [self] Delete two objects, ⌘Z: both come back with their connections.
+Status: todo
+
 ---
 
 ## Later
 
-- Full visual node editor: drag objects from the palette, connect, utilities (conditional, junction, transform) (30, 31).
-- Music mini player and music keywords (21-features-music-general.png, 22-features-music-keywords.png, 23-features-music-advanced.png).
-- Web bookmarks from Safari and Chrome (11-features-web-bookmarks.png).
-- Custom actions on contact fields (18).
-- Rich file thumbnails in the Preview instead of the file icon (28).
+Nothing at the moment.
 
 ## Dropped
 
@@ -900,4 +1008,4 @@ Status: done
 
 ## Screen coverage
 
-Each screen 01–66 is linked above, listed under Later or Dropped: 01 S-007/S-037 · 02 S-014/S-018/S-037 · 03 S-014 · 04 S-008 · 05 S-013 · 06 S-014 · 07 S-009/S-011 · 08 S-010 · 09 S-016 · 10 S-017 · 11 Later · 12 S-025 · 13 S-028 · 14 S-027 · 15 S-029/S-031 · 16 S-015 · 17 S-022 · 18 S-024 · 19 S-024 · 20 S-024 · 21–23 Later · 24 Dropped · 25 S-019/S-020 · 26 S-021 · 27 S-023 · 28 S-012 · 29 S-042 · 30 S-044 · 31 S-044 · 32 S-041 · 33 S-043 · 34 S-046 · 35 S-043 · 36 S-046 · 37 S-045 · 38 S-032/S-033 · 39 S-034/S-035 · 40 S-032 · 41–42 Dropped · 43 S-038/S-039 · 44 Dropped · 45 S-040 · 46 S-036 (rest Dropped) · 47 Dropped · 48 S-007/S-035 · 49 S-001 · 50 S-002/S-003/S-004 · 51 S-009 · 52 S-015 · 53 S-015 · 54 S-006 · 55 S-005 · 56 S-005 · 57 S-008 · 58 S-021 · 59 S-006/S-016 · 60 S-022 · 61 S-026 · 62 S-030 · 63 S-019 · 64 S-041 · 65 S-026 · 66 S-023.
+Each screen 01–66 is linked above, listed under Later or Dropped: 01 S-007/S-037 · 02 S-014/S-018/S-037 · 03 S-014 · 04 S-008 · 05 S-013 · 06 S-014 · 07 S-009/S-011 · 08 S-010 · 09 S-016 · 10 S-017 · 11 S-057 · 12 S-025 · 13 S-028 · 14 S-027 · 15 S-029/S-031 · 16 S-015 · 17 S-022 · 18 S-024/S-058 · 19 S-024 · 20 S-024 · 21 S-060 · 22 S-059 · 23 S-060 · 24 Dropped · 25 S-019/S-020 · 26 S-021 · 27 S-023 · 28 S-012/S-056 · 29 S-042 · 30 S-044/S-061–S-065 · 31 S-044/S-063 · 32 S-041 · 33 S-043 · 34 S-046 · 35 S-043 · 36 S-046 · 37 S-045 · 38 S-032/S-033 · 39 S-034/S-035 · 40 S-032 · 41–42 Dropped · 43 S-038/S-039 · 44 Dropped · 45 S-040 · 46 S-036 (rest Dropped) · 47 Dropped · 48 S-007/S-035 · 49 S-001 · 50 S-002/S-003/S-004 · 51 S-009 · 52 S-015 · 53 S-015 · 54 S-006 · 55 S-005 · 56 S-005 · 57 S-008 · 58 S-021 · 59 S-006/S-016 · 60 S-022 · 61 S-026 · 62 S-030 · 63 S-019 · 64 S-041 · 65 S-026 · 66 S-023.
