@@ -16,6 +16,12 @@ final class ContactsSettings {
     var lastFirst: Bool { didSet { save(lastFirst, "lastFirst") } }
     var showTitle: Bool { didSet { save(showTitle, "showTitle") } }
     var showJobTitle: Bool { didSet { save(showJobTitle, "showJobTitle") } }
+    /// The custom action the sheet in Settings edits; a new one for +. Not saved.
+    var editingAction: ContactAction?
+    /// Custom actions on details, like Call with FaceTime (S-058).
+    var actions: [ContactAction] {
+        didSet { if let data = try? JSONEncoder().encode(actions) { save(data, "actions") } }
+    }
 
     private init() {
         let defaults = Store.settings
@@ -26,7 +32,15 @@ final class ContactsSettings {
         lastFirst = flag("lastFirst", false)
         showTitle = flag("showTitle", false)
         showJobTitle = flag("showJobTitle", false)
+        actions = defaults.data(forKey: "contacts.actions").flatMap { try? JSONDecoder().decode([ContactAction].self, from: $0) } ?? []
     }
+
+    /// Adds `action`, or replaces the one with its id.
+    func save(_ action: ContactAction) {
+        if let index = actions.firstIndex(where: { $0.id == action.id }) { actions[index] = action } else { actions.append(action) }
+    }
+
+    func removeAction(_ id: String) { actions.removeAll { $0.id == id } }
 
     private func save(_ value: Any, _ key: String) { Store.settings.set(value, forKey: "contacts." + key) }
 
@@ -40,6 +54,7 @@ final class ContactsSettings {
         lastFirst = false
         showTitle = false
         showJobTitle = false
+        actions = []
     }
 }
 

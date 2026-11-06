@@ -9,7 +9,7 @@ extension LauncherModel {
         guard actions == nil, let result = selectedResult else { return false }
         // A contact's card (S-024).
         if let contact = result.contact {
-            actions = ActionPanel(contact: contact, result: result)
+            actions = ActionPanel(contact: contact, result: result, actions: contacts.settings.actions)
             onResultsChange()
             return true
         }
@@ -162,6 +162,9 @@ extension LauncherModel {
             }
             // Using a card's detail picks the contact, for Learning.
             onOpened(query, target)
+        case .contactAction(let action, let field):
+            guard let url = action.url(for: field), opener(url) else { panel.failure = "Unable to run “\(action.title)”."; return }
+            onOpened(query, target)
         case .workflow(let id, _, let trigger, let title, let argument):
             actions = nil
             switch runWorkflowAction(trigger, title: title, in: id, argument: argument) {
@@ -189,6 +192,23 @@ extension LauncherModel {
         if !panel.isMany, case .app = item { onOpened(query, target) }
         onUsed(.actions)
         onHide()
+    }
+
+    /// ⌥↩ or ⌃↩ on a card's detail: runs the custom action with that modifier (S-058).
+    /// False when the detail has none, so Return does the built-in action.
+    func runCustomAction(_ modifier: ReturnModifier) -> Bool {
+        guard let panel = actions, let (action, field) = panel.customAction(for: modifier) else { return false }
+        actionLog.notice("run custom action on \(field.kind.rawValue, privacy: .public)")
+        guard let url = action.url(for: field), opener(url) else { panel.failure = "Unable to run “\(action.title)”."; return true }
+        onOpened(query, panel.target)
+        onUsed(.actions)
+        onHide()
+        return true
+    }
+
+    /// → on a card's detail: lists its actions. False elsewhere.
+    func showDetailActions() -> Bool {
+        actions?.showDetailActions() ?? false
     }
 
     /// ⌘O on a contact, or in its card: opens it in Contacts.app. False for other results.

@@ -290,9 +290,13 @@ final class LauncherController {
             model.runAction(at: number - 1)
             return true
         }
+        // ⌥↩ and ⌃↩ on a card's detail run its custom action (S-058).
+        if [36, 76].contains(event.keyCode), let modifier = ReturnModifier.held(control: flags == .control, option: flags == .option, command: false),
+           model.runCustomAction(modifier) { return true }
         switch event.keyCode {
         case 126: actions.move(-1)
         case 125: actions.move(1)
+        case 124 where flags.isEmpty && caretAtEnd: return model.showDetailActions()
         case 36, 76: model.runAction(at: actions.selection)
         case 53: model.cancelActions()
         case 123 where flags.isEmpty && actions.filter.isEmpty: model.cancelActions()
