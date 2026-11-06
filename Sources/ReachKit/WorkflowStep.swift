@@ -88,40 +88,41 @@ extension Workflow {
         if all.isEmpty, let type = object(uid)?.type, [ScriptFilter.type, KeywordInput.type].contains(type) {
             return Self.opensItself(argument) ? [.open(argument)] : []
         }
-        return follow(all.filter { $0.modifiers == modifiers }, argument: argument, variables: variables,
-                      environment: environment, depth: 0)
+        return follow(all.filter { $0.modifiers == modifiers },
+                      WorkflowFlow(argument: argument, variables: variables, environment: environment))
     }
 
     /// The steps after `uid` without a modifier, on the lines that leave `output`.
-    /// `config` overrides the next objects' configuration (JSON Config, S-052).
-    private func next(after uid: String, output: String? = nil, argument: String, variables: [String: String],
-                      environment: [String: String], config: [String: PlistValue] = [:], depth: Int) -> [WorkflowStep] {
+    private func next(after uid: String, output: String? = nil, _ flow: WorkflowFlow) -> [WorkflowStep] {
         let lines = (connections[uid] ?? []).filter { $0.modifiers == 0 && $0.sourceOutput == output }
-        return follow(lines, argument: argument, variables: variables, environment: environment, config: config, depth: depth + 1)
+        var flow = flow
+        flow.depth += 1
+        return follow(lines, flow)
     }
 
-    private func follow(_ lines: [WorkflowConnection], argument: String, variables: [String: String],
-                        environment: [String: String], config: [String: PlistValue] = [:], depth: Int) -> [WorkflowStep] {
-        guard depth < Self.deepest else { return [] }
+    private func follow(_ lines: [WorkflowConnection], _ flow: WorkflowFlow) -> [WorkflowStep] {
+        guard flow.depth < Self.deepest else { return [] }
         return lines.flatMap { line -> [WorkflowStep] in
             guard var object = object(line.to) else { return [] }
-            object.config.merge(config) { _, new in new }
-            let fill = { (text: String) in WorkflowText.fill(text, query: argument, variables: variables) }
+            object.config.merge(flow.config) { _, new in new }
+            var flow = flow
+            flow.config = [:]
+            let argument = flow.argument
             switch object.type {
             case Self.openURL:
                 let template = object.string("url")
-                return [.open(template.isEmpty ? argument : WorkflowText.fill(template, query: argument, variables: variables,
+                return [.open(template.isEmpty ? argument : WorkflowText.fill(template, query: argument, variables: flow.variables,
                                                                              encodeQuery: template != "{query}"))]
             case Self.openFile:
                 let file = object.string("sourcefile")
-                return [.open(file.isEmpty ? argument : fill(file))]
+                return [.open(file.isEmpty ? argument : flow.fill(file))]
             case Self.revealFile:
                 return [.reveal(argument)]
             case Self.terminalCommand:
                 // `{query}` escaped as `escaping` says, like an inline script; one
                 // pass, so text in the argument is never filled again.
                 let query = ScriptSource.escape(argument, object.int("escaping"))
-                return [.terminalCommand(WorkflowText.fill(object.string("script"), query: query, variables: variables))]
+                return [.terminalCommand(WorkflowText.fill(object.string("script"), query: query, variables: flow.variables))]
             case Self.textView:
                 // Only the plain text view, as Homebrew uses it; a script as input
                 // (inputtype 1), output to the next objects, or a footer is not mapped.
@@ -133,15 +134,16 @@ extension Workflow {
                 let step = WorkflowStep.textView(argument)
                 return (connections[object.uid] ?? []).isEmpty ? [step] : [step, .unsupported("userinterface.text with lines after it")]
             case Self.dialog:
-                let buttons = ["button1", "button2", "button3"].map { fill(object.string($0)) }.filter { !$0.isEmpty }
-                let step = WorkflowStep.dialog(title: fill(object.string("title")), text: fill(object.string("description")),
+                let buttons = ["button1", "button2", "button3"].map { flow.fill(object.string($0)) }.filter { !$0.isEmpty }
+                let step = WorkflowStep.dialog(title: flow.fill(object.string("title")), text: flow.fill(object.string("description")),
                                                buttons: buttons.isEmpty ? ["OK"] : buttons)
                 // Sander's dialogs end the workflow; lines out of one are named, not followed.
                 return (connections[object.uid] ?? []).isEmpty ? [step] : [step, .unsupported("utility.dialog with lines after it")]
             case Self.delay:
                 // `seconds` is text in Alfred's plist, like "0.3".
                 let seconds = max(0, object.config["seconds"]?.double ?? 0)
-                return [.wait(seconds: seconds, then: object.uid, argument: argument, variables: variables, environment: environment)]
+                return [.wait(seconds: seconds, then: object.uid, argument: argument, variables: flow.variables,
+                              environment: flow.environment)]
             case Self.actionInAlfred:
                 // Type 1 jumping to `_popUpItemAction:`: the actions for the path (the argument when empty).
                 guard object.int("type") == 1, ["", "_popUpItemAction:"].contains(object.string("jumpto")) else {
@@ -149,86 +151,80 @@ extension Workflow {
                         .trimmingCharacters(in: .whitespaces))]
                 }
                 let path = object.string("path")
-                return [.actions(path.isEmpty ? argument : fill(path))]
+                return [.actions(path.isEmpty ? argument : flow.fill(path))]
             case Self.grid:
                 // Input type 1: a script in the workflow folder gets the argument and prints Script Filter JSON.
                 let file = object.string("inputfile")
                 guard object.int("inputtype") == 1, !file.isEmpty,
                       let command = ScriptSource(language: .file, file: file).command(query: argument, folder: folder,
-                                                                                    environment: environment)
+                                                                                    environment: flow.environment)
                 else { return [.unsupported("userinterface.grid with input type \(object.int("inputtype"))")] }
-                return [.grid(WorkflowGridRun(uid: object.uid, command: command, variables: variables,
+                return [.grid(WorkflowGridRun(uid: object.uid, command: command, variables: flow.variables,
                                               filterable: object.bool("filterable"), loading: object.string("loadingtext")))]
             case Self.dispatchKeys:
                 switch WorkflowKeys.read(object) {
                 case .success(let keys):
-                    return [.keys(keys)] + next(after: object.uid, argument: argument, variables: variables,
-                                                environment: environment, depth: depth)
+                    return [.keys(keys)] + next(after: object.uid, flow)
                 case .failure(let problem):
                     return [.unsupported(problem.kind)]
                 }
             case Self.browseInTerminal:
                 // An empty path is the argument; the objects after it get the same argument.
                 let path = object.string("path")
-                return [.terminal(path.isEmpty ? argument : fill(path))]
-                    + next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
+                return [.terminal(path.isEmpty ? argument : flow.fill(path))] + next(after: object.uid, flow)
             case Self.copyToClipboard:
                 let text = object.string("clipboardtext")
-                return [.copy(text.isEmpty ? argument : fill(text))]
+                return [.copy(text.isEmpty ? argument : flow.fill(text))]
             case Self.largeType:
                 let text = object.string("largetypetext")
-                return [.largeType(text.isEmpty ? argument : fill(text))]
+                return [.largeType(text.isEmpty ? argument : flow.fill(text))]
             case Self.runScript:
-                guard let command = ScriptSource(object).command(query: argument, folder: folder, environment: environment)
+                guard let command = ScriptSource(object).command(query: argument, folder: folder, environment: flow.environment)
                 else { return [.unsupported("a script in this language")] }
-                return [.run(command, then: object.uid, variables: variables)]
+                return [.run(command, then: object.uid, variables: flow.variables)]
             case Self.junction:
-                return next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
+                return next(after: object.uid, flow)
             case Self.argument:
                 let text = object.string("argument")
-                let set = (object.config["variables"]?.dict ?? [:]).compactMapValues(\.string).mapValues(fill)
-                return next(after: object.uid, argument: text.isEmpty ? argument : fill(text),
-                            variables: variables.merging(set) { _, new in new },
-                            environment: environment.merging(set) { _, new in new }, depth: depth)
+                let set = (object.config["variables"]?.dict ?? [:]).compactMapValues(\.string).mapValues(flow.fill)
+                return next(after: object.uid, flow.with(argument: text.isEmpty ? argument : flow.fill(text)).setting(set))
             case Self.conditional:
-                let output = WorkflowCondition.output(of: object, query: argument, variables: variables)
-                return next(after: object.uid, output: output, argument: argument, variables: variables,
-                            environment: environment, depth: depth)
+                let output = WorkflowCondition.output(of: object, query: argument, variables: flow.variables)
+                return next(after: object.uid, output: output, flow)
             case Self.split:
                 let parts = WorkflowSplit.parts(of: argument, object)
                 // As variables the argument goes on as it is; as arguments
                 // Reach runs the objects after it once for each part.
                 guard object.int("outputas") == 1 else {
-                    let set = WorkflowSplit.variables(parts, object)
-                    return next(after: object.uid, argument: argument, variables: variables.merging(set) { _, new in new },
-                                environment: environment.merging(set) { _, new in new }, depth: depth)
+                    return next(after: object.uid, flow.setting(WorkflowSplit.variables(parts, object)))
                 }
                 // A Join Arguments right after it gets the parts back as one argument (S-052).
                 let lines = (connections[object.uid] ?? []).filter { $0.modifiers == 0 && $0.sourceOutput == nil }
+                var after = flow
+                after.depth += 1
                 return lines.flatMap { line -> [WorkflowStep] in
                     if let join = self.object(line.to), join.type == Self.joinArgs {
-                        return next(after: join.uid, argument: parts.joined(separator: join.string("delimiter")),
-                                    variables: variables, environment: environment, depth: depth + 1)
+                        return next(after: join.uid, after.with(argument: parts.joined(separator: join.string("delimiter"))))
                     }
-                    return parts.flatMap { follow([line], argument: $0, variables: variables, environment: environment, depth: depth + 1) }
+                    return parts.flatMap { follow([line], after.with(argument: $0)) }
                 }
             case Self.replace:
                 switch WorkflowReplace.apply(to: argument, object) {
                 case .success(let text):
-                    return next(after: object.uid, argument: text, variables: variables, environment: environment, depth: depth)
+                    return next(after: object.uid, flow.with(argument: text))
                 case .failure(let problem):
                     return [.unsupported(problem.kind)]
                 }
             case Self.joinArgs:
                 // One argument joins to itself.
-                return next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
+                return next(after: object.uid, flow)
             case Self.json:
-                guard let output = WorkflowJSON.read(object, query: argument, variables: variables) else {
+                guard let output = WorkflowJSON.read(object, query: argument, variables: flow.variables) else {
                     return [.unsupported("utility.json with JSON that does not parse")]
                 }
-                return next(after: object.uid, argument: output.argument ?? argument,
-                            variables: variables.merging(output.variables) { _, new in new },
-                            environment: environment.merging(output.variables) { _, new in new }, config: output.config, depth: depth)
+                var after = flow.with(argument: output.argument ?? argument).setting(output.variables)
+                after.config = output.config
+                return next(after: object.uid, after)
             case Self.hideAlfred:
                 // Reach hides the launcher after Return anyway.
                 return []
@@ -240,56 +236,57 @@ extension Workflow {
                 else { return [] }
                 let passes = object.bool("passvariables")
                 // Without passvariables the trigger starts from the workflow's own variables.
-                let own = environment.filter { key, _ in variables[key] == nil || self.variables[key] != nil }
-                return next(after: trigger.uid, argument: object.bool("passinputasargument") ? argument : "",
-                            variables: passes ? variables : self.variables, environment: passes ? environment : own,
-                            depth: depth)
+                let own = flow.environment.filter { key, _ in flow.variables[key] == nil || self.variables[key] != nil }
+                var after = flow.with(argument: object.bool("passinputasargument") ? argument : "")
+                if !passes {
+                    after.variables = self.variables
+                    after.environment = own
+                }
+                return next(after: trigger.uid, after)
             case Self.automationTask where object.string("taskuid").hasSuffix(CurrentTab.taskSuffix):
                 let allowEmpty = object.config["tasksettings"]?.dict?["allow_empty"]?.bool ?? false
-                return [.currentTab(then: object.uid, allowEmpty: allowEmpty, variables: variables, environment: environment)]
+                return [.currentTab(then: object.uid, allowEmpty: allowEmpty, variables: flow.variables, environment: flow.environment)]
             case WorkflowShortcut.runType:
-                switch WorkflowShortcut.run(object, argument: argument, variables: variables, folder: folder, environment: environment) {
-                case .success(let command): return [.run(command, then: object.uid, variables: variables)]
+                switch WorkflowShortcut.run(object, argument: argument, variables: flow.variables, folder: folder,
+                                            environment: flow.environment) {
+                case .success(let command): return [.run(command, then: object.uid, variables: flow.variables)]
                 case .failure(let problem): return [.unsupported(problem.kind)]
                 }
-            case Self.automationTask where FinderTask.command(for: object.string("taskuid"), folder: folder, environment: environment) != nil:
-                let command = FinderTask.command(for: object.string("taskuid"), folder: folder, environment: environment)!
-                return [.run(command, then: object.uid, variables: variables)]
+            case Self.automationTask where FinderTask.command(for: object.string("taskuid"), folder: folder,
+                                                              environment: flow.environment) != nil:
+                let command = FinderTask.command(for: object.string("taskuid"), folder: folder, environment: flow.environment)!
+                return [.run(command, then: object.uid, variables: flow.variables)]
             case Self.automationTask where object.string("taskuid") == WorkflowShortcut.viewTask:
-                let command = WorkflowShortcut.view(object, argument: argument, variables: variables, folder: folder, environment: environment)
-                return [.run(command, then: object.uid, variables: variables)]
+                let command = WorkflowShortcut.view(object, argument: argument, variables: flow.variables, folder: folder,
+                                                    environment: flow.environment)
+                return [.run(command, then: object.uid, variables: flow.variables)]
             case Self.automationTask where object.string("taskuid") == Self.trashTask:
                 let target = object.config["tasksettings"]?.dict?["target_path"]?.string ?? ""
-                let path = target.isEmpty ? argument : fill(target)
+                let path = target.isEmpty ? argument : flow.fill(target)
                 // The objects after it run once the file is in the Trash, with its path.
-                return [.trash(path)] + next(after: object.uid, argument: path, variables: variables,
-                                             environment: environment, depth: depth)
+                return [.trash(path)] + next(after: object.uid, flow.with(argument: path))
             case Self.notification:
                 // Like Alfred, the argument goes on to the objects after it.
-                let after = next(after: object.uid, argument: argument, variables: variables,
-                                 environment: environment, depth: depth)
+                let after = next(after: object.uid, flow)
                 if object.bool("onlyshowifquerypopulated") && argument.isEmpty { return after }
                 var shown = argument
                 if object.bool("lastpathcomponent") { shown = (shown as NSString).lastPathComponent }
                 if object.bool("removeextension") { shown = (shown as NSString).deletingPathExtension }
-                let title = WorkflowText.fill(object.string("title"), query: shown, variables: variables)
+                let title = WorkflowText.fill(object.string("title"), query: shown, variables: flow.variables)
                 return [.notify(title: title.isEmpty ? name : title,
-                                text: WorkflowText.fill(object.string("text"), query: shown, variables: variables))] + after
+                                text: WorkflowText.fill(object.string("text"), query: shown, variables: flow.variables))] + after
             case Self.playSound:
                 let name = object.string("soundname")
-                let after = next(after: object.uid, argument: argument, variables: variables,
-                                 environment: environment, depth: depth)
+                let after = next(after: object.uid, flow)
                 guard !name.isEmpty else { return after }
                 // A sound that is not a system sound is a file in the workflow's folder.
                 return [.sound(object.bool("systemsound") ? name : folder.appending(path: name).path)] + after
             case Self.debug:
                 let template = object.string("argument")
-                let line = WorkflowText.fill(template.isEmpty ? "{query}" : template, query: argument, variables: variables)
-                    .replacingOccurrences(of: "{variables}", with: Self.describe(variables))
+                let line = flow.fill(template.isEmpty ? "{query}" : template)
+                    .replacingOccurrences(of: "{variables}", with: Self.describe(flow.variables))
                 // Without "process outputs" the objects after it do not run.
-                let after = object.config["processoutputs"]?.bool ?? true
-                    ? next(after: object.uid, argument: argument, variables: variables, environment: environment, depth: depth)
-                    : []
+                let after = object.config["processoutputs"]?.bool ?? true ? next(after: object.uid, flow) : []
                 return [.debug(line, clear: object.bool("cleardebuggertext"))] + after
             case ScriptFilter.type, KeywordInput.type:
                 guard let keyword = scriptFilters.first(where: { $0.uid == object.uid })?.keyword
