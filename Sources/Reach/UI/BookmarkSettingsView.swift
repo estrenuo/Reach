@@ -15,11 +15,9 @@ struct BookmarkSettingsView: View {
                 Text(safariText)
             }
             .toggleStyle(.checkbox)
-            if settings.safariOn, source.safariAccess == .denied {
+            if Self.showsAccessRow(settings: settings, source: source) {
                 LabeledContent {
-                    Button("Open Full Disk Access…") {
-                        if let url = BookmarkSource.fullDiskAccess { NSWorkspace.shared.open(url) }
-                    }
+                    Button("Open Full Disk Access…", action: Self.openFullDiskAccess)
                 } label: {
                     Label {
                         Text("Full Disk Access")
@@ -57,6 +55,16 @@ struct BookmarkSettingsView: View {
         .onAppear { if settings.safariOn || settings.chromeOn { source.read() } }
         .onChange(of: settings.safariOn) { source.read() }
         .onChange(of: settings.chromeOn) { source.read() }
+    }
+
+    /// The Full Disk Access row shows while Safari is on and macOS refused its file.
+    static func showsAccessRow(settings: BookmarkSettings, source: BookmarkSource) -> Bool {
+        settings.safariOn && source.safariAccess == .denied
+    }
+
+    /// Open Full Disk Access…: through the launcher's opener, so the self-test can record it.
+    static func openFullDiskAccess() {
+        if let url = BookmarkSource.fullDiskAccess { _ = AppModel.shared.launcherModel.opener(url) }
     }
 
     private var safariText: String {

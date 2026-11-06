@@ -910,7 +910,7 @@ UX:
 - States: no bookmarks or no match → no bookmark rows, the usual fallbacks; a browser that is not installed or has no file → "No Chrome bookmarks found." under its checkbox; Safari without Full Disk Access → "Needs Full Disk Access." under Safari plus a Full Disk Access row (warning symbol, not color alone) with "Open Full Disk Access…"; too much → at most 9 bookmark rows, long titles truncate with the full title in the tooltip. No loading state: the files read in milliseconds on the first query after a change.
 - Words: row title = bookmark title (the address when it has none), subtext = address without `https://`; Settings labels "Safari", "Google Chrome", "Show bookmarks" (In Default Results / With Keyword Only), "Open in" (Default Browser / The Bookmark’s Browser); counts as "128 bookmarks, from every profile."
 - Access: VoiceOver reads "Bookmark, title, address"; every setting is a standard checkbox or menu, reachable by keyboard; the warning row is a Label with text, so it does not rest on the yellow symbol.
-Status: todo
+Status: done
 
 ### S-058 Add my own action to a contact field
 As the user, I add an action such as "Call with FaceTime" for phone numbers, and it shows on that field in the contact card.
