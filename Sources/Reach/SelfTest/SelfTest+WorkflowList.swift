@@ -73,7 +73,7 @@ extension SelfTest {
             defer { try? FileManager.default.removeItem(at: out) }
             try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
             let file = out.appending(path: "Hello World.alfredworkflow")
-            if let saved { library.export(saved, to: file) }
+            if let saved { await library.export(saved, to: file) }
             let unzip = Process()
             unzip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
             unzip.arguments = ["-x", "-k", file.path, out.appending(path: "x").path]

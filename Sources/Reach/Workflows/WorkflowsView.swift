@@ -63,7 +63,7 @@ struct WorkflowsView: View {
         panel.canChooseFiles = true
         panel.allowedContentTypes = [UTType(filenameExtension: "alfredworkflow") ?? .zip, .folder]
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        WorkflowLibrary.shared.install(from: url)
+        Task { await WorkflowLibrary.shared.install(from: url) }
     }
 
     /// The save panel for Export Workflow…: an .alfredworkflow file to share.
@@ -76,7 +76,7 @@ struct WorkflowsView: View {
         panel.nameFieldStringValue = workflow.name + ".alfredworkflow"
         panel.allowedContentTypes = [UTType(filenameExtension: "alfredworkflow") ?? .zip]
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        WorkflowLibrary.shared.export(workflow, to: url)
+        Task { await WorkflowLibrary.shared.export(workflow, to: url) }
     }
 }
 

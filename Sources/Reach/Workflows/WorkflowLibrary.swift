@@ -81,12 +81,13 @@ final class WorkflowLibrary {
     var selected: Workflow? { selection.flatMap(workflow) }
 
     /// Copies a workflow folder, or unpacks an .alfredworkflow file, into the folder, and selects it.
-    func install(from source: URL) {
+    /// Unpacking runs off the main thread, so a large workflow never stalls the window.
+    func install(from source: URL) async {
         failure = nil
         do {
             let installed: URL
             if source.pathExtension == "alfredworkflow" {
-                installed = try unpack(source)
+                installed = try await unpack(source)
             } else {
                 installed = try WorkflowFolder.install(from: source, into: folder)
             }
@@ -142,19 +143,14 @@ final class WorkflowLibrary {
 
     /// Writes an .alfredworkflow file to share: Don't Export values blanked,
     /// Configure Workflow… values left out.
-    func export(_ workflow: Workflow, to file: URL) {
+    func export(_ workflow: Workflow, to file: URL) async {
         let staging = FileManager.default.temporaryDirectory.appending(path: "Reach-export-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: staging) }
         do {
             try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
             let staged = try WorkflowExport.stage(workflow.folder, in: staging)
             try? FileManager.default.removeItem(at: file)
-            let zip = Process()
-            zip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-            zip.arguments = ["-c", "-k", "--norsrc", staged.path, file.path]
-            try zip.run()
-            zip.waitUntilExit()
-            if zip.terminationStatus != 0 { failure = "Unable to export “\(workflow.name)”." }
+            try await Self.ditto(["-c", "-k", "--norsrc", staged.path, file.path], in: staging)
         } catch {
             failure = "Unable to export “\(workflow.name)”: \(error.localizedDescription)"
         }
@@ -174,18 +170,32 @@ final class WorkflowLibrary {
     @ObservationIgnored var trash: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
 
     /// An .alfredworkflow file is a zip of the folder's contents.
-    private func unpack(_ file: URL) throws -> URL {
+    private func unpack(_ file: URL) async throws -> URL {
         let target = folder.appending(path: WorkflowFolder.newName(), directoryHint: .isDirectory)
-        let unzip = Process()
-        unzip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-        unzip.arguments = ["-x", "-k", file.path, target.path]
-        try unzip.run()
-        unzip.waitUntilExit()
-        guard unzip.terminationStatus == 0, Workflow(folder: target) != nil else {
+        do {
+            try await Self.ditto(["-x", "-k", file.path, target.path], in: folder)
+        } catch {
+            try? FileManager.default.removeItem(at: target)
+            throw error
+        }
+        guard Workflow(folder: target) != nil else {
             try? FileManager.default.removeItem(at: target)
             throw WorkflowFolder.Failure.notAWorkflow
         }
         return target
+    }
+
+    /// Zips or unzips with ditto through `ScriptRunner`, off the main thread.
+    /// When ditto fails, the thrown error carries what it wrote to stderr.
+    private static func ditto(_ arguments: [String], in directory: URL) async throws {
+        let result = await ScriptRunner.run(ScriptCommand(executable: "/usr/bin/ditto", arguments: arguments, directory: directory))
+        guard !result.succeeded else { return }
+        let errors = result.errors.trimmingCharacters(in: .whitespacesAndNewlines)
+        throw DittoFailure(errorDescription: result.failure ?? (errors.isEmpty ? "ditto ended with status \(result.status)." : errors))
+    }
+
+    private struct DittoFailure: LocalizedError {
+        var errorDescription: String?
     }
 
     /// Logs a script run for the debugger.
