@@ -63,7 +63,7 @@ enum Snapshot {
             // S-057: fixture bookmark files in /tmp, never the person's own.
             let bookmarkFiles = SelfTest.writeBookmarkFixtures(in: URL(fileURLWithPath: "/tmp/Reach-bookmarks-snap", isDirectory: true))
             model.launcherModel.bookmarks.files = bookmarkFiles
-            if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
+            if only == nil || only?.contains("launcher") == true, model.launcher != nil {
                 await model.launcherModel.apps.refreshNow()
                 // Sample files instead of the person's own: snapshots get shared.
                 let samples = SampleFiles.make()
@@ -84,211 +84,11 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("thumbnails", "open o"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("workflow-grid", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", ""), ("bookmarks", "swift")]
-                // S-026: sample clips, never what this Mac copied.
-                let context = model.container.mainContext
-                let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
-                let sampleClips = [("Meeting notes\nShip the clipboard viewer on Friday.\nAsk Ada about the snippets.", "Notes", 3),
-                               ("https://example.com/docs/clipboard", "Safari", 25),
-                               ("/Applications/Safari.app\n/Applications/Mail.app", "Finder", 90),
-                               ("let viewer = ClipboardViewer(history: clips)", "Xcode", 300)]
-                    .map { text, app, minutes in
-                        let item = ClipboardItem(kind: text.hasPrefix("/") ? .files : .text, text: text, sourceApp: app)
-                        item.copiedAt = Date.now.addingTimeInterval(TimeInterval(-minutes * 60))
-                        context.insert(item)
-                        return item
-                    }
-                defer {
-                    sampleClips.forEach(context.delete)
-                    try? context.save()
-                    ClipboardSettings.shared.reset()
+                await withSampleClips(model: model) { clips in
+                    await captureLauncher(launcherShots(model: model, clips: clips), model: model, dir: dir)
                 }
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                    for (name, query) in states {
-                        launcher.show()
-                        model.launcherModel.query = query
-                        try? await Task.sleep(for: .seconds(1))
-                        if name == "selection" {
-                            model.launcherModel.showActions(for: .text("""
-                                The quick brown fox jumps over the lazy dog.
-                                Pack my box with five dozen liquor jugs.
-                                """, source: "TextEdit"))
-                            try? await Task.sleep(for: .seconds(0.5))
-                        }
-                        if name == "confirm" { model.launcherModel.openSelected() }
-                        // S-053: a sample Grid View's items, from a fake script, filtered by "q".
-                        if name == "workflow-grid" {
-                            let library = WorkflowLibrary.shared
-                            let folder = library.folder.appending(path: "snapshot-grid.workflow", directoryHint: .isDirectory)
-                            let plist: [String: Any] = ["name": "Tag Finder", "objects": [
-                                ["uid": "GRID", "type": Workflow.grid, "config": ["inputtype": 1, "inputfile": "getTaggedFiles.sh", "filterable": true]],
-                            ]]
-                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-                                .write(to: folder.appending(path: "info.plist"))
-                            library.reload()
-                            let lm = model.launcherModel
-                            let realRun = lm.workflows.run
-                            let samples = ((try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: SampleFiles.folder),
-                                                                                         includingPropertiesForKeys: nil)) ?? [])
-                                .sorted { $0.path < $1.path }.prefix(5)
-                            let items = samples.map { url in
-                                ["title": url.lastPathComponent, "subtitle": (url.path as NSString).abbreviatingWithTildeInPath, "arg": url.path,
-                                 "icon": ["type": "fileicon", "path": url.path]] as [String: Any]
-                            }
-                            let json = (try? JSONSerialization.data(withJSONObject: ["items": items])) ?? Data()
-                            lm.workflows.run = { _ in ScriptResult(output: json) }
-                            if let workflow = library.workflow("snapshot-grid.workflow") {
-                                let command = ScriptCommand(executable: folder.appending(path: "getTaggedFiles.sh").path,
-                                                            arguments: ["Red"], directory: folder)
-                                lm.workflows.showGrid(WorkflowGridRun(uid: "GRID", command: command), in: workflow)
-                            }
-                            lm.query = ""
-                            lm.refresh()
-                            try? await Task.sleep(for: .seconds(0.8))
-                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                            lm.workflows.run = realRun
-                            lm.workflows.forget()
-                            try? FileManager.default.removeItem(at: folder)
-                            library.reload()
-                            launcher.hide()
-                            continue
-                        }
-                        // S-052: a sample workflow's Universal Action on selected text, filtered by "a".
-                        if name == "selection-universal" {
-                            let library = WorkflowLibrary.shared
-                            let folder = library.folder.appending(path: "snapshot-universal.workflow", directoryHint: .isDirectory)
-                            let plist: [String: Any] = ["name": "ChatGPT", "objects": [
-                                ["uid": "UA", "type": WorkflowUniversalAction.type, "config": ["name": "Ask ChatGPT", "acceptstext": true]],
-                            ]]
-                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-                                .write(to: folder.appending(path: "info.plist"))
-                            library.reload()
-                            model.launcherModel.showActions(for: .text("The quick brown fox jumps over the lazy dog.", source: "TextEdit"))
-                            model.launcherModel.actions?.filter = "a"
-                            try? await Task.sleep(for: .seconds(0.8))
-                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                            try? FileManager.default.removeItem(at: folder)
-                            library.reload()
-                            launcher.hide()
-                            continue
-                        }
-                        // S-052: a sample workflow's Fallback Search below the web searches.
-                        if name == "workflow-fallback" {
-                            let library = WorkflowLibrary.shared
-                            let folder = library.folder.appending(path: "snapshot-fallback.workflow", directoryHint: .isDirectory)
-                            let plist: [String: Any] = ["name": "Shimmering Obsidian", "objects": [
-                                ["uid": "FB", "type": WorkflowFallback.type, "config": ["text": "Search Vault: '{query}'"]],
-                            ]]
-                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-                                .write(to: folder.appending(path: "info.plist"))
-                            library.reload()
-                            model.launcherModel.query = "zzqxv meeting notes"
-                            try? await Task.sleep(for: .seconds(0.8))
-                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                            try? FileManager.default.removeItem(at: folder)
-                            library.reload()
-                            launcher.hide()
-                            continue
-                        }
-                        // S-051: a sample workflow's File Filter, with the sample files for Spotlight's answer.
-                        if name == "file-filter" {
-                            let library = WorkflowLibrary.shared
-                            let folder = library.folder.appending(path: "snapshot-filefilter.workflow", directoryHint: .isDirectory)
-                            let plist: [String: Any] = ["name": "Visual Studio Code", "objects": [
-                                ["uid": "FF", "type": FileFilter.type, "config": [
-                                    "keyword": "codef", "withspace": true, "title": "Find and open with Visual Studio Code",
-                                    "subtext": "Open files and folders",
-                                ]],
-                            ]]
-                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-                                .write(to: folder.appending(path: "info.plist"))
-                            library.reload()
-                            let lm = model.launcherModel
-                            let realFind = lm.workflows.findFiles
-                            let samples = ((try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: SampleFiles.folder),
-                                                                                         includingPropertiesForKeys: nil)) ?? [])
-                                .sorted { $0.path < $1.path }.prefix(4)
-                            lm.workflows.findFiles = { _, _, _, done in
-                                done(samples.map { url in
-                                    LaunchResult(id: url.path, title: url.lastPathComponent,
-                                                 subtitle: (url.path as NSString).abbreviatingWithTildeInPath, icon: .file(url.path), url: url)
-                                })
-                            }
-                            lm.query = "codef brief"
-                            try? await Task.sleep(for: .seconds(0.8))
-                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                            lm.workflows.findFiles = realFind
-                            try? FileManager.default.removeItem(at: folder)
-                            library.reload()
-                            launcher.hide()
-                            continue
-                        }
-                        // S-050: a sample workflow's File Action after Reach's own, filtered by "op".
-                        if name == "file-actions" {
-                            let library = WorkflowLibrary.shared
-                            let folder = library.folder.appending(path: "snapshot-fileaction.workflow", directoryHint: .isDirectory)
-                            let plist: [String: Any] = ["name": "Image Tools", "objects": [
-                                ["uid": "FA", "type": WorkflowFileAction.type, "config": ["name": "Optimize Images", "acceptsmulti": 1]],
-                            ]]
-                            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                            try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-                                .write(to: folder.appending(path: "info.plist"))
-                            library.reload()
-                            let sample = (try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: SampleFiles.folder),
-                                                                                       includingPropertiesForKeys: nil))?
-                                .filter { !$0.hasDirectoryPath }.sorted { $0.path < $1.path }.first
-                            if let sample { model.launcherModel.showActions(for: .files([sample])) }
-                            model.launcherModel.actions?.filter = "op"
-                            try? await Task.sleep(for: .seconds(0.5))
-                            capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                            try? FileManager.default.removeItem(at: folder)
-                            library.reload()
-                            launcher.hide()
-                            continue
-                        }
-                        if name == "actions" || name == "contact-card" {
-                            _ = model.launcherModel.showActions()
-                            try? await Task.sleep(for: .seconds(0.5))
-                        }
-                        if name.hasPrefix("clipboard") {
-                            ClipboardSettings.shared.keep[.text] = true
-                            model.launcherModel.clipboard = name == "clipboard-empty" ? nil : clips
-                            model.launcherModel.showClipboard()
-                            if name == "clipboard-snippets" { model.launcherModel.viewer?.filter = "follow" }
-                            try? await Task.sleep(for: .seconds(0.5))
-                        }
-                        if name.hasPrefix("buffer") {
-                            let lm = model.launcherModel
-                            for index in 0..<min(3, lm.results.count) {
-                                lm.select(index)
-                                _ = lm.toggleBuffer()
-                            }
-                            lm.select(0)
-                            if name == "buffer-actions" { _ = lm.showBufferActions() }
-                            try? await Task.sleep(for: .seconds(0.5))
-                        }
-                        capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                        _ = model.launcherModel.clearBuffer()
-                        launcher.hide()
-                    }
-                    // S-058: a card with custom actions, and a phone number's actions after →.
-                    ContactsSettings.shared.actions = SelfTest.sampleContactActions
-                    for name in ["contact-custom", "contact-detail-actions"] {
-                        launcher.show()
-                        model.launcherModel.query = "sander"
-                        _ = model.launcherModel.showActions()
-                        model.launcherModel.actions?.select(2)
-                        if name == "contact-detail-actions" { _ = model.launcherModel.showDetailActions() }
-                        try? await Task.sleep(for: .seconds(0.5))
-                        capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
-                        launcher.hide()
-                    }
-                    ContactsSettings.shared.actions = []
                     // S-023: the Large Type card, from ⌘L on a calculation.
                     LargeType.shared.show("Hallo Sander")
                     try? await Task.sleep(for: .seconds(0.8))
@@ -426,147 +226,67 @@ enum Snapshot {
         }
     }
 
-    /// S-042: the Workflows window with nothing selected and with sample workflows.
-    private static func captureWorkflows(model: AppModel, dir: String) async {
-        let library = WorkflowLibrary.shared
-        // The launcher view hands over openWindow when it first shows.
-        model.launcher?.show()
-        try? await Task.sleep(for: .seconds(0.5))
-        model.launcher?.hide()
-        let saved = library.workflows.map(\.folder)
-        // Only sample workflows in the shots, in the /tmp library.
-        let parked = FileManager.default.temporaryDirectory.appending(path: "Reach-parked-workflows-\(UUID().uuidString)")
-        try? FileManager.default.createDirectory(at: parked, withIntermediateDirectories: true)
-        for folder in saved { try? FileManager.default.moveItem(at: folder, to: parked.appending(path: folder.lastPathComponent)) }
-        library.reload()
-        defer {
-            for folder in library.workflows.map(\.folder) { try? FileManager.default.removeItem(at: folder) }
-            for folder in saved { try? FileManager.default.moveItem(at: parked.appending(path: folder.lastPathComponent), to: folder) }
-            try? FileManager.default.removeItem(at: parked)
-            library.selection = nil
-            library.reload()
+    /// The launcher states, in the order they are captured. A new state is one entry here or in its feature's file.
+    private static func launcherShots(model: AppModel, clips: ClipboardHistory) -> [LauncherShot] {
+        let typed = [("empty", ""), ("results", "co"), ("files", "open brief"), ("thumbnails", "open o"), ("fallbacks", "zzqxv nothing"),
+                     ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"),
+                     ("system", "sleep")].map { LauncherShot(name: $0.0, query: $0.1) }
+        let showActions: @MainActor (AppModel) async -> Void = { model in
+            _ = model.launcherModel.showActions()
+            try? await Task.sleep(for: .seconds(0.5))
         }
-        model.launcherModel.openWorkflows()
-        try? await Task.sleep(for: .seconds(1))
-        let window = { NSApp.windows.first { $0.isVisible && $0.identifier?.rawValue.hasPrefix(WorkflowLibrary.windowID) == true } }
-        for mode in ["light", "dark"] {
-            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-            library.selection = nil
-            try? await Task.sleep(for: .seconds(0.8))
-            capture(to: "\(dir)/workflows-empty-\(mode).png", window: window())
-        }
-        library.addExample()
-        if let folder = try? WorkflowFolder.addExample(into: library.folder) {
-            try? WorkflowFolder.update(folder) {
-                $0["name"] = "GitHub Repos"
-                $0["createdby"] = "Ada Lovelace"
-                $0["version"] = "2.1"
-                $0["description"] = "Search your repositories."
-                $0["disabled"] = true
-            }
-        }
-        library.reload()
-        library.selection = library.workflows.first { $0.name == "Hello World" }?.id
-        for mode in ["light", "dark"] {
-            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-            try? await Task.sleep(for: .seconds(0.8))
-            capture(to: "\(dir)/workflows-\(mode).png", window: window())
-        }
-        // Configure Workflow… (S-043): as installed, then with the required field emptied.
-        for (name, greeting) in [("workflow-configure", nil), ("workflow-configure-missing", "")] as [(String, String?)] {
-            guard let example = library.selected else { break }
-            if let greeting { library.saveConfiguration(["greeting": greeting], for: example) }
-            for mode in ["light", "dark"] {
-                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                library.configuring = library.selected
-                try? await Task.sleep(for: .seconds(0.8))
-                capture(to: "\(dir)/\(name)-\(mode).png", window: window()?.attachedSheet)
-                library.configuring = nil
-                try? await Task.sleep(for: .seconds(0.5))
-            }
-        }
-        // Workflow Info… (S-046): each tab, and Variables before and after one is added.
-        let tabs: [(String, WorkflowInfoSheet.Tab)] = [("about", .about), ("readme", .readme), ("variables-empty", .variables)]
-        for (name, tab) in tabs + [("variables", .variables)] {
-            if name == "variables", let example = library.selected {
-                var info = WorkflowInfo(example)
-                info.variables = [WorkflowVariable(name: "api_key", value: "sk-12345", dontExport: true),
-                                  WorkflowVariable(name: "user", value: "ada")]
-                library.saveInfo(info, for: example)
-            }
-            library.infoTab = tab
-            for mode in ["light", "dark"] {
-                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                library.editingInfo = library.selected
-                try? await Task.sleep(for: .seconds(0.8))
-                capture(to: "\(dir)/workflow-info-\(name)-\(mode).png", window: window()?.attachedSheet)
-                library.editingInfo = nil
-                try? await Task.sleep(for: .seconds(0.5))
-            }
-        }
-        library.infoTab = .about
-        // Hotkeys… (S-049): one set, one empty, one on Reach's launcher hotkey.
-        if let example = library.selected {
-            try? WorkflowFolder.update(example.folder) {
-                $0["objects"] = ($0["objects"] as? [[String: Any]] ?? []) + [
-                    ["uid": "HKSET", "type": WorkflowHotkey.type, "config": ["argument": 1]],
-                    ["uid": "HKEMPTY", "type": WorkflowHotkey.type, "config": ["argument": 2]],
-                    ["uid": "HKTAKEN", "type": WorkflowHotkey.type, "config": ["argument": 0]],
-                ]
-            }
-            library.reload()
-            let hotkeys = WorkflowHotkeys.shared
-            if let current = library.selected {
-                hotkeys.set(.init(combo: KeyCombo(keyCode: 40, modifiers: KeyCombo.control | KeyCombo.option), keyName: "K"),
-                            for: current, uid: "HKSET")
-                hotkeys.set(.init(combo: HotkeyCenter.shared.combo, keyName: "Space"), for: current, uid: "HKTAKEN")
-                for mode in ["light", "dark"] {
-                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                    library.editingHotkeys = current
-                    try? await Task.sleep(for: .seconds(0.8))
-                    capture(to: "\(dir)/workflow-hotkeys-\(mode).png", window: window()?.attachedSheet)
-                    library.editingHotkeys = nil
-                    try? await Task.sleep(for: .seconds(0.5))
+        // The first three results in the buffer, with or without the buffer's actions.
+        func buffer(actions: Bool) -> @MainActor (AppModel) async -> Void {
+            { model in
+                let lm = model.launcherModel
+                for index in 0..<min(3, lm.results.count) {
+                    lm.select(index)
+                    _ = lm.toggleBuffer()
                 }
-                hotkeys.set(nil, for: current, uid: "HKSET")
-                hotkeys.set(nil, for: current, uid: "HKTAKEN")
+                lm.select(0)
+                if actions { _ = lm.showBufferActions() }
+                try? await Task.sleep(for: .seconds(0.5))
             }
         }
-        // The debugger (S-045) with a run that printed and one that failed.
-        if let example = library.selected {
-            library.log.clear()
-            library.record(example, object: "Script Filter", input: "hello Ada",
-                           result: ScriptResult(output: Data(#"{"items":[{"title":"Hello, Ada","arg":"Hello, Ada"}]}"#.utf8)))
-            library.record(example, object: "Run Script", input: nil,
-                           result: ScriptResult(errors: "say: command not found", status: 127))
-            library.debugging = true
-            for mode in ["light", "dark"] {
-                NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                try? await Task.sleep(for: .seconds(0.8))
-                capture(to: "\(dir)/workflows-debugger-\(mode).png", window: window())
-            }
-            library.debugging = false
-            library.log.clear()
+        // S-058: a card with custom actions, and a phone number's actions after →.
+        func contactActions(detail: Bool) -> LauncherShot {
+            LauncherShot(name: detail ? "contact-detail-actions" : "contact-custom", query: "sander", prepare: { model in
+                ContactsSettings.shared.actions = SelfTest.sampleContactActions
+                _ = model.launcherModel.showActions()
+                model.launcherModel.actions?.select(2)
+                if detail { _ = model.launcherModel.showDetailActions() }
+                try? await Task.sleep(for: .seconds(0.5))
+            }, cleanUp: { _ in ContactsSettings.shared.actions = [] })
         }
-        window()?.close()
-        // S-055: a workflow's Text View, as Homebrew shows `brew info`.
-        TextViewWindow.shared.show(title: "Homebrew", text: """
-            ==> wget: stable 1.25.0 (bottled), HEAD
-            Internet file retriever
-            https://www.gnu.org/software/wget/
-            Not installed
-            From: https://github.com/Homebrew/homebrew-core/blob/HEAD/Formula/w/wget.rb
-            License: GPL-3.0-or-later
-            ==> Dependencies
-            Build: pkgconf ✘
-            Required: libidn2 ✘, openssl@3 ✔
-            """)
-        for mode in ["light", "dark"] {
-            NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-            try? await Task.sleep(for: .seconds(0.8))
-            capture(to: "\(dir)/workflows-textview-\(mode).png", window: TextViewWindow.shared.shown)
-        }
-        TextViewWindow.shared.hide()
+        return typed + [
+            LauncherShot(name: "confirm", query: "restart", prepare: { $0.launcherModel.openSelected() }),
+            LauncherShot(name: "quit", query: "quit"),
+            LauncherShot(name: "shell", query: "> ls -la"),
+            LauncherShot(name: "define", query: "define serendipity"),
+            LauncherShot(name: "spell", query: "spell recieve"),
+            LauncherShot(name: "contacts", query: "sand"),
+            LauncherShot(name: "contact-card", query: "sander", prepare: showActions),
+            LauncherShot(name: "email", query: "email sander"),
+            LauncherShot(name: "path", query: SampleFiles.folder),
+            LauncherShot(name: "actions", query: "safari", prepare: showActions),
+        ] + workflowShots(model: model) + [
+            LauncherShot(name: "selection", prepare: { model in
+                model.launcherModel.showActions(for: .text("""
+                    The quick brown fox jumps over the lazy dog.
+                    Pack my box with five dozen liquor jugs.
+                    """, source: "TextEdit"))
+                try? await Task.sleep(for: .seconds(0.5))
+            }),
+            LauncherShot(name: "buffer", query: "co", prepare: buffer(actions: false)),
+            LauncherShot(name: "buffer-actions", query: "co", prepare: buffer(actions: true)),
+            LauncherShot(name: "clipboard-empty", prepare: clipboardViewer(nil)),
+            LauncherShot(name: "clipboard", prepare: clipboardViewer(clips)),
+            LauncherShot(name: "snip", query: "snip "),
+            LauncherShot(name: "clipboard-snippets", prepare: clipboardViewer(clips, filter: "follow")),
+            LauncherShot(name: "bookmarks", query: "swift"),
+            contactActions(detail: false),
+            contactActions(detail: true),
+        ]
     }
 
     /// Captures the real window with screencapture, so glass, sidebars, and
