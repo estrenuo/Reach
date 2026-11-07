@@ -105,3 +105,8 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Object | One step of a workflow on the canvas: an input, an action, a utility or an output, shown as a card | node, block, item |
 | Connection | The line from one object to the next; a modifier key on it picks that path | link, edge, wire |
 | Move Object | Drag a card, or select it and press an arrow key, to put it somewhere else on the canvas | drag, reposition |
+| Output handle | The round knob on a card's right edge that a new connection is dragged from | port, socket, anchor |
+| Connect Objects | Drag from one card's output handle to another card to add a connection | link, wire up, join |
+| Delete Connection | Remove a line from its context menu; Undo brings it back | disconnect (only in VoiceOver actions and Edit Connections), unlink |
+| Modifier | The key (⌘, ⌥, ⌃ or ⇧) held with Return that picks a connection, set from the line's context menu | mod, key combo |
+| Edit Connections… | The popover on a selected card that connects it to, or disconnects it from, the other objects with the keyboard | connection editor, link panel |
