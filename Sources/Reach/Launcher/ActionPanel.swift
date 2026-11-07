@@ -19,6 +19,8 @@ final class ActionPanel {
         case web(URL)
         /// A line of a contact card (S-024).
         case field(ContactField)
+        /// A custom action on a card's detail (S-058).
+        case contactAction(ContactAction, ContactField)
         /// An imported workflow's File Action (S-050) or Universal Action (S-052),
         /// by the workflow's id and name, the trigger's uid and title, and what it gets.
         case workflow(id: String, name: String, trigger: String, title: String, argument: String)
@@ -31,6 +33,7 @@ final class ActionPanel {
             case .text(let action, _): "text \(action.rawValue)"
             case .web(let search): "web search on \(search.host() ?? "?")"
             case .field(let field): "contact \(field.kind.rawValue)"
+            case .contactAction(let action, _): "custom action on \(action.kind.rawValue)"
             case .workflow(_, let name, _, let title, _): "workflow \(name) / \(title)"
             }
         }
@@ -45,6 +48,10 @@ final class ActionPanel {
     let text: String?
     /// The contact a card shows; nil for files and text (S-024).
     let contact: Contact?
+    /// The custom actions a card offers on its details (S-058).
+    private(set) var customActions: [ContactAction] = []
+    /// The detail whose actions the card lists after →; nil for the card itself.
+    private(set) var detailActions: ContactField?
     /// Opened by the selection hotkey: there are no results to go back to.
     var fromSelection = false
     /// Opened with ⌥→ on the buffer: an action empties it.
@@ -100,18 +107,20 @@ final class ActionPanel {
     }
 
     /// A contact's card: its fields, then Open in Contacts. `result` is its row in the results.
-    init(contact: Contact, result: LaunchResult) {
+    init(contact: Contact, result: LaunchResult, actions: [ContactAction] = []) {
         target = result
         url = result.url
         urls = result.url.map { [$0] } ?? []
         text = nil
         self.contact = contact
+        customActions = actions
         refresh()
     }
 
     /// The path, or where the text came from, for the header.
     var detail: String {
         if isMany { return names.joined(separator: ", ") }
+        if let detailActions { return Self.line(detailActions.value) }
         if contact != nil { return target.subtitle.isEmpty ? "Contact" : target.subtitle }
         if let url { return (url.path as NSString).abbreviatingWithTildeInPath }
         return target.subtitle
@@ -125,7 +134,12 @@ final class ActionPanel {
         switch selectedItem {
         case .action(.open) where contact != nil: return "Open the contact in Contacts (⌘O)"
         case .action(let action): return isMany ? action.summaryForMany : action.summary
-        case .field(let field): return field.summary + " (⌘C copies it)"
+        case .field(let field):
+            let keys = customActions.filter { $0.kind == field.kind }.compactMap { action in
+                action.modifier.map { "\($0.symbol) \(action.title)" }
+            }
+            return ([field.summary + " (⌘C copies it)"] + keys).joined(separator: " · ")
+        case .contactAction(let action, let field): return "Run “\(action.title)” on \(Self.line(field.value))"
         case .app(let app): return "Open “\(target.title)” with \(Self.appName(app))"
         case .text(let action, _): return action.summary
         case .web: return "Open the search in your browser"
@@ -156,12 +170,57 @@ final class ActionPanel {
     func back() -> Bool {
         if !filter.isEmpty { filter = ""; return true }
         if choosingApp { choosingApp = false; refresh(); return true }
+        if let field = detailActions {
+            detailActions = nil
+            refresh()
+            if let index = items.firstIndex(of: .field(field)) { selection = index }
+            return true
+        }
         return false
     }
 
+    /// → on a card's detail: lists its built-in action, then its custom actions. False elsewhere.
+    func showDetailActions() -> Bool {
+        guard detailActions == nil, case .field(let field) = selectedItem else { return false }
+        detailActions = field
+        filter = ""
+        refresh()
+        return true
+    }
+
+    /// The custom action a modifier runs on the selected detail, with the detail.
+    func customAction(for modifier: ReturnModifier) -> (ContactAction, ContactField)? {
+        let field: ContactField
+        switch selectedItem {
+        case .field(let selected): field = selected
+        case .contactAction(_, let selected): field = selected
+        default: return nil
+        }
+        return ContactAction.action(in: customActions, for: field.kind, modifier: modifier).map { ($0, field) }
+    }
+
+    /// A detail on one line: an address's lines joined.
+    static func line(_ value: String) -> String { value.split(whereSeparator: \.isNewline).joined(separator: ", ") }
+
     private func refresh() {
         failure = nil
-        if let contact {
+        if let field = detailActions {
+            let text = filter.trimmingCharacters(in: .whitespaces)
+            let custom = customActions.filter { action in
+                action.kind == field.kind && (text.isEmpty || Matcher.score(query: text, title: action.title) != nil)
+            }
+            let builtIn = text.isEmpty || Matcher.score(query: text, title: field.summary) != nil
+            items = (builtIn ? [.field(field)] : []) + custom.map { .contactAction($0, field) }
+            rows = (builtIn ? [LaunchResult(id: "field:\(field.id)", title: field.summary, subtitle: "",
+                                            icon: .symbol(Self.symbol(field.kind)), url: URL(string: "reach-field://\(field.kind.rawValue)"),
+                                            kindLabel: "Action")] : [])
+                + custom.map { action in
+                    LaunchResult(id: "contact-action:\(action.id)", title: action.title, subtitle: "",
+                                 icon: .symbol("arrow.up.forward.app"), url: URL(string: "reach-action://\(action.id)"),
+                                 kindLabel: "Custom action", badge: action.modifier?.symbol ?? "")
+                }
+            if rows.isEmpty { rows = [hint("No actions match “\(text)”")] }
+        } else if let contact {
             let text = filter.trimmingCharacters(in: .whitespaces)
             let fields = contact.fields.filter { field in
                 text.isEmpty || Matcher.score(query: text, title: field.value) != nil
@@ -301,7 +360,7 @@ enum ActionRunner {
             return NSPasteboard.general.setString(text, forType: .string)
         case .web(let search):
             return workspace.open(search)
-        case .field, .workflow:
+        case .field, .contactAction, .workflow:
             // The model opens or copies fields, and runs workflows, itself.
             return false
         case .app(let app):

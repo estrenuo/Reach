@@ -89,6 +89,8 @@ public enum SettingsIndex {
         + page("contacts", "Contacts", ["Contacts", "Search contacts", "Email", "Email a Contact"], words: "people person")
         + page("contacts", "Names", ["Names", "Show last name first", "Show title", "Show job title"], words: "people person")
         + page("contacts", "Access", ["Access"], words: "privacy permission")
+        + page("contacts", "Custom Actions", ["Custom Actions", "Detail", "Action", "Modifier"],
+               words: "facetime call phone url custom action")
         + page("clipboard", "History", ["History", "Keep Plain Text", "Keep Images", "Keep File Lists", "Keep for"],
                words: "clipboard copy retention")
         + page("clipboard", "Viewer", ["Viewer", "Show the clipboard viewer"], words: "clipboard hotkey")

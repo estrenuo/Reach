@@ -273,6 +273,19 @@ enum Snapshot {
                         _ = model.launcherModel.clearBuffer()
                         launcher.hide()
                     }
+                    // S-058: a card with custom actions, and a phone number's actions after →.
+                    ContactsSettings.shared.actions = SelfTest.sampleContactActions
+                    for name in ["contact-custom", "contact-detail-actions"] {
+                        launcher.show()
+                        model.launcherModel.query = "sander"
+                        _ = model.launcherModel.showActions()
+                        model.launcherModel.actions?.select(2)
+                        if name == "contact-detail-actions" { _ = model.launcherModel.showDetailActions() }
+                        try? await Task.sleep(for: .seconds(0.5))
+                        capture(to: "\(dir)/launcher-\(name)-\(mode).png", window: launcher.panel)
+                        launcher.hide()
+                    }
+                    ContactsSettings.shared.actions = []
                     // S-023: the Large Type card, from ⌘L on a calculation.
                     LargeType.shared.show("Hallo Sander")
                     try? await Task.sleep(for: .seconds(0.8))
@@ -295,6 +308,18 @@ enum Snapshot {
                         // Only titled windows: the menu bar icon and the launcher have windows too.
                         let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.styleMask.contains(.titled) }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
+                        if tab == .contacts {
+                            // S-058: the Custom Actions table and its add sheet; the plain page shows it empty.
+                            ContactsSettings.shared.actions = SelfTest.sampleContactActions
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-contacts-actions-\(mode).png", window: settings)
+                            ContactsSettings.shared.editingAction = ContactAction(kind: .phone, title: "", url: "")
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-contact-action-sheet-\(mode).png", window: settings?.attachedSheet)
+                            ContactsSettings.shared.editingAction = nil
+                            ContactsSettings.shared.actions = []
+                            try? await Task.sleep(for: .seconds(0.5))
+                        }
                         if tab == .search {
                             // The Fallbacks section sits below the fold. The page's scroll view is wider than the sidebar's.
                             if let scroll = settings?.contentView?.descendants(of: NSScrollView.self).max(by: { $0.frame.width < $1.frame.width }),

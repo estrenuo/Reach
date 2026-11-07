@@ -922,7 +922,14 @@ Acceptance:
 - [unit] An action is a field (phone, email, address, URL), a title, a URL template with `{query}` (like `facetime://{query}`) and an optional modifier; the value is URL-encoded once.
 - [self] In the contact card, ↩ on a field still does the built-in action; the field's own action runs with its modifier (⌥↩, ⌃↩) or from the action panel (→).
 - [snap] Settings > Contacts: the Custom Actions table (Field | Action | Modifier) with + and −, an empty state, and the add sheet.
-Status: todo
+UX:
+- Flow: Settings > Contacts > Custom Actions -> + -> Add Custom Action sheet (Detail, Title, URL, Modifier) -> Add (↩) or Cancel (Esc) -> the new row is selected; double-click or Edit… changes one, − or Remove deletes the selected one. In the launcher: card -> a detail -> ↩ does the built-in action as before; ⌥↩ or ⌃↩ runs the custom action with that modifier; → lists that detail's actions (built-in first, then the custom ones) -> ↩ runs one -> ← or Esc goes back to the card.
+- Surface: the table is a section of Settings > Contacts (a list people come back to, inline in its tab); add and edit are a sheet (one short task that must finish or cancel); the detail's actions are the card's own list, like Open With… (input people repeat while they watch the result)
+- States: empty "No custom actions" with the + button under it; a problem shows in red under the sheet's fields after Add ("Give the action a title.", "Put {query} in the URL where the detail goes.", "The URL needs a scheme, like facetime:", "⌥↩ already runs “Call with FaceTime” on phone numbers."); a failing action says "Unable to run “Call with FaceTime”." in the card's footer; long titles and URLs truncate in the middle with the full text in a tooltip
+- Words: section "Custom Actions"; columns "Detail", "Action", "Modifier" (the glossary's Detail, not Field); Detail names "Phone", "Email", "Address", "Website"; Modifier "None", "⌥↩", "⌃↩"; sheet titles "Add Custom Action" and "Edit Custom Action", buttons "Add"/"Save" and "Cancel"; placeholders "Call with FaceTime" and "facetime://{query}"; tooltips "Add a custom action" and "Remove the selected custom action"; the card's footer adds "⌥↩ Call with FaceTime" after the built-in action
+- Access: keyboard only in the launcher; Return adds, Escape cancels in the sheet; VoiceOver reads a row as "Phone, Call with FaceTime, ⌥↩" and the empty table as "Custom Actions, empty"
+- Not now: ⌘↩ and ⇧↩ (⌘ keys already copy, open and pick rows in the card), actions on birthdays, running a script instead of a URL
+Status: done
 
 ### S-059 Control Music with a keyword
 As the user, I type `play`, `next`, `previous`, `random`, `mute` or `volume 50` and Music does it without leaving my app.

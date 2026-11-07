@@ -74,6 +74,7 @@ struct ActionPanelView: View {
     }
 
     private var placeholder: String {
+        if panel.detailActions != nil { return "Filter actions" }
         if panel.contact != nil { return "Filter details" }
         return panel.choosingApp ? "Filter apps" : "Filter actions"
     }
