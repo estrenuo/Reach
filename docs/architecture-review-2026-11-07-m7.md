@@ -23,7 +23,7 @@ Survey:
 - `Process()` lives in five app files, as before; no new ones.
 - No duplicate `private struct`s. No new fix-log entries.
 
-## Launcher snapshots by feature  [Strong]
+## Launcher snapshots by feature  [Done]
 
 Files: Sources/Reach/Snapshot.swift (675 lines)
 Signal: a Swift file over 600 lines; the most-edited file since the last review; a merge conflict in two of the four M7 merges.
@@ -50,6 +50,8 @@ The plain states stay one list; the workflow captures move to
 Benefits: a new launcher state is one entry in its feature's file; the loop has no `if name ==`; `Snapshot.swift` drops below 400 lines.
 Proof of same behavior: the same 180 PNG names in `/tmp/Reach-shots` before and after, the layout JSONs PASS, and a look at the moved captures in light and dark.
 Plan: 1) add `LauncherShot`, `captureLauncher` and `withSampleWorkflow`, run the plain states through them. 2) move the workflow captures to `Snapshot+Workflows.swift`. Two commits, snapshot code only.
+
+Done: the launcher captures are one list of `LauncherShot`s run by `captureLauncher` (`Snapshot+Launcher.swift`), with no `if name ==`; the workflow shots and the Workflows window captures are in `Snapshot+Workflows.swift`, the sample clips and the clipboard viewer in `Snapshot+Clipboard.swift`. `Snapshot.swift` went from 675 to 395 lines. The same 180 PNG names before and after, every layout JSON and grid-lint PASS, and the moved captures look the same in light and dark (only the text cursor and the file dates differ).
 
 ## Read bookmark files off the main thread  [Worth exploring]
 

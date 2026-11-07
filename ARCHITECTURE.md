@@ -12,7 +12,7 @@ A keyboard launcher: an agent app (no Dock icon) with a floating launcher panel,
 
 Settings go through `Store.settings`: `UserDefaults.standard` for real use, and for test, snapshot and seed runs (`APP_STORE` set) a suite that starts empty at every launch, so those runs never read or write the real settings. AppKit's own window frames still land in `.standard`.
 
-Logic that can be tested without the app goes in ReachKit. The app target holds the self-test (`SelfTest/`, one file per milestone section) and snapshot mode (`Snapshot.swift`); both refuse to run without `APP_STORE` in /tmp.
+Logic that can be tested without the app goes in ReachKit. The app target holds the self-test (`SelfTest/`, one file per milestone section) and snapshot mode (`Snapshot.swift`); both refuse to run without `APP_STORE` in /tmp. Launcher snapshots are `LauncherShot` values (name, query, an optional sample workflow, `prepare`, `cleanUp`) that `Snapshot.captureLauncher` runs in light and dark (`Snapshot+Launcher.swift`); a feature keeps its shots and captures in its own `Snapshot+<Feature>.swift` (Workflows, Clipboard, Music, MiniPlayer).
 
 ## The launcher
 
