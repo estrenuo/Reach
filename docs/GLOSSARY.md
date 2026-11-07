@@ -107,6 +107,11 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Move Object | Drag a card, or select it and press an arrow key, to put it somewhere else on the canvas | drag, reposition |
 | Palette | The panel beside the canvas that lists the objects you can add, by category | library, toolbox, object list |
 | Add Object | Put a new object on the canvas: drag it from the palette, or select it there and press Return | insert, create, drop |
+| Output handle | The round knob on a card's right edge that a new connection is dragged from | port, socket, anchor |
+| Connect Objects | Drag from one card's output handle to another card to add a connection | link, wire up, join |
+| Delete Connection | Remove a line from its context menu; Undo brings it back | disconnect (only in VoiceOver actions and Edit Connections), unlink |
+| Modifier | The key (⌘, ⌥, ⌃ or ⇧) held with Return that picks a connection, set from the line's context menu | mod, key combo |
+| Edit Connections… | The popover on a selected card that connects it to, or disconnects it from, the other objects with the keyboard | connection editor, link panel |
 | Selection | The cards picked on the canvas, each with an accent border; ⌘-click and ⇧-click add to it, ⌘A selects all | highlighted, marked |
 | Delete Object | Remove the selected objects and every connection to or from them; ⌘Z puts them back | remove, erase, cut |
 | Configure Object | Change one object's settings (its keyword, URL, script or text) in a sheet; saved in info.plist | edit, inspect, properties |

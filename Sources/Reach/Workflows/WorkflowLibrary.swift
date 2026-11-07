@@ -35,6 +35,11 @@ final class WorkflowLibrary {
     var selectedObjects: Set<String> = []
     /// The object in the Configure Object… sheet (S-064).
     var configuringObject: ObjectInSheet?
+    /// The line being dragged from a card (S-062), and whether Edit Connections… shows.
+    var connecting: WorkflowConnecting?
+    var editingConnections = false
+    /// Where the canvas's content starts in its window, for the snapshot of a line's context menu.
+    @ObservationIgnored var canvasOrigin = CGPoint.zero
     /// The workflow in the Hotkeys… sheet (S-049).
     var editingHotkeys: Workflow?
     /// Called after every read of the folder, so workflow hotkeys follow it.

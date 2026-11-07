@@ -999,7 +999,15 @@ Acceptance:
 - [unit] `WorkflowStep` follows the new line at once: the next ↩ runs it.
 - [self] Connect a keyword to Copy to Clipboard, run it, disconnect it, run it again: the second run copies nothing. ⌘Z undoes each.
 - [snap] A line being dragged, and the context menu on a line (Delete, Modifier ▸).
-Status: todo
+UX:
+- Flow: every card that can lead somewhere has a round output handle on its right edge, in its category color (Copy to Clipboard, Large Type and Call External Trigger have none) → drag from the handle → a line follows the pointer from that card → over another card that can take it, the card gets an accent border; over one that cannot, a capsule next to the pointer says why ("A trigger starts a workflow: nothing connects into it.") → release on an allowed card: the line is saved at once, without a modifier → release anywhere else: the line goes away, nothing changes, and a refusal stays next to the drop until the next click. Edit > Undo Connect Objects (⌘Z) removes it, ⌘⇧Z draws it again.
+- Disconnect and modifier: right-click (or Control-click) a line → Delete Connection, and Modifier ▸ None, ⌘ Command, ⌥ Option, ⌃ Control, ⇧ Shift (a checkmark on the current one) → the line goes, or its key changes, at once. Undo names: "Connect Objects", "Delete Connection", "Change Modifier".
+- Keyboard and menu: select a card, then Workflow > Edit Connections… (⌥⌘L) opens a popover on the card that lists every other object; a checkmark marks the ones it connects to; ↑↓ pick one, ↩ or a double-click connects or disconnects it; refused objects are dimmed with the reason under them; Esc closes. The line context menu is also on the canvas in VoiceOver.
+- Surface: inline (direct manipulation on the canvas) for the drag and the line menu; a popover for Edit Connections…, as a few choices tied to one card.
+- States: dragging = the line is drawn in the accent color with a dot at the pointer; refused = the capsule with the reason, in secondary text, never only a color; error writing = the line is not drawn and the window shows "Unable to connect the objects in “<workflow>”: <reason>"; changed on disk = read again first, as in S-061. A line Alfred has with a modifier keeps its subtext when the modifier changes.
+- Words (refusals): "An object cannot connect to itself." · "These objects are already connected." · "A trigger starts a workflow: nothing connects into it." · "An input only takes a line from a trigger." · "<Kind> ends a workflow: nothing comes after it." · "This would make a loop: <Kind> already leads here."
+- Access: a card offers the VoiceOver actions "Connect to <Kind>" for each object it can connect to and "Disconnect from <Kind>" for each line it has; a line is an element "Connection from <Kind> to <Kind>, <modifier>" with the actions Delete Connection and Modifier None/Command/Option/Control/Shift. No animation, so Reduce Motion needs nothing extra.
+Status: done
 
 ### S-063 Add an object from the palette
 As the user, I open the palette, type `/` and a name, and drop the object on the canvas.

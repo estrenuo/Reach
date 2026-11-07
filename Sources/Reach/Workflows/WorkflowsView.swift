@@ -281,6 +281,10 @@ struct WorkflowCommands: Commands {
             Button("Workflow Hotkeys…") { library.editingHotkeys = library.selected }
                 .keyboardShortcut("k", modifiers: [.command, .option])
                 .disabled(!inFront || library.selected?.hotkeys.isEmpty != false)
+            // S-062: connect the selected card with the keyboard.
+            Button("Edit Connections…") { library.editingConnections = true }
+                .keyboardShortcut("l", modifiers: [.command, .option])
+                .disabled(!inFront || library.selectedObject == nil)
             Button(library.selected?.disabled == true ? "Turn On Workflow" : "Turn Off Workflow") {
                 if let workflow = library.selected { library.setEnabled(workflow.disabled, workflow) }
             }

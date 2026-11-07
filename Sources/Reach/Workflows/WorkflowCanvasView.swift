@@ -33,14 +33,20 @@ struct WorkflowCanvasView: View {
                 ZStack(alignment: .topLeading) {
                     Color.clear
                         .contentShape(Rectangle())
-                        .onTapGesture { library.selectedObjects = [] }
+                        .onTapGesture {
+                            library.selectedObjects = []
+                            library.connecting = nil
+                        }
                     Lines(workflow: workflow, positions: positions)
                     ForEach(workflow.objects) { object in
                         if let point = positions[object.uid] {
-                            card(object, at: point)
+                            card(object, at: point, positions: positions)
                         }
                     }
+                    ConnectingLayer(positions: positions)
                 }
+                .coordinateSpace(.named(CanvasSpace.name))
+                .onGeometryChange(for: CGPoint.self) { $0.frame(in: .global).origin } action: { library.canvasOrigin = $0 }
                 .frame(width: size.width, height: size.height, alignment: .topLeading)
                 .dropDestination(for: String.self) { types, location in drop(types, at: location) }
             }
@@ -64,8 +70,9 @@ struct WorkflowCanvasView: View {
                 return .handled
             }
             .onKeyPress(.escape) {
-                guard !library.selectedObjects.isEmpty else { return .ignored }
+                guard !library.selectedObjects.isEmpty || library.connecting != nil else { return .ignored }
                 library.selectedObjects = []
+                library.connecting = nil
                 return .handled
             }
             .onKeyPress(keys: [.delete, .deleteForward]) { _ in
@@ -77,22 +84,32 @@ struct WorkflowCanvasView: View {
             .onCommand(#selector(NSResponder.selectAll(_:))) {
                 library.selectedObjects = Set(workflow.objects.map(\.uid))
             }
-            .onChange(of: workflow.id) { library.selectedObjects = [] }
+            .onChange(of: workflow.id) {
+                library.selectedObjects = []
+                library.connecting = nil
+            }
             .accessibilityLabel("Canvas of \(workflow.name)")
         }
     }
 
-    private func card(_ object: WorkflowObject, at point: WorkflowPoint) -> some View {
+    private func card(_ object: WorkflowObject, at point: WorkflowPoint, positions: [String: WorkflowPoint]) -> some View {
         let dragging = drag?.uid == object.uid
         let isSelected = library.selectedObjects.contains(object.uid)
-        return ObjectCard(object: object, selected: isSelected)
+        let target = library.connecting.map { $0.target == object.uid && $0.refusal == nil && !$0.dropped } ?? false
+        return ObjectCard(object: object, selected: isSelected || target)
             .frame(width: Self.card.width, height: Self.card.height)
+            .overlay(alignment: .trailing) { OutputHandle(object: object, workflow: workflow, positions: positions) }
+            .popover(isPresented: Binding(get: { library.editingConnections && selected == object.uid },
+                                          set: { library.editingConnections = $0 }), arrowEdge: .trailing) {
+                EditConnectionsPopover(object: object, workflow: workflow)
+            }
             .shadow(radius: dragging ? Space.sm : 0)
             .offset(x: point.x, y: point.y) // grid: ok canvas coordinates from the workflow
             .zIndex(dragging ? 1 : 0)
             .gesture(DragGesture(minimumDistance: 2)
                 .onChanged { value in
                     if !isSelected { library.select(object.uid) }
+                    library.connecting = nil
                     drag = (object.uid, value.translation)
                 }
                 .onEnded { value in
@@ -121,6 +138,7 @@ struct WorkflowCanvasView: View {
             .accessibilityAction(named: "Move Right") { nudge(object.uid, .rightArrow, by: WorkflowEdit.grid) }
             .accessibilityAction(named: "Move Up") { nudge(object.uid, .upArrow, by: WorkflowEdit.grid) }
             .accessibilityAction(named: "Move Down") { nudge(object.uid, .downArrow, by: WorkflowEdit.grid) }
+            .modifier(ConnectionActions(object: object, workflow: workflow))
     }
 
     /// The saved positions, with the card being dragged where the pointer has it.
@@ -185,6 +203,7 @@ private struct Lines: View {
         var from: CGPoint
         var to: CGPoint
         var keys: String
+        var edge: WorkflowLine
     }
 
     private var lines: [Line] {
@@ -193,7 +212,8 @@ private struct Lines: View {
             connections.enumerated().compactMap { index, connection -> Line? in
                 guard let start = positions[uid], let end = positions[connection.to] else { return nil }
                 return Line(id: "\(uid)-\(index)", from: CGPoint(x: start.x + card.width, y: start.y + card.height / 2),
-                            to: CGPoint(x: end.x, y: end.y + card.height / 2), keys: Self.keys(connection.modifiers))
+                            to: CGPoint(x: end.x, y: end.y + card.height / 2), keys: Self.keys(connection.modifiers),
+                            edge: WorkflowLine(from: uid, to: connection.to, modifiers: connection.modifiers))
             }
         }
     }
@@ -202,13 +222,13 @@ private struct Lines: View {
         ZStack(alignment: .topLeading) {
             Canvas { context, _ in
                 for line in lines {
-                    var path = Path()
-                    path.move(to: line.from)
-                    let bend = max(40, abs(line.to.x - line.from.x) / 2)
-                    path.addCurve(to: line.to, control1: CGPoint(x: line.from.x + bend, y: line.from.y),
-                                  control2: CGPoint(x: line.to.x - bend, y: line.to.y))
-                    context.stroke(path, with: .style(.secondary), lineWidth: 2)
+                    context.stroke(ConnectionCurve.path(from: line.from, to: line.to), with: .style(.secondary), lineWidth: 2)
                 }
+            }
+            .allowsHitTesting(false)
+            // S-062: right-click a line for Delete Connection and Modifier ▸.
+            ForEach(lines) { line in
+                LineHit(line: line.edge, from: line.from, to: line.to, workflow: workflow)
             }
             ForEach(lines.filter { !$0.keys.isEmpty }) { line in
                 Text(line.keys)
