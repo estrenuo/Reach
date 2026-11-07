@@ -131,6 +131,7 @@ extension Snapshot {
         library.selectedObjects = []
         await captureWorkflowsMultiSelect(dir: dir, window: window)
         await capturePalette(dir: dir, window: window)
+        await captureObjectSheets(dir: dir, window: window)
         // Configure Workflow… (S-043): as installed, then with the required field emptied.
         for (name, greeting) in [("workflow-configure", nil), ("workflow-configure-missing", "")] as [(String, String?)] {
             guard let example = library.selected else { break }

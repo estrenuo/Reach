@@ -38,6 +38,11 @@ struct WorkflowsView: View {
         .sheet(item: $library.editingHotkeys) { workflow in
             WorkflowHotkeysSheet(workflow: workflow)
         }
+        .sheet(item: $library.configuringObject) { item in
+            if let workflow = library.workflow(item.workflow), let object = workflow.object(item.uid) {
+                WorkflowObjectSheet(workflow: workflow, object: object)
+            }
+        }
         .confirmationDialog(removeTitle, isPresented: Binding(get: { library.removing != nil }, set: { if !$0 { library.removing = nil } })) {
             Button("Move to Trash", role: .destructive) {
                 if let workflow = library.removing { library.remove(workflow) }
@@ -269,6 +274,10 @@ struct WorkflowCommands: Commands {
             Button("Workflow Info…") { library.editingInfo = library.selected }
                 .keyboardShortcut("i")
                 .disabled(!inFront || library.selected == nil)
+            Button("Configure Object…") { library.configureObject() }
+                .keyboardShortcut("e", modifiers: [.command, .option])
+                .disabled(!inFront || library.selectedObjects.count != 1
+                          || library.selected?.object(library.selectedObject ?? "").map(WorkflowLibrary.canConfigure) != true)
             Button("Workflow Hotkeys…") { library.editingHotkeys = library.selected }
                 .keyboardShortcut("k", modifiers: [.command, .option])
                 .disabled(!inFront || library.selected?.hotkeys.isEmpty != false)

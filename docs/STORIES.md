@@ -1027,7 +1027,13 @@ Acceptance:
 - [unit] Each kind the palette offers has a form whose fields map one to one to its `config` keys; unknown keys are kept as they are.
 - [snap] The sheets for Keyword, Script Filter, Run Script and Open URL, in light and dark.
 - [self] Change an Open URL's address, ↩ in the launcher: the new address opens (recorded).
-Status: todo
+UX:
+- Flow: double-click a card, select it and press ↩, its context menu Configure…, or Workflow > Configure Object… (⌥⌘E) → a sheet "Configure <kind>" with one row per setting, the ones people change most first (keyword, title, URL, script) → Save (↩) writes them into info.plist at once, Cancel (Esc) leaves it as it was → Edit > Undo Configure Object (⌘Z) puts the old settings back, ⌘⇧Z the new ones.
+- Surface: sheet (one short task that finishes or cancels before going on).
+- States: a kind Reach has no form for → Configure… is dimmed and double-click does nothing; a list or dictionary setting (variables, conditions, search fields) is edited as JSON, and JSON that does not read shows "<label> is not valid JSON of the right shape." under it with Save dimmed; a number Alfred wrote that has no name in a choice shows as "Other (<n>)"; a long script scrolls inside its editor.
+- Words: title "Configure Keyword", "Configure Open URL"; footer "Saved in the workflow's info.plist, so Alfred reads it too."; labels in title case from Alfred's own names ("With Space", "Argument", "Please Wait Subtext", "Language", "Input").
+- Access: every row has its label as its VoiceOver name, editors included; the whole sheet works with Tab, ↩ and Esc. VoiceOver action Configure on a card.
+Status: done
 
 ### S-065 Delete objects
 As the user, I select one or more objects and press Delete; their connections go with them.

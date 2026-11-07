@@ -33,6 +33,8 @@ final class WorkflowLibrary {
     /// The selected objects on the canvas (S-065); Delete removes them, and
     /// with one selected the arrow keys move it (S-061, `selectedObject`).
     var selectedObjects: Set<String> = []
+    /// The object in the Configure Object… sheet (S-064).
+    var configuringObject: ObjectInSheet?
     /// The workflow in the Hotkeys… sheet (S-049).
     var editingHotkeys: Workflow?
     /// Called after every read of the folder, so workflow hotkeys follow it.

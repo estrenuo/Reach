@@ -58,6 +58,11 @@ struct WorkflowCanvasView: View {
                 WorkflowPaletteState.shared.search()
                 return .handled
             }
+            .onKeyPress(.return) {
+                guard library.selectedObjects.count == 1 else { return .ignored }
+                library.configureObject()
+                return .handled
+            }
             .onKeyPress(.escape) {
                 guard !library.selectedObjects.isEmpty else { return .ignored }
                 library.selectedObjects = []
@@ -101,11 +106,16 @@ struct WorkflowCanvasView: View {
                 library.select(object.uid, command: keys.contains(.command), shift: keys.contains(.shift))
                 focused = true
             }
+            .simultaneousGesture(TapGesture(count: 2).onEnded { library.configureObject(object.uid) })
             .contextMenu {
+                Button("Configure…") { library.configureObject(object.uid) }
+                    .disabled(!WorkflowLibrary.canConfigure(object))
+                Divider()
                 Button("Delete", role: .destructive) { delete(object.uid) }
             }
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
             .accessibilityAction { library.select(object.uid) }
+            .accessibilityAction(named: "Configure") { library.configureObject(object.uid) }
             .accessibilityAction(named: "Delete") { delete(object.uid) }
             .accessibilityAction(named: "Move Left") { nudge(object.uid, .leftArrow, by: WorkflowEdit.grid) }
             .accessibilityAction(named: "Move Right") { nudge(object.uid, .rightArrow, by: WorkflowEdit.grid) }
