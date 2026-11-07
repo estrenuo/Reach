@@ -982,7 +982,13 @@ Acceptance:
 - [unit] A move changes only that object's `xpos`/`ypos` in `uidata`, snapped to the canvas grid; every other key in `info.plist` stays byte for byte the same.
 - [unit] The plist is written with a safe save (temporary file, then replace); a workflow folder that changed on disk since it was read is read again first.
 - [self] Drag a card, reopen the workflow: it is where it was dropped. ⌘Z puts it back.
-Status: todo
+UX:
+- Flow: drag an object's card → it follows the pointer and its lines follow it → on release it snaps to the 10 pt canvas grid and is saved at once → Edit > Undo Move Object (⌘Z) puts it back, ⌘⇧Z moves it again. Keyboard: click a card to select it (accent border), ←↑→↓ move it one grid step, ⇧ with an arrow five steps, Esc clears the selection.
+- Surface: inline (direct manipulation on the canvas; no sheet, no Save button).
+- States: dragging = the card is drawn above the others with a shadow; error = the card goes back and the window shows "Unable to move the object in “<workflow>”: <reason>"; changed on disk = the workflow is read again before the move, so a change made in Alfred is kept.
+- Words: undo name "Move Object"; card tooltip stays "<kind>: <summary>".
+- Access: a card is a selectable element; VoiceOver offers the actions Move Left, Move Right, Move Up and Move Down. No animation on drop, so Reduce Motion needs nothing extra.
+Status: done
 
 ### S-062 Connect and disconnect objects
 As the user, I drag from one card's output to another card to connect them, and remove a connection from its context menu.

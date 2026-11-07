@@ -2,9 +2,24 @@ import ReachKit
 import SwiftUI
 
 /// A workflow's objects and the lines between them (S-044), where its
-/// uidata puts them. Read only: the canvas shows how a workflow is built.
+/// uidata puts them. Drag a card, or select it and press an arrow key, to
+/// move it (S-061); the new place is saved in info.plist at once.
 struct WorkflowCanvasView: View {
     let workflow: Workflow
+    private var library = WorkflowLibrary.shared
+    @Environment(\.undoManager) private var undo
+    @State private var drag: (uid: String, by: CGSize)?
+    @FocusState private var focused: Bool
+
+    init(workflow: Workflow) {
+        self.workflow = workflow
+    }
+
+    /// The selected card (S-061): the arrow keys move it.
+    private var selected: String? {
+        get { library.selectedObject }
+        nonmutating set { library.selectedObject = newValue }
+    }
 
     static let card = CGSize(width: 168, height: 56)
 
@@ -13,24 +28,90 @@ struct WorkflowCanvasView: View {
             ContentUnavailableView("No Objects", systemImage: "square.dashed",
                                    description: Text("This workflow has nothing on its canvas."))
         } else {
-            let positions = WorkflowLayout.positions(workflow)
+            let positions = shownPositions
             let size = canvasSize(positions)
             ScrollView([.horizontal, .vertical]) {
                 ZStack(alignment: .topLeading) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { selected = nil }
                     Lines(workflow: workflow, positions: positions)
                     ForEach(workflow.objects) { object in
                         if let point = positions[object.uid] {
-                            ObjectCard(object: object)
-                                .frame(width: Self.card.width, height: Self.card.height)
-                                .offset(x: point.x, y: point.y) // grid: ok canvas coordinates from the workflow
+                            card(object, at: point)
                         }
                     }
                 }
                 .frame(width: size.width, height: size.height, alignment: .topLeading)
             }
             .defaultScrollAnchor(.topLeading)
+            .focusable()
+            .focusEffectDisabled()
+            .focused($focused)
+            .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
+                guard let selected else { return .ignored }
+                let steps = press.modifiers.contains(.shift) ? 5.0 : 1.0
+                nudge(selected, press.key, by: steps * WorkflowEdit.grid)
+                return .handled
+            }
+            .onKeyPress(.escape) {
+                guard selected != nil else { return .ignored }
+                selected = nil
+                return .handled
+            }
+            .onChange(of: workflow.id) { selected = nil }
             .accessibilityLabel("Canvas of \(workflow.name)")
         }
+    }
+
+    private func card(_ object: WorkflowObject, at point: WorkflowPoint) -> some View {
+        let dragging = drag?.uid == object.uid
+        return ObjectCard(object: object, selected: selected == object.uid)
+            .frame(width: Self.card.width, height: Self.card.height)
+            .shadow(radius: dragging ? Space.sm : 0)
+            .offset(x: point.x, y: point.y) // grid: ok canvas coordinates from the workflow
+            .zIndex(dragging ? 1 : 0)
+            .gesture(DragGesture(minimumDistance: 2)
+                .onChanged { value in
+                    selected = object.uid
+                    drag = (object.uid, value.translation)
+                }
+                .onEnded { value in
+                    drag = nil
+                    guard let from = WorkflowLayout.positions(workflow)[object.uid] else { return }
+                    library.move(object.uid, to: WorkflowPoint(x: from.x + value.translation.width, y: from.y + value.translation.height),
+                                 in: workflow, undo: undo)
+                })
+            .onTapGesture {
+                selected = object.uid
+                focused = true
+            }
+            .accessibilityAddTraits(selected == object.uid ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { selected = object.uid }
+            .accessibilityAction(named: "Move Left") { nudge(object.uid, .leftArrow, by: WorkflowEdit.grid) }
+            .accessibilityAction(named: "Move Right") { nudge(object.uid, .rightArrow, by: WorkflowEdit.grid) }
+            .accessibilityAction(named: "Move Up") { nudge(object.uid, .upArrow, by: WorkflowEdit.grid) }
+            .accessibilityAction(named: "Move Down") { nudge(object.uid, .downArrow, by: WorkflowEdit.grid) }
+    }
+
+    /// The saved positions, with the card being dragged where the pointer has it.
+    private var shownPositions: [String: WorkflowPoint] {
+        var positions = WorkflowLayout.positions(workflow)
+        if let drag, let point = positions[drag.uid] {
+            positions[drag.uid] = WorkflowPoint(x: max(0, point.x + drag.by.width), y: max(0, point.y + drag.by.height))
+        }
+        return positions
+    }
+
+    private func nudge(_ uid: String, _ key: KeyEquivalent, by step: Double) {
+        guard let point = WorkflowLayout.positions(workflow)[uid] else { return }
+        let (dx, dy): (Double, Double) = switch key {
+        case .leftArrow: (-step, 0)
+        case .rightArrow: (step, 0)
+        case .upArrow: (0, -step)
+        default: (0, step)
+        }
+        library.move(uid, to: WorkflowPoint(x: point.x + dx, y: point.y + dy), in: workflow, undo: undo)
     }
 
     private func canvasSize(_ positions: [String: WorkflowPoint]) -> CGSize {
@@ -97,8 +178,9 @@ private struct Lines: View {
 }
 
 /// One object: its kind and what it does, colored by its category.
-private struct ObjectCard: View {
+struct ObjectCard: View {
     let object: WorkflowObject
+    var selected = false
 
     var body: some View {
         HStack(spacing: Space.sm) {
@@ -126,6 +208,11 @@ private struct ObjectCard: View {
             RoundedRectangle(cornerRadius: Radius.row).fill(Self.color(object.category).opacity(0.12))
         }
         .overlay(RoundedRectangle(cornerRadius: Radius.row).strokeBorder(Self.color(object.category).opacity(0.6)))
+        .overlay {
+            if selected {
+                RoundedRectangle(cornerRadius: Radius.row).strokeBorder(Palette.accent, lineWidth: 2)
+            }
+        }
         .help("\(object.kindName): \(object.summary)")
         .accessibilityElement(children: .combine)
     }

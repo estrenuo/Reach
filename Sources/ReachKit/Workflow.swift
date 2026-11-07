@@ -143,6 +143,8 @@ public struct Workflow: Equatable, Sendable, Identifiable {
     public var positions: [String: WorkflowPoint] = [:]
     /// The note on each object's card, from uidata.
     public var notes: [String: String] = [:]
+    /// When info.plist was last changed on disk, as it was read (S-061).
+    public var modified: Date?
 
     public init(id: String, folder: URL, bundleID: String = "", name: String, author: String = "", version: String = "",
                 description: String = "", readme: String = "", category: String = "", webAddress: String = "",
@@ -171,6 +173,7 @@ public struct Workflow: Equatable, Sendable, Identifiable {
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return nil }
         self.init(plist: plist, folder: folder)
         configuration = WorkflowConfiguration.values(in: folder)
+        modified = WorkflowEdit.modified(folder)
     }
 
     public init(plist: [String: Any], folder: URL) {

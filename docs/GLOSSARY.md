@@ -101,3 +101,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Song | One track in the Music library | item, media item; "track" only in Next Track and Previous Track |
 | Mini player playlist | The playlist "Reach Mini Player" in Music that Reach fills when it plays an album or artist; Reach only ever changes this one | temp playlist, queue, generated playlist |
 | Music library | Your albums, artists, playlists and songs, read with Apple's iTunesLibrary framework; needs Media & Apple Music access | iTunes library, catalogue |
+| Canvas | The area in a workflow's page where its objects sit as cards, joined by lines | board, editor, graph |
+| Object | One step of a workflow on the canvas: an input, an action, a utility or an output, shown as a card | node, block, item |
+| Connection | The line from one object to the next; a modifier key on it picks that path | link, edge, wire |
+| Move Object | Drag a card, or select it and press an arrow key, to put it somewhere else on the canvas | drag, reposition |

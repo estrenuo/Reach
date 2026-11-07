@@ -30,6 +30,8 @@ final class WorkflowLibrary {
     var log = WorkflowLog()
     var logLevel = WorkflowLogLevel.all
     var debugging = false
+    /// The selected object on the canvas (S-061); the arrow keys move it.
+    var selectedObject: String?
     /// The workflow in the Hotkeys… sheet (S-049).
     var editingHotkeys: Workflow?
     /// Called after every read of the folder, so workflow hotkeys follow it.
@@ -139,6 +141,33 @@ final class WorkflowLibrary {
             failure = "Unable to save “\(workflow.name)”: \(error.localizedDescription)"
         }
         reload()
+    }
+
+    /// S-061: puts an object somewhere else on the canvas and saves it at once.
+    /// A workflow changed on disk since it was read is read again first.
+    /// ⌘Z moves it back, ⌘⇧Z moves it again.
+    func move(_ uid: String, to point: WorkflowPoint, in workflow: Workflow, undo: UndoManager?) {
+        failure = nil
+        if WorkflowEdit.changedOnDisk(workflow) { reload() }
+        let current = self.workflow(workflow.id) ?? workflow
+        guard let from = WorkflowLayout.positions(current)[uid] else { return }
+        let to = WorkflowEdit.snapped(point)
+        guard to != from else { return }
+        do {
+            try WorkflowEdit.move(uid, to: to, folder: current.folder)
+        } catch {
+            failure = "Unable to move the object in “\(current.name)”: \(error.localizedDescription)"
+            reload()
+            return
+        }
+        reload()
+        let id = workflow.id
+        undo?.registerUndo(withTarget: self) { library in
+            MainActor.assumeIsolated {
+                if let workflow = library.workflow(id) { library.move(uid, to: from, in: workflow, undo: undo) }
+            }
+        }
+        undo?.setActionName("Move Object")
     }
 
     /// Writes an .alfredworkflow file to share: Don't Export values blanked,
