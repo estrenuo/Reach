@@ -110,3 +110,5 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Delete Connection | Remove a line from its context menu; Undo brings it back | disconnect (only in VoiceOver actions and Edit Connections), unlink |
 | Modifier | The key (⌘, ⌥, ⌃ or ⇧) held with Return that picks a connection, set from the line's context menu | mod, key combo |
 | Edit Connections… | The popover on a selected card that connects it to, or disconnects it from, the other objects with the keyboard | connection editor, link panel |
+| Selection | The cards picked on the canvas, each with an accent border; ⌘-click and ⇧-click add to it, ⌘A selects all | highlighted, marked |
+| Delete Object | Remove the selected objects and every connection to or from them; ⌘Z puts them back | remove, erase, cut |

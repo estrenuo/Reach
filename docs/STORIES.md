@@ -1037,7 +1037,13 @@ Depends: S-061
 Acceptance:
 - [unit] Deleting removes the objects, every connection to or from them, and their `uidata`; nothing else in the plist changes.
 - [self] Delete two objects, ⌘Z: both come back with their connections.
-Status: todo
+UX:
+- Flow: click a card to select it; ⌘-click adds or removes a card, ⇧-click adds one; Edit > Select All (⌘A) selects every card; a click on empty canvas or Esc clears the selection → Delete or ⌫ (or Edit > Delete, or Delete in a card's context menu) removes the selected objects and their lines at once and saves → Edit > Undo Delete Object (⌘Z) puts them back with their lines, ⌘⇧Z deletes them again.
+- Surface: inline. No confirmation dialog: nothing is lost, because ⌘Z brings it back.
+- States: several selected = each has the accent border; the arrow keys move a card only when one is selected; error = nothing is removed and the window shows "Unable to delete the objects in “<workflow>”: <reason>"; changed on disk = the workflow is read again first, so a change made in Alfred is kept.
+- Words: menu item and context menu "Delete"; undo name "Delete Object", or "Delete 2 Objects" for more than one.
+- Access: VoiceOver offers Delete on each card (it deletes the selection when the card is in it, else that card); a selected card has the Selected trait.
+Status: done
 
 ---
 

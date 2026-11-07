@@ -4,6 +4,7 @@ import SwiftUI
 /// A workflow's objects and the lines between them (S-044), where its
 /// uidata puts them. Drag a card, or select it and press an arrow key, to
 /// move it (S-061); the new place is saved in info.plist at once.
+/// ⌘-click, ⇧-click and ⌘A select several; Delete removes them (S-065).
 struct WorkflowCanvasView: View {
     let workflow: Workflow
     private var library = WorkflowLibrary.shared
@@ -15,11 +16,8 @@ struct WorkflowCanvasView: View {
         self.workflow = workflow
     }
 
-    /// The selected card (S-061): the arrow keys move it.
-    private var selected: String? {
-        get { library.selectedObject }
-        nonmutating set { library.selectedObject = newValue }
-    }
+    /// The single selected card (S-061): the arrow keys move it.
+    private var selected: String? { library.selectedObject }
 
     static let card = CGSize(width: 168, height: 56)
 
@@ -35,7 +33,7 @@ struct WorkflowCanvasView: View {
                     Color.clear
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            selected = nil
+                            library.selectedObjects = []
                             library.connecting = nil
                         }
                     Lines(workflow: workflow, positions: positions)
@@ -61,13 +59,22 @@ struct WorkflowCanvasView: View {
                 return .handled
             }
             .onKeyPress(.escape) {
-                guard selected != nil || library.connecting != nil else { return .ignored }
-                selected = nil
+                guard !library.selectedObjects.isEmpty || library.connecting != nil else { return .ignored }
+                library.selectedObjects = []
                 library.connecting = nil
                 return .handled
             }
+            .onKeyPress(keys: [.delete, .deleteForward]) { _ in
+                guard !library.selectedObjects.isEmpty else { return .ignored }
+                deleteSelection()
+                return .handled
+            }
+            .onDeleteCommand(perform: deleteAction)
+            .onCommand(#selector(NSResponder.selectAll(_:))) {
+                library.selectedObjects = Set(workflow.objects.map(\.uid))
+            }
             .onChange(of: workflow.id) {
-                selected = nil
+                library.selectedObjects = []
                 library.connecting = nil
             }
             .accessibilityLabel("Canvas of \(workflow.name)")
@@ -76,8 +83,9 @@ struct WorkflowCanvasView: View {
 
     private func card(_ object: WorkflowObject, at point: WorkflowPoint, positions: [String: WorkflowPoint]) -> some View {
         let dragging = drag?.uid == object.uid
+        let isSelected = library.selectedObjects.contains(object.uid)
         let target = library.connecting.map { $0.target == object.uid && $0.refusal == nil && !$0.dropped } ?? false
-        return ObjectCard(object: object, selected: selected == object.uid || target)
+        return ObjectCard(object: object, selected: isSelected || target)
             .frame(width: Self.card.width, height: Self.card.height)
             .overlay(alignment: .trailing) { OutputHandle(object: object, workflow: workflow, positions: positions) }
             .popover(isPresented: Binding(get: { library.editingConnections && selected == object.uid },
@@ -89,7 +97,7 @@ struct WorkflowCanvasView: View {
             .zIndex(dragging ? 1 : 0)
             .gesture(DragGesture(minimumDistance: 2)
                 .onChanged { value in
-                    selected = object.uid
+                    if !isSelected { library.select(object.uid) }
                     library.connecting = nil
                     drag = (object.uid, value.translation)
                 }
@@ -100,11 +108,16 @@ struct WorkflowCanvasView: View {
                                  in: workflow, undo: undo)
                 })
             .onTapGesture {
-                selected = object.uid
+                let keys = NSEvent.modifierFlags
+                library.select(object.uid, command: keys.contains(.command), shift: keys.contains(.shift))
                 focused = true
             }
-            .accessibilityAddTraits(selected == object.uid ? [.isButton, .isSelected] : .isButton)
-            .accessibilityAction { selected = object.uid }
+            .contextMenu {
+                Button("Delete", role: .destructive) { delete(object.uid) }
+            }
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { library.select(object.uid) }
+            .accessibilityAction(named: "Delete") { delete(object.uid) }
             .accessibilityAction(named: "Move Left") { nudge(object.uid, .leftArrow, by: WorkflowEdit.grid) }
             .accessibilityAction(named: "Move Right") { nudge(object.uid, .rightArrow, by: WorkflowEdit.grid) }
             .accessibilityAction(named: "Move Up") { nudge(object.uid, .upArrow, by: WorkflowEdit.grid) }
@@ -119,6 +132,21 @@ struct WorkflowCanvasView: View {
             positions[drag.uid] = WorkflowPoint(x: max(0, point.x + drag.by.width), y: max(0, point.y + drag.by.height))
         }
         return positions
+    }
+
+    /// Deletes the selection when `uid` is in it, else only that card (context menu, VoiceOver).
+    private func delete(_ uid: String) {
+        let uids = library.selectedObjects.contains(uid) ? library.selectedObjects : [uid]
+        library.delete(uids, in: workflow, undo: undo)
+    }
+
+    /// Edit > Delete, off while nothing is selected.
+    private var deleteAction: (() -> Void)? {
+        library.selectedObjects.isEmpty ? nil : { deleteSelection() }
+    }
+
+    private func deleteSelection() {
+        library.delete(library.selectedObjects, in: workflow, undo: undo)
     }
 
     private func nudge(_ uid: String, _ key: KeyEquivalent, by step: Double) {

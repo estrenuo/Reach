@@ -30,8 +30,9 @@ final class WorkflowLibrary {
     var log = WorkflowLog()
     var logLevel = WorkflowLogLevel.all
     var debugging = false
-    /// The selected object on the canvas (S-061); the arrow keys move it.
-    var selectedObject: String?
+    /// The selected objects on the canvas (S-065); Delete removes them, and
+    /// with one selected the arrow keys move it (S-061, `selectedObject`).
+    var selectedObjects: Set<String> = []
     /// The line being dragged from a card (S-062), and whether Edit Connections… shows.
     var connecting: WorkflowConnecting?
     var editingConnections = false
