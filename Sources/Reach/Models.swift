@@ -84,6 +84,33 @@ final class ClipboardItem {
     var clipKind: ClipboardPolicy.Kind { ClipboardPolicy.Kind(rawValue: kind) ?? .text }
 }
 
+/// A deleted collection and its snippets as values, for ⌘Z.
+struct DeletedCollection {
+    struct Value { var name, keyword, text: String; var createdAt: Date; var uuid: UUID }
+    var name: String
+    var createdAt: Date
+    var uuid: UUID
+    var snippets: [Value]
+
+    init(_ collection: SnippetCollection) {
+        (name, createdAt, uuid) = (collection.name, collection.createdAt, collection.uuid)
+        snippets = (collection.snippets ?? []).map {
+            Value(name: $0.name, keyword: $0.keyword, text: $0.text, createdAt: $0.createdAt, uuid: $0.uuid)
+        }
+    }
+}
+
+extension ModelContext {
+    /// The model with this id while it is in the store, else nil. Unlike
+    /// `model(for:)`, it never returns a deleted model, whose properties
+    /// crash when read (fix log: deleting the collection on screen).
+    func existing<T: PersistentModel>(_ id: PersistentIdentifier, as type: T.Type) -> T? {
+        var descriptor = FetchDescriptor<T>(predicate: #Predicate { $0.persistentModelID == id })
+        descriptor.fetchLimit = 1
+        return (try? fetch(descriptor))?.first
+    }
+}
+
 /// What the snippets window's sidebar shows: every snippet, or one collection.
 enum SnippetPage: Hashable {
     case all
@@ -203,7 +230,7 @@ final class AppModel {
     /// The collection the window shows, nil on All Snippets.
     var currentCollection: SnippetCollection? {
         guard case .collection(let id) = page else { return nil }
-        return container.mainContext.model(for: id) as? SnippetCollection
+        return container.mainContext.existing(id, as: SnippetCollection.self)
     }
 
     /// A new snippet goes into the collection on screen; on All Snippets into
@@ -230,11 +257,49 @@ final class AppModel {
     }
 
     /// Deletes the collection and its snippets; ⌘Z brings them back.
+    ///
+    /// The undo is Reach's own: it keeps the collection and its snippets as
+    /// values and inserts them again. SwiftData's own undo of a saved cascade
+    /// delete crashes now and then (fix log: ⌘Z after deleting a collection).
     func delete(_ collection: SnippetCollection) {
         if case .collection(collection.id) = page { page = .all }
         selection = nil
-        container.mainContext.delete(collection)
-        try? container.mainContext.save()
+        let context = container.mainContext
+        let kept = DeletedCollection(collection)
+        let undo = context.undoManager
+        context.undoManager = nil
+        context.delete(collection)
+        try? context.save()
+        context.undoManager = undo
+        undo?.registerUndo(withTarget: self) { model in
+            MainActor.assumeIsolated { model.restore(kept) }
+        }
+        undo?.setActionName("Delete Collection")
+    }
+
+    /// Puts a deleted collection and its snippets back, with their ids, and
+    /// shows it; ⌘⇧Z deletes it again.
+    private func restore(_ kept: DeletedCollection) {
+        let context = container.mainContext
+        let undo = context.undoManager
+        context.undoManager = nil
+        let collection = SnippetCollection(name: kept.name)
+        collection.uuid = kept.uuid
+        collection.createdAt = kept.createdAt
+        context.insert(collection)
+        for value in kept.snippets {
+            let snippet = Snippet(name: value.name)
+            (snippet.keyword, snippet.text, snippet.createdAt, snippet.uuid) = (value.keyword, value.text, value.createdAt, value.uuid)
+            context.insert(snippet)
+            snippet.collection = collection
+        }
+        try? context.save()
+        context.undoManager = undo
+        page = .collection(collection.id)
+        undo?.registerUndo(withTarget: self) { model in
+            MainActor.assumeIsolated { model.delete(collection) }
+        }
+        undo?.setActionName("Delete Collection")
     }
 
     /// Snippets from before collections go into "Snippets", so every snippet has one.

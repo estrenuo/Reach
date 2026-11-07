@@ -47,19 +47,42 @@ extension SelfTest {
         check("snippets from before S-029 get a collection", orphan.collection != nil)
 
         let count = collections().count
+        // ⌘Z puts the snippets back as new models; find them again by their ids.
+        let leftovers = [loose.uuid, orphan.uuid]
+        let kept = work.snippets?.count ?? 0
         model.page = .collection(work.id)
+        // The undo manager groups by event, like in the app: a run-loop turn
+        // closes the group, and the window draws between the steps.
+        await Self.nextEvent()
         undo.removeAllActions()
         model.delete(work)
         check("deleting a collection deletes its snippets",
               collections().count == count - 1 && ((try? context.fetchCount(FetchDescriptor<Snippet>(predicate: #Predicate { $0.name == "Email signature" }))) ?? 0) == 0
                 && model.page == .all)
+        await Self.nextEvent()
         undo.undo()
         let back = (try? context.fetch(FetchDescriptor<SnippetCollection>(predicate: #Predicate { $0.name == "Work mail" }))) ?? []
         check("⌘Z brings the collection back with its snippets",
               back.count == 1 && back.first?.snippets?.contains { $0.name == "Email signature" } == true)
+        check("and shows it", back.first.map { model.page == .collection($0.id) } ?? false)
+        await Self.nextEvent()
+        undo.redo()
+        func workMail() -> [SnippetCollection] {
+            (try? context.fetch(FetchDescriptor<SnippetCollection>(predicate: #Predicate { $0.name == "Work mail" }))) ?? []
+        }
+        check("⌘⇧Z deletes it again", workMail().isEmpty && model.page == .all)
+        await Self.nextEvent()
+        undo.undo()
+        check("and ⌘Z brings it back once more", kept > 0 && workMail().first?.snippets?.count == kept)
 
-        back.forEach(context.delete)
-        for item in [loose, orphan] { context.delete(item) }
+        workMail().forEach(context.delete)
+        for uuid in leftovers {
+            let found = (try? context.fetch(FetchDescriptor<Snippet>(predicate: #Predicate { $0.uuid == uuid }))) ?? []
+            found.forEach(context.delete)
+        }
         try? context.save()
     }
+
+    /// Lets the main run loop turn once, so the undo manager closes its event group.
+    static func nextEvent() async { try? await Task.sleep(for: .milliseconds(50)) }
 }

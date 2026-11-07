@@ -68,12 +68,12 @@ struct SnippetTable: View {
 
     private var title: String {
         guard case .collection(let id) = page else { return SnippetPage.allTitle }
-        return (context.model(for: id) as? SnippetCollection)?.name ?? SnippetPage.allTitle
+        return context.existing(id, as: SnippetCollection.self)?.name ?? SnippetPage.allTitle
     }
 
     /// No confirmation: ⌘Z brings it back.
     private func delete(_ ids: Set<PersistentIdentifier>) {
-        for id in ids { if let snippet = context.model(for: id) as? Snippet { context.delete(snippet) } }
+        for id in ids { if let snippet = context.existing(id, as: Snippet.self) { context.delete(snippet) } }
         if let selection = model.selection, ids.contains(selection) { model.selection = nil }
         try? context.save()
     }

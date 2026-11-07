@@ -145,3 +145,10 @@ Symptom: a `{query}` holding `{var:token}` came out with the token's value in it
 Cause: `WorkflowText.fill` replaced `{query}` first and then each `{var:…}` over the whole result.
 Fix: one pass over the template; values are put in as they are and never scanned again.
 Rule: fill templates in a single pass; never run a replacement over text that already holds values.
+
+## ⌘Z after deleting a collection crashed the app (S-029)
+
+Symptom: deleting the collection on screen in the Snippets window, or pressing ⌘Z after it, could stop Reach with SwiftData's "This model instance was invalidated". The self-test's snippets group crashed now and then, and every time once it let the window draw between the steps.
+Cause: two bugs. `SnippetTable.title` and `AppModel.currentCollection` looked the collection up with `model(for:)`, which hands back a deleted model whose properties crash when read; the table drew once more with the old page. And SwiftData's own undo of a saved cascade delete crashes inside `NSUndoManager.undo` about one time in two when the delete and the undo fall in one undo group (a standalone repro shows it), and still now and then in the app's shape.
+Fix: `ModelContext.existing(_:as:)` fetches by id and returns nil for a deleted model; the window uses it. `AppModel.delete(_:)` keeps the collection and its snippets as values, deletes with SwiftData's undo off, and registers its own undo that inserts them again with their uuids (and a redo that deletes again). The self-test now lets the run loop turn between the steps, as a person would, and checks ⌘Z, ⌘⇧Z and ⌘Z again.
+Rule: never read a model from `model(for:)` for an id that may have been deleted; look it up with `existing(_:as:)`. Undo of a delete that cascades is Reach's own, from values, not SwiftData's.
