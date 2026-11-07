@@ -65,7 +65,7 @@ Plan: one commit. Do it first if the first `bm` query on the real Mac feels slow
 
 Done: a query starts one read in a detached task and gets its matches through `later`; the first `bm` query with 20,000 Safari bookmarks (5.9 MB) went from 0.56 s to 0.007 s, and the `bookmarks` self-test has 24 checks.
 
-## Settings pages in their feature's folder  [Worth exploring]
+## Settings pages in their feature's folder  [Done]
 
 Done 2026-11-07: pages moved to `Launcher/`, `Appearance/` and `Settings/` in one rename-only commit; `UI/` keeps the shared parts.
 
