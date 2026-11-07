@@ -29,6 +29,64 @@ extension SelfTest {
         return files
     }
 
+    /// A large Safari file (`count` bookmarks in folders of 100, several MB),
+    /// for timing the first query. Chrome stays empty.
+    static func writeLargeBookmarkFixture(in root: URL, count: Int) -> BookmarkSource.Files {
+        let files = BookmarkSource.Files(safari: root.appending(path: "Safari/Bookmarks.plist"), chromeRoot: root.appending(path: "Chrome"))
+        try? FileManager.default.removeItem(at: root)
+        try? FileManager.default.createDirectory(at: files.safari.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let folders = stride(from: 0, to: count, by: 100).map { start -> [String: Any] in
+            let leaves = (start..<min(start + 100, count)).map { n -> [String: Any] in
+                ["WebBookmarkType": "WebBookmarkTypeLeaf", "WebBookmarkUUID": UUID().uuidString,
+                 "URLString": "https://site\(n).example.com/articles/\(n)/a-long-path-for-realistic-size?ref=bookmarks",
+                 "URIDictionary": ["title": "Bookmark number \(n) about topic \(n % 97)"]]
+            }
+            return ["WebBookmarkType": "WebBookmarkTypeList", "Title": "Folder \(start / 100)", "Children": leaves]
+        }
+        let safari: [String: Any] = ["WebBookmarkType": "WebBookmarkTypeList", "Title": "", "Children": [
+            ["WebBookmarkType": "WebBookmarkTypeList", "Title": "BookmarksBar", "Children": folders],
+        ]]
+        try? PropertyListSerialization.data(fromPropertyList: safari, format: .binary, options: 0).write(to: files.safari)
+        return files
+    }
+
+    /// The first query with a large Safari file (20,000 bookmarks, about
+    /// 6 MB) answers before the file is read; the read runs off the main
+    /// thread, once, and its matches arrive late for the newest query.
+    static func checkFirstQueryOffMain(model: AppModel) async {
+        guard let launcher = model.launcher else { return }
+        let lm = model.launcherModel
+        let source = lm.bookmarks
+        let root = URL(fileURLWithPath: "/tmp/Reach-bookmarks-large", isDirectory: true)
+        let files = source.files
+        source.files = writeLargeBookmarkFixture(in: root, count: 20_000)
+        defer {
+            source.files = files
+            try? FileManager.default.removeItem(at: root)
+        }
+        func marks() -> [LaunchResult] { lm.results.filter { $0.id.hasPrefix("bookmark:") } }
+
+        launcher.show()
+        let readsBefore = source.reads
+        let clock = ContinuousClock()
+        let first = clock.measure { lm.query = "bm topic 4" }
+        check("the first query answers while the files are read off the main thread",
+              source.isReading && marks().isEmpty, "\(first), reading: \(source.isReading)")
+        print("TIMING first bm query: \(first)")
+        let next = clock.measure { lm.query = "bm topic 42" }
+        check("typing on starts no second read", source.reads == readsBefore + 1, "\(source.reads - readsBefore) reads, \(next)")
+        let waited = clock.now
+        await source.readDone()
+        print("TIMING read off the main thread: \(clock.now - waited) after the second keystroke")
+        check("when the read lands, the newest query's matches arrive",
+              marks().count == BookmarkSource.maxResults && marks().allSatisfy { $0.title.hasSuffix("topic 42") },
+              marks().map(\.title).joined(separator: ", "))
+        let warm = clock.measure { lm.query = "bm topic 43" }
+        print("TIMING next bm query: \(warm)")
+        check("the query after it uses the list without reading", source.reads == readsBefore + 1 && !source.isReading)
+        launcher.hide()
+    }
+
     static func writeChrome(_ files: BookmarkSource.Files, profile: String, _ marks: [(String, String)]) {
         let folder = files.chromeRoot.appending(path: profile)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -61,9 +119,14 @@ extension SelfTest {
             try? FileManager.default.removeItem(at: root)
         }
         func marks() -> [LaunchResult] { lm.results.filter { $0.id.hasPrefix("bookmark:") } }
+        /// Types a query and waits for a read it starts: reads run off the main thread.
+        func type(_ text: String) async {
+            lm.query = text
+            await source.readDone()
+        }
 
         launcher.show()
-        lm.query = "swift"
+        await type("swift")
         let rows = marks()
         check("a query finds bookmarks from Safari and every Chrome profile",
               Set(rows.map(\.title)) == ["Swift Forums", "Swift Package Index", "SwiftUI Documentation", "Swift Evolution"],
@@ -115,14 +178,14 @@ extension SelfTest {
         launcher.hide()
         await showAgain(launcher)
         check("showing the launcher does not read them either", source.reads == readsBefore)
-        lm.query = "swift test"
+        await type("swift test")
         check("the next query reads the changed file", source.reads == readsBefore + 1 && marks().first?.title == "Swift Testing",
               marks().map(\.title).joined(separator: ", "))
         lm.query = "swift testi"
         check("and the query after it does not", source.reads == readsBefore + 1)
 
         settings.chromeOn = false
-        lm.query = "swift"
+        await type("swift")
         check("with Chrome off, only Safari's bookmarks", Set(marks().map(\.title)) == ["Swift Forums"],
               marks().map(\.title).joined(separator: ", "))
         settings.chromeOn = true
@@ -132,7 +195,7 @@ extension SelfTest {
         try? FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: safariFile)
         launcher.hide()
         await showAgain(launcher)
-        lm.query = "swift"
+        await type("swift")
         check("without Full Disk Access, Safari is skipped and Chrome still shows",
               source.safariAccess == .denied && !marks().isEmpty && !marks().contains { $0.title == "Apple Developer" },
               "\(source.safariAccess) \(marks().map(\.title).joined(separator: ", "))")
@@ -150,5 +213,8 @@ extension SelfTest {
         try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: safariFile)
         source.read()
         check("with access back, Safari is read again", source.safariAccess == .readable)
+
+        source.files = files
+        await checkFirstQueryOffMain(model: model)
     }
 }

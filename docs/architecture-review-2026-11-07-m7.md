@@ -53,7 +53,7 @@ Plan: 1) add `LauncherShot`, `captureLauncher` and `withSampleWorkflow`, run the
 
 Done: the launcher captures are one list of `LauncherShot`s run by `captureLauncher` (`Snapshot+Launcher.swift`), with no `if name ==`; the workflow shots and the Workflows window captures are in `Snapshot+Workflows.swift`, the sample clips and the clipboard viewer in `Snapshot+Clipboard.swift`. `Snapshot.swift` went from 675 to 395 lines. The same 180 PNG names before and after, every layout JSON and grid-lint PASS, and the moved captures look the same in light and dark (only the text cursor and the file dates differ).
 
-## Read bookmark files off the main thread  [Worth exploring]
+## Read bookmark files off the main thread  [Done]
 
 Files: Sources/Reach/Launcher/BookmarkSource.swift (215 lines)
 Signal: slow work on the main thread.
@@ -62,6 +62,8 @@ Proposal: when the files changed, start the read in a `Task.detached` that retur
 Benefits: typing never waits on disk; the source works like the mini player.
 Proof of same behavior: the `bookmarks` self-test group (19 checks) and the 10 `WebBookmark` unit tests; a timing of the first query with a large fixture file before and after.
 Plan: one commit. Do it first if the first `bm` query on the real Mac feels slow.
+
+Done: a query starts one read in a detached task and gets its matches through `later`; the first `bm` query with 20,000 Safari bookmarks (5.9 MB) went from 0.56 s to 0.007 s, and the `bookmarks` self-test has 24 checks.
 
 ## Settings pages in their feature's folder  [Worth exploring]
 
