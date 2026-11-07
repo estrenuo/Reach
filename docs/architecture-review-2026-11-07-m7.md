@@ -63,6 +63,8 @@ Plan: one commit. Do it first if the first `bm` query on the real Mac feels slow
 
 ## Settings pages in their feature's folder  [Worth exploring]
 
+Done 2026-11-07: pages moved to `Launcher/`, `Appearance/` and `Settings/` in one rename-only commit; `UI/` keeps the shared parts.
+
 Files: Sources/Reach/UI/ (23 files; 14 are settings pages)
 Signal: a settings page that lives far from its feature.
 Problem: `UI/` mixes the shared parts (`Grid`, `Theme`, `WindowBehavior`, `EditableList`) with feature pages such as `BookmarkSettingsView`, `ContactsSettingsView` and `DictionarySettingsView`, while `Music/`, `Clipboard/`, `Snippets/` and `Workflows/` keep their pages with the feature.

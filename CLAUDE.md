@@ -6,6 +6,7 @@ SwiftData database and no server.
 ## Layout
 
 - `Sources/Reach/` the app. `App.swift` has the window, menus, and the database location.
+  One folder per feature with its settings page beside it (`Launcher/`, `Appearance/`, `Clipboard/`, `Snippets/`, `Music/`, `Workflows/`); `Settings/` has the Settings window and app-wide pages; `UI/` has only shared parts.
 - `Sources/ReachKit/` rules and data logic with no SwiftUI. Tests in `Tests/ReachKitTests/`.
 - `Package.swift` a Swift package. There is no Xcode project.
 - `build.sh` builds, signs, and installs `~/Applications/Reach.app`.
@@ -41,7 +42,7 @@ SwiftData database and no server.
 - Compare accents: add `APP_ACCENT=<id>` to the snapshot command.
 - Spacing comes from `Space` in `UI/Grid.swift`, on a 4 pt grid. Mark custom pages and cards with `.gridArea` and `.gridProbe`.
 - Windows open calm: `.noInitialFocus()` on every window and sheet (no focus ring or selected text on open), `.fitsContent()` on sheets and Settings tabs (no scroll bar with nothing to scroll). System scroll bars. Both in `UI/WindowBehavior.swift`.
-- Settings: one tab per topic in `SettingsView.swift`, one grouped Form per tab. Add a case to `SettingsTab` for a new tab.
+- Settings: one tab per topic in `Settings/SettingsView.swift`, one grouped Form per tab. Add a case to `SettingsTab` for a new tab.
 - Window chrome (title bar, toolbar, sidebar, menus, sheets) stays system. Buttons use system styles, like `.borderedProminent`.
 - Colors: `.primary`, `.secondary`, `.tint`, and system colors. Never fixed grays or white for text.
 - Every action has a menu bar item and a keyboard shortcut.
