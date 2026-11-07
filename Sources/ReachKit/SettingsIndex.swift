@@ -59,6 +59,13 @@ public enum SettingsIndex {
         + ResultType.allCases.map { SettingsEntry($0.title, page: "search", section: "Default Results", words: "file kind") }
         + SystemCommand.allCases.map { SettingsEntry($0.title, page: "system", section: "Commands", words: "keyword confirm") }
         + FileAction.allCases.map { SettingsEntry($0.title, page: "actions", section: "Action Panel", words: "action") }
+        + MusicCommand.allCases.map { SettingsEntry($0.title, page: "music", section: "Keywords", words: "music keyword \($0.defaultKeyword)") }
+        + page("music", "Keywords", ["Keywords", "Show in default results"], words: "music itunes song play")
+        + page("music", "Mini Player", ["Mini Player", "Mini player hotkey", "Keyword", "Random Album needs at least",
+                                        "Hide after choosing"], words: "music album artist playlist browse library")
+        + page("music", "Include", ["Include", "Podcasts", "Videos", "Songs without album or artist"], words: "music library untagged")
+        + page("music", "Access", ["Music library"], words: "music media privacy permission")
+        + page("music", "Access", ["Access", "Automation"], words: "music privacy permission apple events")
 
     private static func page(_ page: String, _ section: String, _ titles: [String], words: String = "") -> [SettingsEntry] {
         titles.map { SettingsEntry($0, page: page, section: section, words: words) }

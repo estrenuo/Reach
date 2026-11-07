@@ -1,3 +1,4 @@
+import ReachKit
 import SwiftUI
 
 /// Sizes of the launcher, on the 4 pt grid. The panel's height follows the rows.
@@ -32,7 +33,13 @@ enum LauncherLayout {
     @MainActor static func height(for model: LauncherModel) -> CGFloat {
         if model.actions != nil { return actionsHeight }
         if model.viewer != nil { return browseHeight }
-        return model.browsing != nil ? browseHeight : height(rows: model.results.count)
+        // The mini player's lists (S-060) can be longer than the bar; they scroll.
+        return model.browsing != nil ? browseHeight : height(rows: min(model.results.count, visibleRows))
+    }
+
+    /// The rows the bar shows before it scrolls: the Visible results setting.
+    @MainActor static var visibleRows: Int {
+        LauncherOptions.clampedVisible(LauncherOptionsStore.shared.visibleResults)
     }
 }
 
@@ -120,18 +127,32 @@ struct LauncherView: View {
             }
             if model.browsing != nil {
                 BrowseView(model: model)
-            } else if !model.results.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(model.results.enumerated()), id: \.element.id) { index, result in
-                        ResultRow(result: result, index: index, count: model.results.count,
-                                  selected: index == model.selection, error: model.errors[result.id])
-                            .onContinuousHover { phase in
-                                if case .active = phase { model.select(index) }
-                            }
-                            .onTapGesture { model.open(at: index) }
-                            .accessibilityAction(named: "Open") { model.open(at: index) }
-                    }
+            } else if model.results.count > LauncherLayout.visibleRows {
+                // Only the mini player's lists get this long (S-060): they scroll with the selection.
+                ScrollViewReader { proxy in
+                    ScrollView { resultRows }
+                        .onChange(of: model.selection) { _, now in
+                            if model.results.indices.contains(now) { proxy.scrollTo(model.results[now].id) }
+                        }
                 }
+            } else if !model.results.isEmpty {
+                resultRows
+            }
+        }
+    }
+}
+
+extension LauncherView {
+    fileprivate var resultRows: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(model.results.enumerated()), id: \.element.id) { index, result in
+                ResultRow(result: result, index: index, count: model.results.count,
+                          selected: index == model.selection, error: model.errors[result.id])
+                    .onContinuousHover { phase in
+                        if case .active = phase { model.select(index) }
+                    }
+                    .onTapGesture { model.open(at: index) }
+                    .accessibilityAction(named: "Open") { model.open(at: index) }
             }
         }
     }

@@ -54,9 +54,11 @@ struct LaunchResult: Identifiable, Equatable {
     var workflow: WorkflowRun?
     /// The bundle id of the browser Return opens the URL in, instead of the default one (S-057).
     var opensIn: String?
+    /// A music command: Return sends it to Music (S-059). It has no URL.
+    var music: MusicRequest?
 
     var isOpenable: Bool {
-        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || opensSnippets || workflow != nil
+        url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || opensSnippets || workflow != nil || music != nil
     }
 }
 

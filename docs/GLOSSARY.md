@@ -92,3 +92,12 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Show bookmarks | Where web bookmarks show: In Default Results, or With Keyword Only (`bm <text>`) | scope, mode |
 | Open in | The browser Return opens a web bookmark in: Default Browser, or The Bookmark’s Browser | launch with, browser choice |
 | Full Disk Access | The macOS permission Reach needs to read Safari's bookmarks; without it Safari is skipped | disk permission, file access |
+| Music command | A keyword row that tells Music.app what to do: play or pause, next, back, previous, random, the volume, mute (S-059) | iTunes command, player action, media key |
+| Music keyword | The word that finds a music command, like `next`; each one can be turned off or changed in Settings > Music | trigger, shortcut |
+| Back to Start | Start the playing song again (`back`); Previous Track goes to the song before | rewind, restart |
+| Automation | The macOS permission that lets Reach send Apple Events to Music; in System Settings > Privacy & Security > Automation | Apple Events access, scripting permission |
+| Mini player | The launcher showing your Music library to browse and play, from its hotkey or the `music` keyword (S-060) | music browser, iTunes mini player, library window |
+| Random Album | A mini player row that plays an album picked at random, skipping albums with fewer songs than the setting | shuffle album, random play |
+| Song | One track in the Music library | item, media item; "track" only in Next Track and Previous Track |
+| Mini player playlist | The playlist "Reach Mini Player" in Music that Reach fills when it plays an album or artist; Reach only ever changes this one | temp playlist, queue, generated playlist |
+| Music library | Your albums, artists, playlists and songs, read with Apple's iTunesLibrary framework; needs Media & Apple Music access | iTunes library, catalogue |

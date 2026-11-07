@@ -27,6 +27,16 @@ final class HotkeyCenter {
     private static let launcherID: UInt32 = 1
     private static let selectionID: UInt32 = 3
     private static let clipboardID: UInt32 = 4
+    /// The mini player hotkey (S-060): nil when people cleared it.
+    private(set) var miniPlayerCombo: KeyCombo?
+    private(set) var miniPlayerKeyName = "Return"
+    var onMiniPlayer: () -> Void = {}
+    /// False when another app owns the mini player hotkey.
+    private(set) var miniPlayerRegistered = false
+    private var miniPlayerRef: EventHotKeyRef?
+    private static let miniPlayerID: UInt32 = 5
+    /// Test runs never register a hotkey, not even one changed in Settings.
+    private var registers = true
     /// Workflow hotkeys (S-049) take ids from here on.
     static let firstWorkflowID: UInt32 = 100
     /// A workflow hotkey was pressed, by its id.
@@ -46,6 +56,52 @@ final class HotkeyCenter {
             combo = .default
             keyName = "Space"
         }
+        if defaults.bool(forKey: "music.hotkey.cleared") {
+            miniPlayerCombo = nil
+        } else if let data = defaults.data(forKey: "music.hotkey.combo"),
+                  let saved = try? JSONDecoder().decode(KeyCombo.self, from: data) {
+            miniPlayerCombo = saved
+            miniPlayerKeyName = defaults.string(forKey: "music.hotkey.key") ?? Self.name(for: saved.keyCode, characters: nil)
+        } else {
+            miniPlayerCombo = .miniPlayer
+        }
+    }
+
+    var miniPlayerDisplay: String? { miniPlayerCombo?.display(key: miniPlayerKeyName) }
+    var miniPlayerSpoken: String? { miniPlayerCombo?.spoken(key: miniPlayerKeyName) }
+
+    /// Switches the mini player hotkey to `new`, or removes it with nil. When the
+    /// system refuses `new`, the old one stays and this returns false.
+    @discardableResult
+    func changeMiniPlayer(to new: KeyCombo?, keyName newName: String) -> Bool {
+        let old = miniPlayerCombo
+        unregisterMiniPlayer()
+        if let new, registers {
+            guard registerFixed(new, id: Self.miniPlayerID, ref: &miniPlayerRef) else {
+                if let old { miniPlayerRegistered = registerFixed(old, id: Self.miniPlayerID, ref: &miniPlayerRef) }
+                return false
+            }
+            miniPlayerRegistered = true
+        }
+        miniPlayerCombo = new
+        if new != nil { miniPlayerKeyName = newName }
+        Store.settings.set(new == nil, forKey: "music.hotkey.cleared")
+        Store.settings.set(try? JSONEncoder().encode(new), forKey: "music.hotkey.combo")
+        Store.settings.set(newName, forKey: "music.hotkey.key")
+        return true
+    }
+
+    /// While Settings records a new mini player hotkey, the old one must not fire.
+    func suspendMiniPlayer() { unregisterMiniPlayer() }
+    func resumeMiniPlayer() {
+        guard registers, miniPlayerRef == nil, let combo = miniPlayerCombo else { return }
+        miniPlayerRegistered = registerFixed(combo, id: Self.miniPlayerID, ref: &miniPlayerRef)
+    }
+
+    private func unregisterMiniPlayer() {
+        if let miniPlayerRef { UnregisterEventHotKey(miniPlayerRef) }
+        miniPlayerRef = nil
+        miniPlayerRegistered = false
     }
 
     var display: String { combo.display(key: keyName) }
@@ -54,7 +110,9 @@ final class HotkeyCenter {
     /// Installs the event handler; registers the saved hotkey unless `register` is false.
     func start(register: Bool = true) {
         installHandler()
+        registers = register
         if register {
+            resumeMiniPlayer()
             isRegistered = self.register(combo)
             selectionRegistered = registerSelection()
             clipboardRegistered = registerFixed(.clipboard, id: Self.clipboardID, ref: &clipboardRef)
@@ -85,6 +143,7 @@ final class HotkeyCenter {
     /// Reach's own hotkeys, which a workflow hotkey never takes (S-049).
     var reserved: [(name: String, combo: KeyCombo)] {
         [("launcher hotkey", combo), ("selection hotkey", .selection), ("clipboard hotkey", .clipboard)]
+            + (miniPlayerCombo.map { [("mini player hotkey", $0)] } ?? [])
     }
 
     /// Registers a workflow hotkey; false when another app owns the combination.
@@ -127,6 +186,7 @@ final class HotkeyCenter {
         switch id {
         case Self.selectionID: onSelection()
         case Self.clipboardID: onClipboard()
+        case Self.miniPlayerID: onMiniPlayer()
         case Self.firstWorkflowID...: onWorkflow(id)
         default: onPress()
         }
