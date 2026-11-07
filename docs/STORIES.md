@@ -1035,7 +1035,7 @@ UX:
 - States: several selected = each has the accent border; the arrow keys move a card only when one is selected; error = nothing is removed and the window shows "Unable to delete the objects in “<workflow>”: <reason>"; changed on disk = the workflow is read again first, so a change made in Alfred is kept.
 - Words: menu item and context menu "Delete"; undo name "Delete Object", or "Delete 2 Objects" for more than one.
 - Access: VoiceOver offers Delete on each card (it deletes the selection when the card is in it, else that card); a selected card has the Selected trait.
-Status: todo
+Status: done
 
 ---
 

@@ -122,13 +122,14 @@ extension Snapshot {
             capture(to: "\(dir)/workflows-\(mode).png", window: window())
         }
         // S-061: a selected card, which the arrow keys move.
-        library.selectedObject = "COPY"
+        library.selectedObjects = ["COPY"]
         for mode in ["light", "dark"] {
             NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
             try? await Task.sleep(for: .seconds(0.8))
             capture(to: "\(dir)/workflows-selected-\(mode).png", window: window())
         }
-        library.selectedObject = nil
+        library.selectedObjects = []
+        await captureWorkflowsMultiSelect(dir: dir, window: window)
         // Configure Workflow… (S-043): as installed, then with the required field emptied.
         for (name, greeting) in [("workflow-configure", nil), ("workflow-configure-missing", "")] as [(String, String?)] {
             guard let example = library.selected else { break }
