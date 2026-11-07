@@ -51,7 +51,7 @@ Benefits: a new launcher state is one entry in its feature's file; the loop has 
 Proof of same behavior: the same 180 PNG names in `/tmp/Reach-shots` before and after, the layout JSONs PASS, and a look at the moved captures in light and dark.
 Plan: 1) add `LauncherShot`, `captureLauncher` and `withSampleWorkflow`, run the plain states through them. 2) move the workflow captures to `Snapshot+Workflows.swift`. Two commits, snapshot code only.
 
-## Read bookmark files off the main thread  [Worth exploring]
+## Read bookmark files off the main thread  [Done]
 
 Files: Sources/Reach/Launcher/BookmarkSource.swift (215 lines)
 Signal: slow work on the main thread.
@@ -60,6 +60,8 @@ Proposal: when the files changed, start the read in a `Task.detached` that retur
 Benefits: typing never waits on disk; the source works like the mini player.
 Proof of same behavior: the `bookmarks` self-test group (19 checks) and the 10 `WebBookmark` unit tests; a timing of the first query with a large fixture file before and after.
 Plan: one commit. Do it first if the first `bm` query on the real Mac feels slow.
+
+Done: a query starts one read in a detached task and gets its matches through `later`; the first `bm` query with 20,000 Safari bookmarks (5.9 MB) went from 0.56 s to 0.007 s, and the `bookmarks` self-test has 24 checks.
 
 ## Settings pages in their feature's folder  [Worth exploring]
 
