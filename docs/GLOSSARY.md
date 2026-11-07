@@ -88,3 +88,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Accent color | The color of the selected row and of buttons, picked apart from the theme | tint, highlight, theme color |
 | Show on Desktop Picture | Draws the theme preview on the desktop picture instead of the plain background | wallpaper, background toggle |
 | Expand | Replace a snippet keyword typed in any app with its snippet, as its last letter is typed | auto-expand, autocomplete, text replacement |
+| Web bookmark | A page saved in Safari or Google Chrome; the launcher finds it by title or address, and a page saved in both shows once | favorite (Safari's word for its bar), link, saved page |
+| Show bookmarks | Where web bookmarks show: In Default Results, or With Keyword Only (`bm <text>`) | scope, mode |
+| Open in | The browser Return opens a web bookmark in: Default Browser, or The Bookmark’s Browser | launch with, browser choice |
+| Full Disk Access | The macOS permission Reach needs to read Safari's bookmarks; without it Safari is skipped | disk permission, file access |

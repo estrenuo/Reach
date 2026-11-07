@@ -104,6 +104,7 @@ enum SelfTest {
         ("largetype", { await checkLargeType(model: $0) }),
         ("contacts", { await checkContacts(model: $0) }),
         ("contactactions", { await checkContactActions(model: $0) }),
+        ("bookmarks", { await checkBookmarks(model: $0) }),
         ("clipboard", { await checkClipboard(model: $0) }),
         ("clipboardviewer", { await checkClipboardViewer(model: $0) }),
         ("merging", { await checkMerging(model: $0) }),

@@ -80,6 +80,9 @@ public enum SettingsIndex {
                                "Scheme for a domain typed without one"], words: "link web address https")
         + page("web", "URL History", ["URL History", "Remember URLs you open from Reach", "Remove a URL when not used for"],
                words: "link forget clear")
+        + page("bookmarks", "Sources", ["Sources", "Safari", "Google Chrome"], words: "bookmark favorites browser")
+        + page("bookmarks", "Sources", ["Full Disk Access", "Open Full Disk Access…"], words: "bookmark safari privacy permission")
+        + page("bookmarks", "Results", ["Results", "Show bookmarks", "Open in"], words: "bookmark keyword bm browser")
         + page("system", "Commands", ["Commands", "Confirm"], words: "sleep lock restart shut down")
         + page("system", "Sound", ["Sound"], words: "volume mute")
         + page("system", "Apps", ["Apps"], words: "quit hide force")

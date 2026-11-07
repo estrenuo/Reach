@@ -60,6 +60,9 @@ enum Snapshot {
                         "https://www.example.com/"] {
                 if let url = URL(string: url) { model.launcherModel.history.record(url) }
             }
+            // S-057: fixture bookmark files in /tmp, never the person's own.
+            let bookmarkFiles = SelfTest.writeBookmarkFixtures(in: URL(fileURLWithPath: "/tmp/Reach-bookmarks-snap", isDirectory: true))
+            model.launcherModel.bookmarks.files = bookmarkFiles
             if only == nil || only?.contains("launcher") == true, let launcher = model.launcher {
                 await model.launcherModel.apps.refreshNow()
                 // Sample files instead of the person's own: snapshots get shared.
@@ -81,7 +84,7 @@ enum Snapshot {
                 dictionary.guesses = { word, _ in word == "recieve" ? ["receive", "relieve", "recife"] : [word] }
                 // Sample contacts, never the person's own address book.
                 model.launcherModel.contacts.use(SelfTest.sampleContacts)
-                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("thumbnails", "open o"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("workflow-grid", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", "")]
+                let states = [("empty", ""), ("results", "co"), ("files", "open brief"), ("thumbnails", "open o"), ("fallbacks", "zzqxv nothing"), ("calculator", "=2*21+sqrt(16)"), ("web", "wiki alfred"), ("url", "example.org/docs"), ("history", "bowler"), ("system", "sleep"), ("confirm", "restart"), ("quit", "quit"), ("shell", "> ls -la"), ("define", "define serendipity"), ("spell", "spell recieve"), ("contacts", "sand"), ("contact-card", "sander"), ("email", "email sander"), ("path", SampleFiles.folder), ("actions", "safari"), ("file-actions", ""), ("file-filter", ""), ("workflow-fallback", ""), ("selection-universal", ""), ("workflow-grid", ""), ("selection", ""), ("buffer", "co"), ("buffer-actions", "co"), ("clipboard-empty", ""), ("clipboard", ""), ("snip", "snip "), ("clipboard-snippets", ""), ("bookmarks", "swift")]
                 // S-026: sample clips, never what this Mac copied.
                 let context = model.container.mainContext
                 let clips = ClipboardHistory(pasteboard: .withUniqueName(), context: context)
@@ -378,6 +381,16 @@ enum Snapshot {
                             capture(to: "\(dir)/settings-launcher-options-\(mode).png", window: settings?.attachedSheet)
                             LauncherOptionsStore.shared.reset()
                             try? await Task.sleep(for: .seconds(0.5))
+                        }
+                        if tab == .bookmarks {
+                            // S-057: Safari unreadable, as without Full Disk Access.
+                            let bookmarks = model.launcherModel.bookmarks
+                            try? FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: bookmarkFiles.safari.path)
+                            bookmarks.read()
+                            try? await Task.sleep(for: .seconds(0.8))
+                            capture(to: "\(dir)/settings-bookmarks-denied-\(mode).png", window: settings)
+                            try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: bookmarkFiles.safari.path)
+                            bookmarks.read()
                         }
                         if tab == .web {
                             WebSearchSettings.shared.page = .urls

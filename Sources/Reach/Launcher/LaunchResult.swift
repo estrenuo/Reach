@@ -52,6 +52,8 @@ struct LaunchResult: Identifiable, Equatable {
     var opensSnippets = false
     /// A row from a workflow's script filter: Return runs what is connected to it (S-041).
     var workflow: WorkflowRun?
+    /// The bundle id of the browser Return opens the URL in, instead of the default one (S-057).
+    var opensIn: String?
 
     var isOpenable: Bool {
         url != nil || answer != nil || completes != nil || system != nil || shell != nil || acts || opensClipboard || pastes != nil || opensSettings || opensSnippets || workflow != nil

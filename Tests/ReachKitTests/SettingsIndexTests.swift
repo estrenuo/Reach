@@ -65,7 +65,7 @@ private func settingsLabels() throws -> [(file: String, label: String)] {
 }
 
 @Test func everyEntryHasAPageAndIsUnique() {
-    let pages: Set<String> = ["general", "search", "web", "system", "terminal", "dictionary", "contacts", "clipboard",
+    let pages: Set<String> = ["general", "search", "web", "bookmarks", "system", "terminal", "dictionary", "contacts", "clipboard",
                               "snippets", "actions", "previews", "workflows", "appearance", "advanced", "usage"]
     for entry in SettingsIndex.entries {
         #expect(pages.contains(entry.page), "\(entry.title) on \(entry.page)")
