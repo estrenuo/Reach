@@ -123,6 +123,7 @@ enum SelfTest {
         ("workflows", { await checkWorkflows(model: $0) }),
         ("workflowlist", { await checkWorkflowList(model: $0) }),
         ("workfloweditor", { await checkWorkflowEditor(model: $0) }),
+        ("workflowdelete", { await checkWorkflowDelete(model: $0) }),
         ("music", { await checkMusic(model: $0) }),
         ("miniplayer", { await checkMiniPlayer(model: $0) }),
     ]
