@@ -1007,7 +1007,7 @@ UX:
 - States: dragging = the line is drawn in the accent color with a dot at the pointer; refused = the capsule with the reason, in secondary text, never only a color; error writing = the line is not drawn and the window shows "Unable to connect the objects in “<workflow>”: <reason>"; changed on disk = read again first, as in S-061. A line Alfred has with a modifier keeps its subtext when the modifier changes.
 - Words (refusals): "An object cannot connect to itself." · "These objects are already connected." · "A trigger starts a workflow: nothing connects into it." · "An input only takes a line from a trigger." · "<Kind> ends a workflow: nothing comes after it." · "This would make a loop: <Kind> already leads here."
 - Access: a card offers the VoiceOver actions "Connect to <Kind>" for each object it can connect to and "Disconnect from <Kind>" for each line it has; a line is an element "Connection from <Kind> to <Kind>, <modifier>" with the actions Delete Connection and Modifier None/Command/Option/Control/Shift. No animation, so Reduce Motion needs nothing extra.
-Status: todo
+Status: done
 
 ### S-063 Add an object from the palette
 As the user, I open the palette, type `/` and a name, and drop the object on the canvas.
