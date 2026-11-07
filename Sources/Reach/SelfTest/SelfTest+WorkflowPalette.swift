@@ -21,7 +21,7 @@ extension SelfTest {
             lm.opener = realOpener
             model.launcher?.hide()
             try? FileManager.default.removeItem(at: example.folder)
-            library.selectedObject = nil
+            library.selectedObjects = []
             library.reload()
             library.selection = selection
         }
@@ -36,7 +36,7 @@ extension SelfTest {
         }
 
         // Return in the palette: no point, so a free place.
-        library.selectedObject = nil
+        library.selectedObjects = []
         guard let kw = added(keyword, at: nil) else {
             check("Return on Keyword adds a Keyword input", false, library.failure ?? "nothing added")
             return

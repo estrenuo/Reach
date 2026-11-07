@@ -42,7 +42,7 @@ extension WorkflowLibrary {
             return
         }
         reload()
-        selectedObject = uid
+        select(uid)
         let id = workflow.id
         undo?.registerUndo(withTarget: self) { library in
             MainActor.assumeIsolated {
@@ -63,7 +63,7 @@ extension WorkflowLibrary {
             failure = "Unable to change “\(current.name)”: \(error.localizedDescription)"
         }
         reload()
-        if selectedObject == uid { selectedObject = nil }
+        selectedObjects.remove(uid)
         let id = workflow.id
         undo?.registerUndo(withTarget: self) { library in
             MainActor.assumeIsolated {
