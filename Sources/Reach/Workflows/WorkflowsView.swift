@@ -277,6 +277,12 @@ struct WorkflowCommands: Commands {
             }
             .keyboardShortcut("d", modifiers: [.command, .shift])
             .disabled(!inFront || library.selected == nil)
+            Button(WorkflowPaletteState.shared.shown ? "Hide Palette" : "Show Palette") { WorkflowPaletteState.shared.shown.toggle() }
+                .keyboardShortcut("p", modifiers: [.command, .option])
+                .disabled(!inFront || library.selected == nil)
+            Button("Search Palette") { WorkflowPaletteState.shared.search() }
+                .keyboardShortcut("/")
+                .disabled(!inFront || library.selected == nil)
             Button(library.debugging ? "Hide Debugger" : "Show Debugger") { library.debugging.toggle() }
                 .keyboardShortcut("d", modifiers: [.command, .option])
                 .disabled(!inFront || library.selected == nil)

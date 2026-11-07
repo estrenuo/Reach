@@ -1010,7 +1010,14 @@ Acceptance:
 - [unit] A new object gets a fresh UID, default `config` for its kind, and a place in `uidata`.
 - [self] Add a Keyword input and an Open URL, connect them, set the keyword: typing it in the launcher shows the row.
 - [snap] The palette beside the canvas with the categories collapsed and the search field.
-Status: todo
+UX:
+- Flow: Palette in the workflow header, Workflow > Show Palette (⌥⌘P), or `/` on the canvas → the palette opens on the right of the canvas: a search field, then Triggers, Inputs, Actions, Utilities and Outputs, each collapsed → `/`, Workflow > Search Palette (⌘/) or a click puts the cursor in the search field; typing a name shows the matches in their categories, opened → ↓ moves into the list, ↩ (or a double-click) adds the selected object at a free place: right of the selected card, else below the others → or drag a row onto the canvas: it lands where it is dropped, on the 10 pt grid → the new card is selected, so the arrow keys move it at once → Edit > Undo Add Object (⌘Z) takes it off again, ⌘⇧Z puts it back. Esc in the search field clears it; a second Esc goes back to the canvas. Hide Palette (⌥⌘P) or the header button closes it.
+- Surface: a panel beside the canvas (a tool kept open beside the work, like Alfred's palette), not a sheet or popover: people add several objects in a row while they watch the canvas. Adding is inline on the canvas; no confirm, Undo instead.
+- States: empty search → the categories, collapsed; no match → "No Results for “xyz”" in the list; a workflow with no objects → the canvas's "No Objects" state takes drops too; error → the card is not added and the window shows "Unable to add the object to “<workflow>”: <reason>"; changed on disk → read again first, as with Move Object.
+- Words: header button and menu items "Palette" / "Show Palette" / "Hide Palette", "Search Palette"; search placeholder "Search Objects"; categories "Triggers", "Inputs", "Actions", "Utilities", "Outputs"; a row is the object's kind name as on its card ("Keyword", "Open URL"); context menu and VoiceOver action "Add to Canvas"; undo name "Add Object"; header button tooltip "Show the objects you can add to the canvas (⌥⌘P)".
+- Access: keyboard only from `/` to ↩; VoiceOver reads a row as "Keyword, Input" with the action Add to Canvas, and the new card is announced by its kind; categories are disclosure headers ("Inputs, collapsed"). No animation, so Reduce Motion needs nothing extra.
+- Not now: Alfred's Getting Started, Prefabs and Favourites, User Interface and Automations objects (Reach does not run most of them yet), and filling in a new object's settings (S-064).
+Status: done
 
 ### S-064 Configure an object
 As the user, I double-click an object to change its settings in a sheet: a keyword, a URL, a script, text.

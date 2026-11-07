@@ -24,7 +24,8 @@ struct WorkflowCanvasView: View {
     var body: some View {
         if workflow.objects.isEmpty {
             ContentUnavailableView("No Objects", systemImage: "square.dashed",
-                                   description: Text("This workflow has nothing on its canvas."))
+                                   description: Text("This workflow has nothing on its canvas. Add objects from the palette."))
+                .dropDestination(for: String.self) { types, location in drop(types, at: location) }
         } else {
             let positions = shownPositions
             let size = canvasSize(positions)
@@ -41,6 +42,7 @@ struct WorkflowCanvasView: View {
                     }
                 }
                 .frame(width: size.width, height: size.height, alignment: .topLeading)
+                .dropDestination(for: String.self) { types, location in drop(types, at: location) }
             }
             .defaultScrollAnchor(.topLeading)
             .focusable()
@@ -50,6 +52,10 @@ struct WorkflowCanvasView: View {
                 guard let selected else { return .ignored }
                 let steps = press.modifiers.contains(.shift) ? 5.0 : 1.0
                 nudge(selected, press.key, by: steps * WorkflowEdit.grid)
+                return .handled
+            }
+            .onKeyPress("/") {
+                WorkflowPaletteState.shared.search()
                 return .handled
             }
             .onKeyPress(.escape) {
@@ -114,6 +120,15 @@ struct WorkflowCanvasView: View {
             positions[drag.uid] = WorkflowPoint(x: max(0, point.x + drag.by.width), y: max(0, point.y + drag.by.height))
         }
         return positions
+    }
+
+    /// S-063: a palette row dropped on the canvas; its card lands centered under the pointer.
+    private func drop(_ types: [String], at location: CGPoint) -> Bool {
+        guard let kind = types.first.flatMap(WorkflowPalette.kind) else { return false }
+        let point = WorkflowPoint(x: location.x - Self.card.width / 2, y: location.y - Self.card.height / 2)
+        library.add(kind, at: point, in: workflow, undo: undo)
+        focused = true
+        return true
     }
 
     /// Deletes the selection when `uid` is in it, else only that card (context menu, VoiceOver).

@@ -18,8 +18,15 @@ struct WorkflowDetail: View {
                 .padding(Space.margin)
                 .gridArea("workflow-header")
             Divider()
-            WorkflowCanvasView(workflow: workflow)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            HStack(spacing: 0) {
+                WorkflowCanvasView(workflow: workflow)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if WorkflowPaletteState.shared.shown {
+                    Divider()
+                    WorkflowPaletteView(workflow: workflow)
+                        .gridArea("workflow-palette", inset: Space.sm)
+                }
+            }
             if library.debugging {
                 Divider()
                 WorkflowDebugger(workflow: workflow)
@@ -55,6 +62,11 @@ struct WorkflowDetail: View {
                 Button("Hotkeys…") { library.editingHotkeys = workflow }
                     .help("Set the key combinations of this workflow's hotkeys")
             }
+            Toggle(isOn: Bindable(WorkflowPaletteState.shared).shown) {
+                Label("Palette", systemImage: "square.grid.2x2")
+            }
+            .toggleStyle(.button)
+            .help("Show the objects you can add to the canvas (⌥⌘P)")
             Button {
                 library.debugging.toggle()
             } label: {

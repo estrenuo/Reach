@@ -105,5 +105,7 @@ Every on-screen name has exactly one entry here. The "Not" column lists words to
 | Object | One step of a workflow on the canvas: an input, an action, a utility or an output, shown as a card | node, block, item |
 | Connection | The line from one object to the next; a modifier key on it picks that path | link, edge, wire |
 | Move Object | Drag a card, or select it and press an arrow key, to put it somewhere else on the canvas | drag, reposition |
+| Palette | The panel beside the canvas that lists the objects you can add, by category | library, toolbox, object list |
+| Add Object | Put a new object on the canvas: drag it from the palette, or select it there and press Return | insert, create, drop |
 | Selection | The cards picked on the canvas, each with an accent border; ⌘-click and ⇧-click add to it, ⌘A selects all | highlighted, marked |
 | Delete Object | Remove the selected objects and every connection to or from them; ⌘Z puts them back | remove, erase, cut |

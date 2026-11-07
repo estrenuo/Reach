@@ -124,6 +124,7 @@ enum SelfTest {
         ("workflowlist", { await checkWorkflowList(model: $0) }),
         ("workfloweditor", { await checkWorkflowEditor(model: $0) }),
         ("workflowdelete", { await checkWorkflowDelete(model: $0) }),
+        ("workflowpalette", { await checkWorkflowPalette(model: $0) }),
         ("music", { await checkMusic(model: $0) }),
         ("miniplayer", { await checkMiniPlayer(model: $0) }),
     ]

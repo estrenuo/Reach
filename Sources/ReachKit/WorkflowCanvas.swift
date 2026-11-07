@@ -25,7 +25,7 @@ extension WorkflowObject {
 
     /// The object's kind in words, such as "Script Filter".
     public var kindName: String {
-        if let name = Self.names[type] { return name }
+        if let name = Self.names[type] ?? WorkflowPalette.kind(type)?.name { return name }
         let last = type.split(separator: ".").last.map(String.init) ?? type
         return last.prefix(1).uppercased() + last.dropFirst()
     }
