@@ -3,6 +3,8 @@
 A native macOS app in SwiftUI. It runs on this Mac only, with a local
 SwiftData database and no server.
 
+Status: af sinds 2026-11-07, alle stories S-001 tot S-065 done, geen verdere ontwikkeling gepland (zie README.md). De werkregels hieronder gelden voor een eventuele fix.
+
 ## Layout
 
 - `Sources/Reach/` the app. `App.swift` has the window, menus, and the database location.
@@ -13,10 +15,8 @@ SwiftData database and no server.
 - `Icon/AppIcon.icon` the app icon, an Icon Composer file (JSON plus SVG layers). `build.sh` compiles it with `tools/make_icon.sh`; `tools/icon_review.sh` renders every look into one PNG.
 - `docs/` the brief, the screen index, and the user stories. See `docs/INDEX.md`.
 - `ARCHITECTURE.md` how the parts fit together.
-- `docs/FIXLOG.md` fixed bugs with their rules; read it before timing or focus work.
-- `docs/GLOSSARY.md` names as they appear on screen.
-- `docs/architecture-review-*.md` architecture reviews per milestone.
 - `Sources/Reach/SelfTest/` the self-test checks, per milestone.
+- `Resources/` en `Info.plist.in`: gecompileerd icoon en Info.plist-sjabloon voor build.sh. `README.md`: publieke uitleg en status.
 
 ## Build and check
 
@@ -61,7 +61,6 @@ The bama plugin has a skill for each step: `mac-design` (design rules),
 `design-system` (accent and tokens), `layout-grid`, `ux-design`,
 `swift-swiftui`, `os-integrations`, `performance`, `build-and-verify`,
 `test-mac-app`, `app-icon`, `user-stories`, and `improve-loop`. Use them.
-The bama plugin is off globally (`bama@bama: false` in `~/.claude/settings.json`). Turn it on for this project, for example with `enabledPlugins` in `.claude/settings.json`, or the skills above do not load.
 
 ## Git
 

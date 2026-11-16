@@ -22,7 +22,7 @@ Reach is **not** meant to take any income away from Alfred or its Powerpack lice
 - **Built-in answers**: calculator, custom web searches with fallbacks, typed URLs with history, system commands, quitting apps, shell commands, dictionary, Large Type and contacts.
 - **Clipboard and snippets**: clipboard history with a viewer, app exclusions, appending to the last clip, snippet collections and auto-expansion while typing.
 - **Look and system**: built-in and custom themes, bar position and behaviour, searchable Settings, usage statistics, and settings sync through a folder such as iCloud Drive.
-- **Workflows (light)**: runs script filters from Alfred-format workflow folders and `.alfredworkflow` files, with configuration, a read-only canvas and a debugger. There is no workflow editor.
+- **Workflows (light)**: runs script filters from Alfred-format workflow folders and `.alfredworkflow` files, with configuration, a canvas editor (move, connect, add, configure and delete objects, written back to Alfred's info.plist) and a debugger.
 
 `docs/STORIES.md` lists every story with its exact behaviour.
 
