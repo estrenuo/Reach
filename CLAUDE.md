@@ -3,15 +3,20 @@
 A native macOS app in SwiftUI. It runs on this Mac only, with a local
 SwiftData database and no server.
 
+Status: af sinds 2026-11-07, alle stories S-001 tot S-065 done, geen verdere ontwikkeling gepland (zie README.md). De werkregels hieronder gelden voor een eventuele fix.
+
 ## Layout
 
 - `Sources/Reach/` the app. `App.swift` has the window, menus, and the database location.
-  One folder per feature with its settings page beside it (`Launcher/`, `Appearance/`, `Clipboard/`, `Snippets/`, `Music/`, `Workflows/`); `Settings/` has the Settings window and app-wide pages; `UI/` has only shared parts.
+  One folder per feature, see `ARCHITECTURE.md`. `Settings/` has the Settings window and app-wide pages; `UI/` has only shared parts.
 - `Sources/ReachKit/` rules and data logic with no SwiftUI. Tests in `Tests/ReachKitTests/`.
 - `Package.swift` a Swift package. There is no Xcode project.
 - `build.sh` builds, signs, and installs `~/Applications/Reach.app`.
 - `Icon/AppIcon.icon` the app icon, an Icon Composer file (JSON plus SVG layers). `build.sh` compiles it with `tools/make_icon.sh`; `tools/icon_review.sh` renders every look into one PNG.
-- `docs/` the brief, the screen index, and the user stories, when they exist.
+- `docs/` the brief, the screen index, and the user stories. See `docs/INDEX.md`.
+- `ARCHITECTURE.md` how the parts fit together.
+- `Sources/Reach/SelfTest/` the self-test checks, per milestone.
+- `Resources/` en `Info.plist.in`: gecompileerd icoon en Info.plist-sjabloon voor build.sh. `README.md`: publieke uitleg en status.
 
 ## Build and check
 
