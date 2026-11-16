@@ -18,6 +18,13 @@ Status: af sinds 2026-11-07, alle stories S-001 tot S-065 done, geen verdere ont
 - `Sources/Reach/SelfTest/` the self-test checks, per milestone.
 - `Resources/` en `Info.plist.in`: gecompileerd icoon en Info.plist-sjabloon voor build.sh. `README.md`: publieke uitleg en status.
 
+## Stories
+
+- `docs/STORIES.md` is the only place for what has to be built and how far it is. There is no TODO or backlog file next to it; the brief says what is wanted, never the status.
+- Status follows `main`: `done` means the code is on `main`; `doing` means part of it is built, or it sits on a branch that is not merged yet; `todo` means nothing is built.
+- Change `Status:` in the same commit as the code.
+- A new wish or bug first gets a story or an acceptance line, then gets built.
+
 ## Build and check
 
 - Build and install: `./build.sh`. Add `--open` to restart the app with the new build. The build shows warnings; fix them.
