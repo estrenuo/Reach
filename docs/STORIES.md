@@ -1,8 +1,36 @@
-# Stories — Reach
+# Stories: Reach
 
-Source: [BRIEF.md](BRIEF.md) and [screens/INDEX.md](screens/INDEX.md) (66 screens of the reference app, 2026-10-28). Names follow `docs/GLOSSARY.md` (started with the M1 UX notes).
+This is the only place for what Reach has to do and how far it is. Sources are [BRIEF.md](BRIEF.md) and [screens/INDEX.md](screens/INDEX.md) (66 screens of the reference app, 2026-10-28). Names follow `docs/GLOSSARY.md` (started with the M1 UX notes). The status follows the code on `main`, not the brief.
 
-Status legend: `todo`, `doing`, `done`, `dropped`.
+## How to read this file
+
+- **Checks.** Each acceptance line starts with how it is checked:
+  - `[unit]` a Swift Testing test in `Tests/ReachKitTests/`, run with `swift test --scratch-path ~/Library/Developer/Reach/test-build`.
+  - `[self]` a check in the app's self-test (`Sources/Reach/SelfTest/`, listed in `SelfTest.groups`), run with `tools/selftest.sh` or `tools/selftest.sh <group>`. It drives the real app on a store in /tmp.
+  - `[snap]` a light and dark snapshot with sample data from `tools/snap.sh` (`Snapshot*.swift`), looked at by eye, plus the grid checks (`tools/grid-lint.sh`, `tools/check-layout.swift`).
+  - `[manual]` a person tries it on this Mac. A line that has not been tried yet ends in "(not yet checked)".
+  - `[ui]` is not used: there are no XCUITests; the self-test drives the app instead.
+- **Screens:** names the reference screenshots in `docs/screens/` (Alfred 5.8.1) whose behaviour the story copies. S-048 to S-055 have no screen of their own.
+- **Source:** the requirement (a section of the brief, the milestone goal, the screen numbers), then the main files and the tests that prove it. App paths are relative to `Sources/Reach/`, `ReachKit/` means `Sources/ReachKit/`, a `...Tests` name is a file in `Tests/ReachKitTests/`, and "self-test `x`" is a group in `SelfTest.groups`.
+- **Status:** `todo` (nothing built), `doing` (part built, or on a branch not merged yet), `done` (on `main`), `dropped`.
+- `UX:` blocks were added just before a story was built.
+
+## Overview
+
+| Milestone | done | doing | todo |
+|---|---|---|---|
+| M1 Core loop: summon, type, open | 7 | 0 | 0 |
+| M2 Files and actions | 7 | 0 | 0 |
+| M3 Built-in answers | 10 | 0 | 0 |
+| M4 Clipboard and snippets | 7 | 0 | 0 |
+| M5 Look and system | 9 | 0 | 0 |
+| M6 Workflows (light) | 15 | 0 | 0 |
+| M7 Bookmarks, music and richer rows | 5 | 0 | 0 |
+| M8 Workflow editor | 5 | 0 | 0 |
+| **Total** | **65** | **0** | **0** |
+
+`## Later` is empty; `## Dropped` lists five reference screens.
+
 
 ---
 
@@ -16,7 +44,7 @@ Screens: 49-alfred-bar-empty.png
 Acceptance:
 - [snap] Empty state: one rounded bar with a large search field and the app mark at the right, nothing else.
 - [self] Hotkey toggles the bar from any app; Esc and clicking outside hide it and give focus back to the previous app.
-- [manual] The bar appears within 100 ms of the key press.
+- [manual] The bar appears within 100 ms of the key press. (not yet checked)
 UX:
 - Flow: hotkey (default ⌃⌥Space), or menu bar icon > Show Launcher → search field has focus, previous query cleared → Esc, the hotkey again, or a click outside hides it and the previous app gets focus back
 - Surface: panel (non-activating floating panel; people type and watch results, then return to their work)
@@ -24,6 +52,7 @@ UX:
 - Words: search field placeholder "Search"; no title bar
 - Access: VoiceOver reads "Launcher, search field"; Reduce Motion uses a fade instead of a scale-in
 Status: done
+Source: Brief: Main jobs 1, System hooks; screen 49. `Launcher/LauncherPanel.swift`, `Hotkey.swift`; self-test `launcher`
 
 ### S-002 See ranked app results while typing
 As the user, I type part of an app name and see up to 9 matching apps, the best match selected.
@@ -40,6 +69,7 @@ UX:
 - Words: subtitle of an app result is its path; shortcut column "↩" on the selected result, "⌘2"…"⌘9" on the others
 - Access: the selection is shown by fill and by the ↩ glyph (not by colour alone); VoiceOver reads "title, subtitle, result 1 of 9"
 Status: done
+Source: Brief: Main jobs 1; screen 50. `ReachKit/Matcher.swift`, `Launcher/AppIndex.swift`; `LauncherKitTests`, self-test `launcher`
 
 ### S-003 Open a result with Return or ⌘number
 As the user, I press ↩ to open the selected result, ↑/↓ to move the selection, or ⌘2–⌘9 to open a row directly.
@@ -55,6 +85,7 @@ UX:
 - Words: no buttons; tooltip on a result shows its full path
 - Access: keyboard-only flow complete; VoiceOver action "Open"
 Status: done
+Source: Brief: Main jobs 1; screen 50. `Launcher/LauncherModel.swift`; self-test `launcher`
 
 ### S-004 Results learn from what I pick
 As the user, when I type the same letters again, the item I chose last time comes first.
@@ -70,6 +101,7 @@ UX:
 - Words: the feature is called "Learning" everywhere
 - Access: n/a
 Status: done
+Source: Brief: Main jobs 1, Data (LearningEntry); screen 50. `Learning.swift`, `ReachKit/Ranking.swift`; `RankingTests`, self-test `launcher`
 
 ### S-005 Find files by name with a keyword
 As the user, I type `open <name>` (or `'` / space prefix) and see matching files and folders, most recently used first.
@@ -86,6 +118,7 @@ UX:
 - Words: keyword names "open" and `'`; hint result "Type a file name"
 - Access: the file kind is in the VoiceOver label ("PDF document, report.pdf, in Documents")
 Status: done
+Source: Brief: Main jobs 1, System hooks (Spotlight); screens 55, 56. `Launcher/FileSearch.swift`; `LauncherKitTests`, self-test `launcher`
 
 ### S-006 Search the web when nothing matches
 As the user, when my query has no results I see "Search Google / Amazon / Wikipedia for '…'" and ↩ opens the browser.
@@ -101,6 +134,7 @@ UX:
 - Words: "Search Google for “query”" (curly quotes, engine name first)
 - Access: the engine icon has a text alternative ("Google")
 Status: done
+Source: Brief: Main jobs 2; screens 54, 59. `Launcher/Fallbacks.swift`; `LauncherKitTests`, self-test `launcher`
 
 ### S-007 Change the launcher hotkey in Settings
 As the user, I open Settings from the menu bar icon, record a new hotkey on the General page, and it works immediately.
@@ -117,10 +151,13 @@ UX:
 - Words: menu "Show Launcher", "Settings…", "Quit"; labels "Launcher hotkey", "Open at login"; button "Grant Permissions…"
 - Access: the recorder field reads "Launcher hotkey, Control Option Space"; the whole page works with Tab
 Status: done
+Source: Brief: System hooks; screens 01, 48. `Hotkey.swift`, `UI/HotkeyRecorder.swift`, `MenuBarIcon.swift`; `LauncherKitTests`, self-test `launcher`
 
 ---
 
 ## M2 Files and actions
+
+Done when I can browse folders, act on a result or the macOS selection, preview it, and set where file search looks.
 
 ### S-008 Browse folders inside the launcher
 As the user, I type `~/` or `/` and walk the file system with →/← or Tab, seeing a preview of the selected item.
@@ -136,6 +173,7 @@ UX:
 - Words: Preview labels "Created" and "Modified"; folder row tooltip "Press → to browse this folder, ↩ to open it in Finder"
 - Access: keyboard only; VoiceOver reads "Folder, Developer, result 1 of 14"; the Preview is one element "Created 16 Jan 2020, Modified today"; no web fallbacks while browsing
 Status: done
+Source: Brief: Main jobs 2; screens 57, 04. `Launcher/PathBrowser.swift`, `ReachKit/PathQuery.swift`; `PathQueryTests`, self-test `launcher`
 
 ### S-009 Show the action panel for a result
 As the user, I press → on a file or app and choose an action (Open with, Reveal in Finder, Copy path, Get Info, Move to Trash…).
@@ -153,6 +191,7 @@ UX:
 - Words: footer descriptions in sentence case, like "Show it selected in a Finder window" and "Move it to the Trash. You can put it back from the Trash."; filter placeholder "Filter actions"
 - Access: keyboard only; VoiceOver reads the header "Actions for Safari, /Applications/Safari.app", each row "Action, Reveal in Finder, 3 of 9"; Move to Trash needs no confirmation because it can be undone from the Trash; when a synced folder (OneDrive, iCloud Drive) refuses a plain trash, Finder moves it, after asking once for Automation permission
 Status: done
+Source: Brief: Main jobs 2; screens 51, 07. `Launcher/ActionPanel.swift`, `ReachKit/FileAction.swift`; `FileActionTests`, self-test `launcher`
 
 ### S-010 Choose which actions appear
 As the user, I switch individual actions on or off in Settings > Features > Actions.
@@ -168,6 +207,7 @@ UX:
 - Words: tab "Actions"; section "Action Panel"; one checkbox per action with its icon and name; footer "Actions you turn off no longer show in the action panel. Open With… shows only for files and apps."
 - Access: each checkbox reads its action's name; the settings are saved for the next launch, and test runs never change them
 Status: done
+Source: Brief: Main jobs 2; screen 08. `Launcher/ActionSettings.swift`, `Settings/SettingsView.swift`; `FileActionTests`, self-test `launcher`
 
 ### S-011 Act on the current macOS selection
 As the user, I select files in Finder or text in any app and press ⌥⌘\ to open the action panel for it.
@@ -175,7 +215,7 @@ Screens: 07-features-universal-actions-general.png
 Depends: S-009
 Acceptance:
 - [self] A Finder selection gives file actions; selected text gives text actions (Large Type, web search, copy as plain text).
-- [manual] Works in Finder, Safari and TextEdit.
+- [manual] Works in Finder, Safari and TextEdit. (not yet checked)
 UX:
 - Flow: select files in Finder or text in any app -> the selection hotkey -> the launcher opens straight on the action panel for it -> type to filter, ↩ or ⌘1–9 runs -> the launcher hides; Esc clears the filter, then hides the launcher (there are no results behind it)
 - Hotkey: ⌃⌥⌘\ while Alfred still owns ⌥⌘\ (the same rule as ⌃⌥Space); shown in Settings > Actions
@@ -186,6 +226,7 @@ UX:
 - Words: header for text "Selected text in Safari", Preview shows the text itself
 - Access: text actions read like file actions; Large Type is one element "Large Type, <text>"
 Status: done
+Source: Brief: Main jobs 2; screen 07. `Hotkey.swift`, `ReachKit/TextAction.swift`; `TextActionTests`, self-test `launcher` and `clipboardloan`
 
 ### S-012 Quick Look the selected result
 As the user, I press ⇧ (or ⌘Y) to preview the selected file.
@@ -204,6 +245,7 @@ UX:
 - Action panel: ⇧ and ⌘Y preview the panel's file too, and "Quick Look" is the second action ("Preview it without opening it. Tap ⇧ or press ⌘Y."); it shows only when Quick Look can preview the file, and ↩ on it keeps the launcher open. Esc closes Quick Look before the panel. Selected text has no file, so neither applies there
 - Not now: rich thumbnails in the Preview (the reference's second checkbox) need a slow thumbnail source and move to Later
 Status: done
+Source: Brief: System hooks (Quick Look); screen 28. `Launcher/QuickLook.swift`, `ReachKit/KeyboardHandover.swift`; `PreviewTests`, `KeyboardHandoverTests`, self-test `quicklook`
 
 ### S-013 Collect files in a buffer and act on all of them
 As the user, I press ⌥↑ on several files and then ⌥→ to run one action on all of them.
@@ -223,6 +265,7 @@ UX:
 - Access: keyboard only; VoiceOver reads the icons as "Buffer, 3 items: q3.pdf, q2.pdf, photo.png"
 - Not now: settings for the buffer (on/off, when to clear), ⌥-click to take out one item
 Status: done
+Source: Brief: Main jobs 2; screen 05. `ReachKit/FileBuffer.swift`, `Launcher/BufferView.swift`; `FileBufferTests`, self-test `buffer`
 
 ### S-014 Set file-search keywords, scope and exclusions
 As the user, I rename or disable the `open`/`find`/`in`/`tags` keywords, edit the search scope and hide file types.
@@ -239,10 +282,13 @@ UX:
 - Words: tab "Search"; sections "Keywords", "Don't Show", "Default Results", "Search Scope"; keyword labels "Open files", "Reveal in Finder", "Search inside files", "Search file tags"; Reset tooltip "Put back the standard folders"; footers say what each section does
 - Access: every checkbox and field has the label text; the keyword field's VoiceOver label is "Keyword for Open files"; the scope list reads like the Previews lists
 Status: done
+Source: Brief: Main jobs 1; screens 02, 03, 06. `Launcher/SearchSettings.swift`, `ReachKit/FileQuery.swift`; `FileQueryTests`, self-test `search`
 
 ---
 
 ## M3 Built-in answers
+
+Done when the bar answers calculations, web searches, URLs, system and shell commands, dictionary lookups, Large Type and contacts without opening another app.
 
 ### S-015 Calculate in the bar
 As the user, I type `2*21` and see the answer; with `=` I can use functions like `sqrt`. ↩ copies the answer.
@@ -259,6 +305,7 @@ UX:
 - Numbers: the macOS decimal separator, and a point always works too; no Settings tab yet
 - Access: ↩ and ⌘↩ from the keyboard; the row reads "Calculation, 42"
 Status: done
+Source: Brief: Main jobs 2; screens 52, 53, 16. `ReachKit/Calculator.swift`, `Launcher/CalculatorSource.swift`; `CalculatorTests`, self-test `calculator`
 
 ### S-016 Use and add custom web searches
 As the user, I type `wiki alfred` to search a site, and add my own search with a URL template containing `{query}`.
@@ -275,6 +322,7 @@ UX:
 - Built-ins: Alfred's list with SF Symbols; on at first: Apple Maps, translate, wiki, amazon, imdb, linkedin, youtube, wolfram. The fallbacks (Google, Amazon, Wikipedia) come from the same list, on or off.
 - Access: every checkbox reads the search's title and keyword; the sheet works from the keyboard
 Status: done
+Source: Brief: Main jobs 2, Data (WebSearch); screen 09. `ReachKit/WebSearch.swift`, `Launcher/WebSearchSource.swift`; `WebSearchTests`, self-test `websearch`
 
 ### S-017 Open typed URLs and keep a URL history
 As the user, I type `example.com` and ↩ opens it; URLs I opened before come back as results.
@@ -291,6 +339,7 @@ UX:
 - What counts: a scheme with //, `localhost:port`, an IPv4 address, or a domain ending in a common top-level domain; endings that are also file extensions (md, sh, py, rs, zip, mov) need https:// typed
 - Access: VoiceOver kinds "URL" and "URL from your history"; − and Clear… have tooltips
 Status: done
+Source: Brief: Main jobs 2; screen 10. `ReachKit/TypedURL.swift`, `Launcher/URLHistory.swift`; `TypedURLTests`, self-test `urls`
 
 ### S-018 Choose and order fallback searches
 As the user, I pick which searches appear when nothing matches, and in which order.
@@ -307,6 +356,7 @@ UX:
 - Access: Return closes the sheet (Done); the chevron buttons and context menu move rows without dragging
 - Snapshots: settings-search-end-<mode>.png, settings-fallbacks-<mode>.png
 Status: done
+Source: Brief: Main jobs 2; screen 02. `ReachKit/FallbackList.swift`, `Launcher/FallbacksSettings.swift`; `FallbackListTests`, self-test `fallbacks`
 
 ### S-019 Run system commands by keyword
 As the user, I type `sleep`, `lock`, `emptytrash`, `restart` or `eject` and run it; dangerous ones ask for confirmation.
@@ -326,6 +376,7 @@ UX:
 - Snapshots: launcher-system-<mode>.png, launcher-confirm-<mode>.png, settings-system-<mode>.png
 - Later: Alfred's Eject scope picker and exclude list
 Status: done
+Source: Brief: Main jobs 2; screens 63, 25. `ReachKit/SystemCommand.swift`, `Launcher/SystemCommands.swift`; `SystemCommandTests`, self-test `system`
 
 ### S-020 Quit, hide or force-quit apps by keyword
 As the user, I type `quit Safari` and the running app quits.
@@ -342,6 +393,7 @@ UX:
 - Defaults: Force Quit and Quit All ask first; Quit All leaves Finder and Reach running; apps with unsaved work still ask for themselves
 - Snapshots: launcher-quit-<mode>.png (sample apps, not the ones running), settings-system-<mode>.png
 Status: done
+Source: Brief: Main jobs 2; screen 25. `ReachKit/SystemCommand.swift`, `Launcher/SystemCommands.swift`; `SystemCommandTests`, self-test `apps`
 
 ### S-021 Run a shell command
 As the user, I type `> ls -la` and ↩ runs it in my terminal app.
@@ -358,6 +410,7 @@ UX:
 - Defaults: prefix `>` (menu of > $ ! ; #, none can start a word); Terminal; Ghostty and iTerm when installed. The shell stays open after the command. Commands are not learned and not logged: they can hold paths and passwords
 - Snapshots: launcher-shell-<mode>.png, settings-terminal-<mode>.png
 Status: done
+Source: Brief: Main jobs 2; screens 58, 26. `ReachKit/ShellCommand.swift`, `Launcher/ShellSource.swift`; `ShellCommandTests`, self-test `shell`
 
 ### S-022 Look up a word
 As the user, I type `define <word>` and see the definition; `spell <word>` suggests spellings.
@@ -374,6 +427,7 @@ UX:
 - Defaults: `define` and `spell`, both on; Automatic follows macOS. Definitions come from the dictionaries ticked in Dictionary.app. Settings is 640 wide so nine tabs fit
 - Snapshots: launcher-define-<mode>.png, launcher-spell-<mode>.png (sample words, the same on every Mac), settings-dictionary-<mode>.png
 Status: done
+Source: Brief: Main jobs 2; screens 60, 17. `ReachKit/DictionaryLookup.swift`, `Launcher/DictionarySource.swift`; `DictionaryLookupTests`, self-test `dictionary`
 
 ### S-023 Show text in Large Type
 As the user, I press ⌘L to show the query or the selected result in huge letters over the screen.
@@ -389,6 +443,7 @@ UX:
 - Words: "Large Type", the action panel's "Show in Large Type"
 - Access: Esc closes; VoiceOver reads "Large Type, <text>"
 Status: done
+Source: Brief: Main jobs 2; screens 66, 27. `Launcher/LargeType.swift`; self-test `largetype`
 
 ### S-024 Find and email contacts
 As the user, I type a name and see the contact; `email <name>` starts a mail to them.
@@ -405,10 +460,13 @@ UX:
 - Access: keyboard only; VoiceOver reads "Card for <name>", each detail with its kind and label, "Contact, <name>" on the preview
 - Not now: Alfred's custom field actions, Gmail compose, file attachment subject lines, a Maps URL setting, the notes field (it needs a special entitlement from Apple)
 Status: done
+Source: Brief: Main jobs 2; screens 18, 19, 20. `ReachKit/Contact.swift`, `Launcher/ContactsSource.swift`; `ContactTests`, self-test `contacts`
 
 ---
 
 ## M4 Clipboard and snippets
+
+Done when I can find and paste anything I copied, and paste or expand my snippets from the launcher or while typing.
 
 ### S-025 Keep a clipboard history
 As the user, I switch on history per type (text, images, file lists) with a retention period, and copied items are stored.
@@ -425,6 +483,7 @@ UX:
 - Access: checkboxes and menus by keyboard; VoiceOver reads "Keep Images for, 24 Hours"
 - Privacy: only the pasteboard's types are looked at until a kind is on and the copy is kept; private and machine-made types (nspasteboard.org) and password managers are skipped; the log names kinds and counts, never content
 Status: done
+Source: Brief: Main jobs 3, Data (ClipboardItem); screen 12. `Clipboard/ClipboardHistory.swift`, `ReachKit/ClipboardPolicy.swift`; `ClipboardPolicyTests`, self-test `clipboard`
 
 ### S-026 Browse and paste from the clipboard viewer
 As the user, I press ⌥⌘C, filter my history and ↩ pastes the item into the front app.
@@ -442,6 +501,7 @@ UX:
 - Access: keyboard only; VoiceOver reads "Text, 12:14, Meeting notes, From Notes, result 2 of 5" and the preview text
 - Snippets: ↩ on All Snippets opens the snippets window until S-029 adds collections
 Status: done
+Source: Brief: Main jobs 3; screens 65, 61. `Clipboard/ClipboardViewer.swift`, `Clipboard/ClipboardViewerView.swift`; `ClipboardPolicyTests`, self-test `clipboardviewer`
 
 ### S-027 Exclude apps and limit clip size
 As the user, I add apps whose copies are never stored and set a maximum clip size.
@@ -458,6 +518,7 @@ UX:
 - Access: + and − are labelled; the list reads "Ignore Apps"
 - Scope: the limit counts text only; images and file lists keep their own retention
 Status: done
+Source: Brief: Main jobs 3; screen 14. `ReachKit/ClipboardPolicy.swift`, `Clipboard/ClipboardAdvancedSettings.swift`; `ClipboardPolicyTests`, self-test `clipboard`
 
 ### S-028 Append to the last clip
 As the user, I hold ⌘ and press C twice to append the selection to the last clipboard item.
@@ -474,6 +535,7 @@ UX:
 - Defaults: Append off; Put on the Clipboard on (Alfred has it off); Space; sound on
 - Privacy: a global key monitor runs only while Append is on; it looks at ⌘C and ⌘ only, never other keys, and takes no key away from the app; copies from ignored apps are never appended
 Status: done
+Source: Brief: Main jobs 3; screen 13. `ReachKit/ClipboardMerge.swift`, `Clipboard/DoubleCopyWatcher.swift`; `ClipboardMergeTests`, self-test `merging`
 
 ### S-029 Create a snippet collection and snippets
 As the user, I create a collection and add snippets with a name, keyword and text.
@@ -490,6 +552,7 @@ UX:
 - Access: + and − are labelled with tooltips; the table reads its columns; the whole flow works from the keyboard
 - Scope: Starred is gone; a keyword has no spaces; snippets without a collection move into "Snippets" at launch
 Status: done
+Source: Brief: Main jobs 3, Data (Snippet); screen 15. `Snippets/SnippetEditor.swift`, `Snippets/CollectionSidebar.swift`; `SnippetNameTests`, self-test `basics` and `snippets`
 
 ### S-030 Paste a snippet from the launcher
 As the user, I type `snip <name>` and ↩ pastes the snippet.
@@ -505,6 +568,7 @@ UX:
 - Access: VoiceOver reads "Snippet" before the name; ⌘1–9 pick a row
 - Scope: the pasted text is marked transient, so Clipboard History never keeps it; a copy made right after the paste is not overwritten
 Status: done
+Source: Brief: Main jobs 3; screen 62. `Snippets/SnippetSource.swift`, `ReachKit/SnippetText.swift`; `SnippetNameTests`, self-test `snippetpaste`
 
 ### S-031 Expand snippets automatically while typing
 As the user, I type a snippet keyword in any app and it is replaced by the snippet.
@@ -512,7 +576,7 @@ Screens: 15-features-snippets-empty.png
 Depends: S-029
 Acceptance:
 - [self] Expansion works in TextEdit and Safari; it is off by default and needs Accessibility permission.
-- [manual] No expansion in password fields.
+- [manual] No expansion in password fields. (not yet checked)
 UX:
 - Flow: Settings > Snippets > Expand keywords while typing (off at first) -> allow Accessibility if asked -> type a keyword at the start of a word in any app -> as its last letter lands, the keyword is deleted and the snippet pasted -> the clipboard from before comes back
 - Surface: a Settings tab of its own, "Snippets" (rare setting, with room for more snippet options)
@@ -521,10 +585,13 @@ UX:
 - Access: the toggle reads its title and description; the warnings carry an icon, not only orange
 - Scope: case counts; a click, an arrow key, a shortcut or another app starts over; secure input (Terminal, password prompts) and AXSecureTextField fields never expand; no Ignore Apps list yet
 Status: done
+Source: Brief: Main jobs 3, System hooks (Accessibility); screen 15. `Snippets/SnippetExpander.swift`, `ReachKit/TypedBuffer.swift`; `SnippetNameTests`, self-test `expansion`
 
 ---
 
 ## M5 Look and system
+
+Done when I can change the bar's look and behaviour, find any setting, clear what Reach learned, sync settings and see my usage.
 
 ### S-032 Pick a theme
 As the user, I choose a light or dark theme from a list and see it live on a mock launcher.
@@ -542,6 +609,7 @@ UX:
 - Access: each thumbnail is a button with its name and summary and the selected trait; the preview reads "Preview of the Reach theme"; the selection shows as a ring and the trait, not only color
 - Scope: a theme is a mode (follows the Mac, light, dark) and a surface (glass, clear glass, solid); the accent color stays apart and goes with every theme; snapshots and the self-test draw a sample picture, never the real desktop picture
 Status: done
+Source: Brief: Look; screens 38, 40. `Appearance/LauncherThemeStore.swift`, `ReachKit/LauncherTheme.swift`; `LauncherThemeTests`, self-test `themes`
 
 ### S-033 Make my own theme
 As the user, I duplicate a theme and change its colours, font and corner radius.
@@ -557,6 +625,7 @@ UX:
 - Access: each part is a button "Change the search field" with a tooltip; hover outlines it with a dashed accent line; the selection text turns black or white by contrast
 - Scope: one font for the whole bar; no import or export of themes yet; the self-test checks the store and the bar, not the click itself (snapshots show both popovers)
 Status: done
+Source: Brief: Look; screen 38. `Appearance/ThemeEditor.swift`, `ReachKit/LauncherTheme.swift`; `LauncherThemeTests`, self-test `ownthemes`
 
 ### S-034 Tune the bar's behaviour and position
 As the user, I set the number of visible results, subtext mode, hidden shortcuts, and which screen the bar shows on.
@@ -573,6 +642,7 @@ UX:
 - Access: every control has a label and a description; the sketch reads "The launcher shows on the left screen"; Done is the default button
 - Scope: "default screen" became Mouse Screen, how Reach always worked; no saved drag position yet; always-on subtext leaves the short browse rows alone
 Status: done
+Source: Brief: Look; screen 39. `Appearance/LauncherOptionsSheet.swift`, `ReachKit/LauncherOptions.swift`; `LauncherOptionsTests`, self-test `launcheroptions`
 
 ### S-035 Hide the menu bar icon
 As the user, I hide the menu bar icon and still reach Settings by typing `settings` in the bar.
@@ -585,6 +655,7 @@ UX:
 - Surface: a toggle in its own "Menu Bar" section of the Launcher Options sheet; a pinned "Reach Settings" row in the launcher
 - Words: "Show menu bar icon" ("Without it, type “settings” in the launcher, press ⌘, there, or open Reach again to reach Settings."); row "Reach Settings", "Open Settings (⌘,)"
 Status: done
+Source: Brief: Shape (menu bar icon); screens 39, 48. `MenuBarIcon.swift`, `ReachKit/SettingsKeyword.swift`; `SettingsKeywordTests`, self-test `menubaricon`
 
 ### S-036 Search Settings
 As the user, I press ⌘F in Settings, type a word and jump to the page with that setting.
@@ -600,6 +671,7 @@ UX:
 - Words: "Search Settings"; each result shows the label, with "Page › Section" under it
 - Access: Edit > Search Settings ⌘F, only while Settings is in front; a page's name and summary words also match
 Status: done
+Source: Brief: Shape (Settings); screen 46. `ReachKit/SettingsIndex.swift`, `Settings/SettingsView.swift`; `SettingsIndexTests`, self-test `settings`
 
 ### S-037 Navigate Settings with the rail and menu bar
 As the user, I move between Settings pages with the left icon rail and the menu bar.
@@ -616,6 +688,7 @@ UX:
 - Access: each sidebar row is a label with its summary as help
 - Scope: Search ⌘F comes with S-036, Filter Workflows ⇧⌘F with S-042
 Status: done
+Source: Brief: Shape (Settings); screens 01, 02. `Settings/SettingsView.swift`; self-test `settings`
 
 ### S-038 Advanced: clear knowledge, query history, alternative actions
 As the user, I clear what the app learned (Learning), restore my last query with ⌃↑, and choose what ctrl↩ / ⌥↩ / ⌘↩ do.
@@ -633,6 +706,7 @@ UX:
 - Access: each key picker is labeled with its key symbol; the toggles have a description line
 - Note: the Learning store lives in the app, so its clear is checked in the self-test, not a unit test
 Status: done
+Source: Brief: Main jobs 1; screen 43. `Settings/AdvancedSettings.swift`, `ReachKit/QueryHistory.swift`; `QueryHistoryTests`, self-test `advanced`
 
 ### S-039 Sync settings through a folder
 As the user, I point Settings to an iCloud Drive folder so another Mac uses the same setup.
@@ -646,6 +720,7 @@ UX:
 - Words: "Sync", "Sync folder", "Set Folder…", "Reveal", "Stop Syncing", "Restart Now", "Later"
 - Note: settings and themes go to `Reach/Preferences.plist`, snippets to `Reach/Snippets.json`, workflows to `Reach/Workflows/`. At launch a folder newer than this Mac's last sync is read first; changes are written 2 s later. The folder setting itself and window places stay per Mac
 Status: done
+Source: Brief: Not in version one (settings sync); screen 43. `SyncService.swift`, `ReachKit/SyncFolder.swift`; `SyncFolderTests`, self-test `sync`
 
 ### S-040 See how much I use the launcher
 As the user, I open Usage and see a 28-day stacked chart by kind of use.
@@ -662,6 +737,7 @@ UX:
 - Access: the chart reads "Uses per day for the last 28 days, by kind"; the legend names each color
 - Note: counts stay on this Mac (`usage.` keys are not synced), and days older than 400 are dropped
 Status: done
+Source: Screen 45. `UsageStore.swift`, `Settings/UsageSettings.swift`, `ReachKit/UsageLog.swift`; `UsageLogTests`, self-test `usage`
 
 ---
 
@@ -683,6 +759,7 @@ UX:
 - Words: "Please wait…", "Nothing in <workflow> uses this result.", "This workflow is no longer installed.", "Reach does not run this script language."
 - Note: scripts run off the main thread with Alfred's `alfred_*` environment variables, and a new query stops the old script. Languages: bash, zsh, ruby, perl, python3, osascript (AppleScript, JavaScript) and an external file. Filters that let Alfred filter run once per launcher opening and Reach filters their rows. The Workflows folder is in Application Support/Reach, or in the sync folder (S-039)
 Status: done
+Source: Brief: Not in version one (workflows, now M6); screens 64, 32. `ReachKit/ScriptFilter.swift`, `Workflows/WorkflowSource.swift`; `ScriptFilterTests`, self-test `workflows`
 
 ### S-042 List, filter, enable and remove workflows
 As the user, I see my workflows in Settings, filter them, switch one off or remove it.
@@ -698,6 +775,7 @@ UX:
 - Words: "Install Workflow…", "Add Example", "Filter Workflows", "Turn Off Workflow", "Move “<name>” to the Trash?", "Its keywords stop working. You can put it back from the Trash."
 - Note: switching off writes `disabled` into info.plist, as Alfred does. Add Example installs "Hello World" (keyword `hello`, a bash script filter, ↩ copies and ⌘↩ searches the web)
 Status: done
+Source: M6 goal; screen 29. `Workflows/WorkflowsView.swift`, `ReachKit/WorkflowFolder.swift`; `WorkflowFolderTests`, self-test `workflowlist`
 
 ### S-043 Fill in a workflow's settings
 As the user, I open "Configure Workflow…" and fill in the fields the workflow asks for, next to its README.
@@ -713,6 +791,7 @@ UX:
 - Words: "Configure “<name>”", "Scripts get each value as an environment variable.", "Reset to Defaults", "Cancel", "Save"
 - Note: fields come from Alfred's `userconfigurationconfig`; values live in the folder's prefs.plist, as Alfred keeps them, and only values that differ from the default are written. A value wins over a workflow variable of the same name
 Status: done
+Source: M6 goal; screens 33, 35. `Workflows/WorkflowConfigure.swift`, `ReachKit/WorkflowConfiguration.swift`; `WorkflowConfigurationTests`, self-test `workflowlist`
 
 ### S-044 See a workflow's objects and connections read-only
 As the user, I select a workflow and see its objects and connections on a canvas.
@@ -727,6 +806,7 @@ UX:
 - Words: "No Objects", "This workflow has nothing on its canvas."
 - Note: cards sit where Alfred's uidata puts them; objects without a position go in columns by how many lines lead to them
 Status: done
+Source: M6 goal; screens 30, 31. `Workflows/WorkflowCanvasView.swift`, `ReachKit/WorkflowCanvas.swift`; `WorkflowCanvasTests`
 
 ### S-045 Debug a workflow
 As the user, I open the debugger and see a timestamped log of each run.
@@ -742,6 +822,7 @@ UX:
 - Words: "All Information", "Errors Only", "Copy", "Clear", "Script Filter ran with “hello Ada”", "Run Script ended with exit code 127."
 - Note: the log keeps the last 500 lines while Reach runs; it is not saved
 Status: done
+Source: M6 goal; screen 37. `Workflows/WorkflowDebugger.swift`, `ReachKit/WorkflowLog.swift`; `WorkflowLogTests`, self-test `workflows`
 
 ### S-046 Edit a workflow's README, version and variables
 As the user, I edit the About text and version and add environment variables to a workflow.
@@ -757,6 +838,7 @@ UX:
 - Words: "About", "README", "Variables", "Name", "Value", "Don't Export", "Export Workflow…"
 - Note: Export blanks the value of every Don't Export variable and leaves out what Configure Workflow… saved (prefs.plist)
 Status: done
+Source: M6 goal; screens 34, 36. `Workflows/WorkflowInfoSheet.swift`, `ReachKit/WorkflowInfo.swift`; `WorkflowInfoTests`, self-test `workflowlist`
 
 ### S-047 Run a workflow from a Keyword input
 As the user, I type the keyword of an imported Alfred workflow that starts with a Keyword input (not a Script Filter), and ↩ runs what is connected to it.
@@ -778,6 +860,7 @@ UX:
 - States: argument required and no text = placeholder row, not openable; argument none = the row runs on the keyword alone
 - Note: the cause of "imported workflows do nothing": Reach only read Script Filters, and most Alfred workflows start with a Keyword input. Configurable keywords (`{var:keyword}`) never matched either. Hotkeys, List Filters, File Filters, Automation Tasks other than Move to Trash, Post Notification and triggers in another workflow still do nothing; Return on them now says so. Alfred's Purge Disk Images runs end to end: dmgeject detaches the image and trashes it, dmgtrash trashes the file, and both show their list again until the last one is gone.
 Status: done
+Source: M6 goal; screen 64. `ReachKit/KeywordInput.swift`, `ReachKit/WorkflowStep.swift`; `KeywordInputTests`, `WorkflowFlowTests`, self-test `workflows`
 
 ---
 
@@ -792,6 +875,7 @@ Acceptance:
 UX:
 - macOS asks once whether Reach may post notifications. When that is off, the debugger says so; the rest of the workflow still runs.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/WorkflowStep+Outputs.swift`, `Workflows/WorkflowNotifier.swift`; `WorkflowOutputTests`, self-test `workflows`
 
 ### S-049 Hotkeys from a workflow
 As the user, a key combination I give an imported Alfred workflow's Hotkey trigger runs what is connected to it from any app, with the text Alfred would pass, so the workflows I start by hotkey work.
@@ -805,6 +889,7 @@ Acceptance:
 UX:
 - Alfred leaves hotkeys out of an exported workflow, so the triggers start empty; the sheet says so. A combination another app owns stays off with that reason.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/WorkflowHotkey.swift`, `Workflows/WorkflowHotkeys.swift`; `WorkflowHotkeyTests`, self-test `workflows`
 
 ### S-050 File Actions from a workflow
 As the user, the action panel for a file lists the File Actions of my imported Alfred workflows that are for that kind of file, and choosing one runs the workflow with the file, so the workflows I start on a file in Finder or the launcher work.
@@ -817,6 +902,7 @@ Acceptance:
 UX:
 - The row has the workflow's icon; the footer says which workflow runs it. A workflow step Reach does not run shows in the panel's footer.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/WorkflowFileAction.swift`, `Workflows/LauncherModel+Workflows.swift`; `WorkflowFileActionTests`, self-test `workflows`
 
 ### S-051 Split, Replace and File Filter in a workflow
 As the user, imported Alfred workflows that split or rewrite their text, or that start with a keyword that finds files, run in Reach, so more of my workflows work end to end.
@@ -829,6 +915,7 @@ Acceptance:
 UX:
 - A File Filter shows "Searching…" under its title until Spotlight answers, and "No files match" when nothing does. → on a file opens Reach's own action panel for it.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/WorkflowSplit.swift`, `ReachKit/WorkflowReplace.swift`, `ReachKit/FileFilter.swift`; `WorkflowSplitTests`, `WorkflowReplaceTests`, `FileFilterTests`, self-test `workflows`
 
 ### S-052 JSON Config, Join, Fallbacks and Universal Actions from a workflow
 As the user, imported Alfred workflows that set their configuration with JSON, join split parts again, offer themselves as a fallback, or act on what I select run in Reach.
@@ -842,6 +929,7 @@ Acceptance:
 UX:
 - Workflow fallbacks follow the web searches in the fallback list; workflow actions follow Reach's own in the action panel, with the workflow's icon and a ⌘ number.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/WorkflowJSON.swift`, `ReachKit/WorkflowFallback.swift`, `ReachKit/WorkflowUniversalAction.swift`; `WorkflowJSONTests`, `WorkflowFallbackTests`, `WorkflowUniversalActionTests`, self-test `workflows`
 
 ### S-053 Terminal, key presses and Grid View from a workflow
 As the user, imported Alfred workflows that open a folder in the terminal, press keys in the app in front, or show their items in a grid run in Reach.
@@ -854,6 +942,7 @@ Acceptance:
 UX:
 - Reach has no grid: the items show as rows with their icons, "please wait" (or `loadingtext`) until the script answers. `columncount`, `imageaspect`, the title and subtitle placement and `fixedorder` do not apply to rows.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/WorkflowKeys.swift`, `ReachKit/WorkflowStep.swift`; `WorkflowTerminalTests`, `WorkflowKeysTests`, `WorkflowGridTests`, self-test `workflows`
 
 ### S-054 ⇧↩, the current tab and Action in Alfred from a workflow
 As the user, ⇧↩ on a workflow row follows its ⇧ line, workflows that read the browser's current tab get it, and a workflow that opens Alfred's actions opens Reach's action panel.
@@ -865,6 +954,7 @@ Acceptance:
 - [unit] Action in Alfred (`alfred.workflow.action.actioninalfred`) with `type` 1 and `jumpto` `_popUpItemAction:` opens Reach's action panel for its `path` (the argument when empty); another type or jump is named in the debugger.
 - [self] The Current Tab task sends the (fake) browser's URL on; a denied Apple Event shows in the debugger. Action in Alfred opens the action panel for a file path, or for text that is not one, and the launcher stays.
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/CurrentTab.swift`, `Workflows/CurrentTabReader.swift`; `CurrentTabTests`, `ActionInAlfredTests`, `QueryHistoryTests`, self-test `workflows`
 
 ### S-055 Delay, Dialog, Terminal Command, Text View, Shortcuts and the Finder from a workflow
 As the user, Default Browser, Homebrew, Shortcuts and Visual Studio Code run in Reach from start to end.
@@ -879,6 +969,7 @@ Acceptance:
 - [unit] The Finder tasks ask Finder through `osascript`: `finder.selection` sends the selected files on, tab-separated; `finder.windows.current` sends the front window's folder, empty without a window. Without the Automation permission the error shows in the debugger.
 - [self] ↩ through Delay sends the text on after the wait, not before. Terminal Command runs the filled command (recorded, never run). Text View shows the text under the workflow's name (recorded). Run Shortcut and View Shortcut call `shortcuts` with the right arguments (faked, never run). The Finder tasks send on what Finder answers (faked). Dialog shows its filled title, text and buttons (recorded, never shown).
 Status: done
+Source: M6 goal (imported Alfred workflows). `ReachKit/FinderTask.swift`, `ReachKit/WorkflowShortcut.swift`, `Workflows/TextViewWindow.swift`; `WorkflowS055Tests`, self-test `workflows`
 
 ## M7 Bookmarks, music and richer rows
 
@@ -901,6 +992,7 @@ UX:
 - Access: the thumbnail is decoration; VoiceOver still reads the kind, title and subtitle of the row, unchanged
 - Not now: thumbnails in the Preview's large icon while browsing
 Status: done
+Source: M7 goal; screen 28. `Launcher/Thumbnails.swift`, `ReachKit/ThumbnailRule.swift`; `ThumbnailRuleTests`, self-test `thumbnails`
 
 ### S-057 Open a web bookmark
 As the user, I type part of a bookmark's name or address and ↩ opens it.
@@ -919,6 +1011,7 @@ UX:
 - Words: row title = bookmark title (the address when it has none), subtext = address without `https://`; Settings labels "Safari", "Google Chrome", "Show bookmarks" (In Default Results / With Keyword Only), "Open in" (Default Browser / The Bookmark’s Browser); counts as "128 bookmarks, from every profile."
 - Access: VoiceOver reads "Bookmark, title, address"; every setting is a standard checkbox or menu, reachable by keyboard; the warning row is a Label with text, so it does not rest on the yellow symbol.
 Status: done
+Source: Brief: Not in version one (web bookmarks, now M7); screen 11. `Launcher/BookmarkSource.swift`, `ReachKit/WebBookmark.swift`; `WebBookmarkTests`, self-test `bookmarks`
 
 ### S-058 Add my own action to a contact field
 As the user, I add an action such as "Call with FaceTime" for phone numbers, and it shows on that field in the contact card.
@@ -936,6 +1029,7 @@ UX:
 - Access: keyboard only in the launcher; Return adds, Escape cancels in the sheet; VoiceOver reads a row as "Phone, Call with FaceTime, ⌥↩" and the empty table as "Custom Actions, empty"
 - Not now: ⌘↩ and ⇧↩ (⌘ keys already copy, open and pick rows in the card), actions on birthdays, running a script instead of a URL
 Status: done
+Source: Brief: Not in version one (contacts custom actions, now M7); screen 18. `ReachKit/ContactAction.swift`, `Launcher/ContactsSource.swift`; `ContactActionTests`, self-test `contactactions`
 
 ### S-059 Control Music with a keyword
 As the user, I type `play`, `next`, `previous`, `random`, `mute` or `volume 50` and Music does it without leaving my app.
@@ -952,6 +1046,7 @@ UX:
 - Words: rows "Play or Pause", "Next Track", "Back to Start", "Previous Track", "Play a Random Song", "Maximum Volume", "Half Volume", "Mute or Unmute", "Set Volume to 50"; subtitle = the playing track "Song — Artist" for Play or Pause, Next, Back and Previous, else what it does ("Set Music's volume to 50"); Settings section "Keywords" (checkbox with the command's title, keyword field), toggle "Show in default results", section "Access" with "Automation" and "Open System Settings…"
 - Access: VoiceOver reads "Music command, Next Track, Song — Artist"; each keyword field is labelled "Keyword for Next Track"; the whole flow is keyboard-only
 Status: done
+Source: Brief: Not in version one (music, now M7); screen 22. `Music/MusicSource.swift`, `ReachKit/MusicCommand.swift`; `MusicCommandTests`, self-test `music`
 
 ### S-060 Pick music in the mini player
 As the user, I press a hotkey or type `music`, browse my albums, artists and playlists in the launcher, and ↩ plays one.
@@ -969,6 +1064,7 @@ UX:
 - Words: root rows "Albums" (subtitle "128 albums"), "Artists", "Playlists", "Random Album" (subtitle "Play an album with at least 5 songs"), "Open Music"; album row = title, subtitle "Artist · 9 songs"; artist row subtitle "12 albums"; playlist subtitle "40 songs"; song row = title, subtitle "Artist — Album", badge with its track number; Settings > Music > General: "Mini player hotkey", "Keyword", "Random Album needs at least" (stepper, "5 songs"), "Hide after choosing", section "Include" with "Podcasts", "Videos", "Songs without album or artist"; Access: "Music library" and "Automation"
 - Access: VoiceOver reads "Album, Kind of Blue, Miles Davis, 5 songs"; artwork is decorative (no label); the hotkey button reads "Mini player hotkey, Control Command Return"; keyboard-only throughout
 Status: done
+Source: Brief: Not in version one (music mini player, now M7); screens 21, 23. `Music/LauncherModel+MiniPlayer.swift`, `ReachKit/MiniPlayer.swift`; `MiniPlayerTests`, self-test `miniplayer`
 
 ## M8 Workflow editor
 
@@ -989,6 +1085,7 @@ UX:
 - Words: undo name "Move Object"; card tooltip stays "<kind>: <summary>".
 - Access: a card is a selectable element; VoiceOver offers the actions Move Left, Move Right, Move Up and Move Down. No animation on drop, so Reduce Motion needs nothing extra.
 Status: done
+Source: M8 goal; screen 30. `Workflows/WorkflowCanvasView.swift`, `ReachKit/WorkflowEdit.swift`; `WorkflowEditTests`, self-test `workfloweditor`
 
 ### S-062 Connect and disconnect objects
 As the user, I drag from one card's output to another card to connect them, and remove a connection from its context menu.
@@ -1008,6 +1105,7 @@ UX:
 - Words (refusals): "An object cannot connect to itself." · "These objects are already connected." · "A trigger starts a workflow: nothing connects into it." · "An input only takes a line from a trigger." · "<Kind> ends a workflow: nothing comes after it." · "This would make a loop: <Kind> already leads here."
 - Access: a card offers the VoiceOver actions "Connect to <Kind>" for each object it can connect to and "Disconnect from <Kind>" for each line it has; a line is an element "Connection from <Kind> to <Kind>, <modifier>" with the actions Delete Connection and Modifier None/Command/Option/Control/Shift. No animation, so Reduce Motion needs nothing extra.
 Status: done
+Source: M8 goal; screen 30. `Workflows/WorkflowCanvas+Connections.swift`, `ReachKit/WorkflowEdit+Connections.swift`; `WorkflowConnectionEditTests`, self-test `workflowconnections`
 
 ### S-063 Add an object from the palette
 As the user, I open the palette, type `/` and a name, and drop the object on the canvas.
@@ -1026,6 +1124,7 @@ UX:
 - Access: keyboard only from `/` to ↩; VoiceOver reads a row as "Keyword, Input" with the action Add to Canvas, and the new card is announced by its kind; categories are disclosure headers ("Inputs, collapsed"). No animation, so Reduce Motion needs nothing extra.
 - Not now: Alfred's Getting Started, Prefabs and Favourites, User Interface and Automations objects (Reach does not run most of them yet), and filling in a new object's settings (S-064).
 Status: done
+Source: M8 goal; screen 31. `Workflows/WorkflowPaletteView.swift`, `ReachKit/WorkflowEdit+Add.swift`; `WorkflowPaletteTests`, self-test `workflowpalette`
 
 ### S-064 Configure an object
 As the user, I double-click an object to change its settings in a sheet: a keyword, a URL, a script, text.
@@ -1042,6 +1141,7 @@ UX:
 - Words: title "Configure Keyword", "Configure Open URL"; footer "Saved in the workflow's info.plist, so Alfred reads it too."; labels in title case from Alfred's own names ("With Space", "Argument", "Please Wait Subtext", "Language", "Input").
 - Access: every row has its label as its VoiceOver name, editors included; the whole sheet works with Tab, ↩ and Esc. VoiceOver action Configure on a card.
 Status: done
+Source: M8 goal; screen 30. `Workflows/WorkflowObjectSheet.swift`, `ReachKit/WorkflowForm.swift`; `WorkflowFormTests`, self-test `workflowobject`
 
 ### S-065 Delete objects
 As the user, I select one or more objects and press Delete; their connections go with them.
@@ -1057,6 +1157,7 @@ UX:
 - Words: menu item and context menu "Delete"; undo name "Delete Object", or "Delete 2 Objects" for more than one.
 - Access: VoiceOver offers Delete on each card (it deletes the selection when the card is in it, else that card); a selected card has the Selected trait.
 Status: done
+Source: M8 goal; screen 30. `Workflows/WorkflowLibrary+Delete.swift`, `ReachKit/WorkflowEdit+Delete.swift`; `WorkflowDeleteTests`, self-test `workflowdelete`
 
 ---
 
